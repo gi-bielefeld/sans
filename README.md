@@ -1,4 +1,4 @@
-# SANS
+# SANS *frost*
 
 ### Symmetric Alignment-free phylogeNomic Splits
 
