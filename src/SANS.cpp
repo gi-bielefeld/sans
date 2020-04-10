@@ -25,14 +25,11 @@ void PrintCite() {
 void PrintUsage() {
     cout << endl;
     cout << "SANS " << SANS_VERSION << endl;
-    cout << endl;
     cout << "Symmetric Alignment-free phylogeNomic Splits" << endl;
     cout << endl;
     cout << "Usage: SANS [PARAMETERS]" << endl;
     cout << endl;
-    cout << "[PARAMETERS]:" << endl;
-    cout << endl;
-    cout << "  > Mandatory with required argument:" << endl;
+    cout << " > Mandatory with required argument:" << endl;
     cout << endl;
     cout << "  -s, --input-seq-files   Input sequence files (FASTA/FASTQ possibly gzipped)" << endl;
     cout << "                          Input files can be provided as a list in a TXT file (one file per line)" << endl;
@@ -42,7 +39,7 @@ void PrintUsage() {
     cout << "                          All k-mers of the input reference files are used" << endl;
     cout << "  -o, --output-file       name of output file" << endl;
     cout << endl;
-    cout << "  > Optional with required argument:" << endl;
+    cout << " > Optional with required argument:" << endl;
     cout << endl;
     cout << "  -t, --threads           Number of threads (default: 1)" << endl;
     cout << "  -T, --top               Output the top T splits sorted by weight descending (default: all)" << endl;
@@ -57,7 +54,7 @@ void PrintUsage() {
     cout << "                          options: 1-tree: compatible to a tree" << endl;
     cout << "                                   2-tree: compatible to union of two trees (network)" << endl;
     cout << endl;
-    cout << "  > Optional with no argument:" << endl;
+    cout << " > Optional with no argument:" << endl;
     cout << endl;
     cout << "  -i, --clip-tips         Clip tips shorter than k k-mers in length" << endl;
     cout << "  -d, --del-isolated      Delete isolated contigs shorter than k k-mers in length" << endl;
@@ -65,7 +62,6 @@ void PrintUsage() {
     cout << "  -a, --allow-asym        Do not discard asymmetric splits completely" << endl;
     cout << "  -S, --output-sequences  Output the conserved subsequences the splits are derived from" << endl;
     cout << "  -v, --verbose           Print information messages during execution" << endl;
-    cout << endl;
     cout << endl;
 }
 
