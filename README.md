@@ -7,7 +7,9 @@
 * Assembled genomes or reads as input
 * Phylogenetic splits as output
 
-### Publication
+### Publications
+
+Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs.](https://pub.uni-bielefeld.de/download/2942421/2942423/s13015-020-00164-3.wittler.pdf) Algorithms for Molecular Biology. 15: 4 (2020).
 
 Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs.](http://drops.dagstuhl.de/opus/volltexte/2019/11032/pdf/LIPIcs-WABI-2019-2.pdf)
 In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Schloss Dagstuhl--Leibniz-Zentrum fuer Informatik, Dagstuhl, Germany (2019).
