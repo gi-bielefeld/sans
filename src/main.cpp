@@ -69,6 +69,8 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -n, --norev   \t Do not consider reverse complement k-mers" << endl;
         cout << endl;
+//        cout << "    -T, --thread  \t Number of threads (default: 1)" << endl;
+//        cout << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -h, --help    \t Display this help page and quit" << endl;
@@ -89,6 +91,7 @@ int main(int argc, char* argv[]) {
     uint64_t window = 1;    // number of k-mers
     uint64_t num = 0;    // number of input files
     uint64_t top = -1;    // number of splits
+    uint64_t T = 1;    // number of threads
 
     auto mean = util::geometric_mean;    // weight function
     string filter;    // filter function
@@ -166,6 +169,24 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--norev") == 0) {
             reverse = false;    // Do not consider reverse complement k-mers
+        }
+        else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--thread") == 0) {
+            string newT = argv[++i];
+            if (newT == "max" || newT == "MAX") {
+                uint64_t maxT = thread::hardware_concurrency();
+                if (maxT == 0) {
+                    cerr << "Error: could not determine number of threads" << endl;
+                    return 1;
+                } else {
+                    T = maxT;
+                }
+            } else {
+                T = stoi(newT);    // Number of threads (default: 1)
+            }
+            if (T > 1) {
+                cerr << "Warning: using experimental feature --thread" << endl;
+                cerr << "         running SANS serif using " << T << " threads" << endl;
+            }
         }
         else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
             verbose = true;    // Print messages during execution
@@ -262,7 +283,7 @@ int main(int argc, char* argv[]) {
 #endif
 
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
-    graph::init(top);    // initialize the toplist size
+    graph::init(T, top);    // initialize the toplist size
 
     if (!splits.empty()) {
         ifstream file(splits);
@@ -304,9 +325,9 @@ int main(int argc, char* argv[]) {
         if (verbose) {
             cout << "SANS::main(): Reading input files..." << flush;
         }
-        string sequence;    // read in the sequence files and extract the k-mers
 
-        for (uint64_t i = 0; i < files.size(); ++i) {
+       auto lambda = [&] (uint64_t T, uint64_t lower_bound, uint64_t upper_bound) {
+        for (uint64_t i = lower_bound; i < upper_bound; ++i) {
             ifstream file(files[i]);    // input file stream
             if (!file.good()) {
                 cout << "\33[2K\r" << "\u001b[31m" << files[i] << " (ERR)" << "\u001b[0m" << endl;    // could not read file
@@ -316,15 +337,16 @@ int main(int argc, char* argv[]) {
             }
 
             string line;    // read the file line by line
+            string sequence;    // read in the sequence files and extract the k-mers
             while (getline(file, line)) {
                 if (line.length() > 0) {
                     if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
                         if (window > 1) {
-                            iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
-                                      : graph::add_minimizers(sequence, i, reverse, window);
+                            iupac > 1 ? graph::add_minimizers(T, sequence, i, reverse, window, iupac)
+                                      : graph::add_minimizers(T, sequence, i, reverse, window);
                         } else {
-                            iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                                      : graph::add_kmers(sequence, i, reverse);
+                            iupac > 1 ? graph::add_kmers(T, sequence, i, reverse, iupac)
+                                      : graph::add_kmers(T, sequence, i, reverse);
                         }
                         sequence.clear();
 
@@ -342,11 +364,11 @@ int main(int argc, char* argv[]) {
                 }
             }
             if (window > 1) {
-                iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
-                          : graph::add_minimizers(sequence, i, reverse, window);
+                iupac > 1 ? graph::add_minimizers(T, sequence, i, reverse, window, iupac)
+                          : graph::add_minimizers(T, sequence, i, reverse, window);
             } else {
-                iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                          : graph::add_kmers(sequence, i, reverse);
+                iupac > 1 ? graph::add_kmers(T, sequence, i, reverse, iupac)
+                          : graph::add_kmers(T, sequence, i, reverse);
             }
             sequence.clear();
 
@@ -354,6 +376,43 @@ int main(int argc, char* argv[]) {
                 cout << "\33[2K\r" << flush;
             }
             file.close();
+        }};
+
+        const uint64_t MAX = files.size();
+        const uint64_t SIZE = MAX / T;
+        const uint64_t CARRY = MAX % T;
+
+        vector<uint64_t> size(T);
+        for (uint64_t x = 0; x < T; ++x) {
+            size[x] = SIZE;
+        }
+        for (uint64_t x = 0; x < CARRY; ++x) {
+            size[x] += 1;
+        }
+        uint64_t curr_size = 0;
+
+        vector<thread> thr(T);
+        for (uint64_t x = 0; x < T; ++x) {
+            thr[x] = thread(lambda, x, curr_size, curr_size + size[x]);
+            curr_size += size[x];
+        }
+        for (uint64_t x = 0; x < T; ++x) {
+            thr[x].join();
+        }
+        size.clear();
+
+        while (thr.size() > 1) {
+            for (uint64_t x = 0; x < thr.size()-1; x += 2) {
+                thr[x] = thread(graph::reduce, x, x+1);
+            }
+            for (uint64_t x = 0; x < thr.size()-1; x += 2) {
+                thr[x].join();
+            }
+            uint64_t next_size = thr.size() / 2;
+            for (uint64_t x = 1; x <= next_size; ++x) {
+                thr.erase(thr.begin()+x);
+                graph::erase(x);
+            }
         }
     }
 
@@ -378,7 +437,7 @@ int main(int argc, char* argv[]) {
             for (; it != end; ++it) {
                 auto seq = sequence.substr(it.getKmerPosition(), kmer);
                 auto col = files.size() + it.getColorID();
-                graph::add_kmers(seq, col, reverse);
+                graph::add_kmers(0, seq, col, reverse);
             }
         }
         if (verbose) {

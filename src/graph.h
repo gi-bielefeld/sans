@@ -62,7 +62,7 @@ private:
     /**
      * This is a hash table mapping k-mers to colors [O(1)].
      */
-    static hash_map<kmer_t, color_t> kmer_table;
+    static vector<hash_map<kmer_t, color_t>> kmer_table;
 
     /**
      * This is a hash table mapping colors to weights [O(1)].
@@ -86,7 +86,7 @@ public:
      *
      * @param t top list size
      */
-    static void init(uint64_t& top_size);
+    static void init(uint64_t T, uint64_t& top_size);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
@@ -95,7 +95,7 @@ public:
      * @param color color flag
      * @param reverse merge complements
      */
-    static void add_kmers(string& str, uint64_t& color, bool& reverse);
+    static void add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse);
 
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
@@ -105,7 +105,7 @@ public:
      * @param reverse merge complements
      * @param m number of k-mers to minimize
      */
-    static void add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m);
+    static void add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
@@ -115,7 +115,7 @@ public:
      * @param reverse merge complements
      * @param max_iupac allowed number of ambiguous k-mers per position
      */
-    static void add_kmers(string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac);
+    static void add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac);
 
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
@@ -126,7 +126,7 @@ public:
      * @param m number of k-mers to minimize
      * @param max_iupac allowed number of ambiguous k-mers per position
      */
-    static void add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
+    static void add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
 
     /**
      * This function iterates over the hash table and calculates the split weights.
@@ -182,6 +182,16 @@ public:
      * @param verbose print progress
      */
     static string filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, bool& verbose);
+
+    /**
+     * This function merges two thread-separate hash tables.
+     */
+    static void reduce(uint64_t T1, uint64_t T2);
+
+    /**
+     * This function destructs a thread-separate hash table.
+     */
+    static void erase(uint64_t T);
 
 protected:
 

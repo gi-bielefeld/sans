@@ -8,7 +8,7 @@ uint64_t graph::t;
 /**
  * This is a hash table mapping k-mers to colors [O(1)].
  */
-hash_map<kmer_t, color_t> graph::kmer_table;
+vector<hash_map<kmer_t, color_t>> graph::kmer_table;
 
 /**
  * This is a hash table mapping colors to weights [O(1)].
@@ -55,8 +55,9 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
  *
  * @param t top list size
  */
-void graph::init(uint64_t& top_size) {
+void graph::init(uint64_t T, uint64_t& top_size) {
     t = top_size;
+    kmer_table.resize(T);
 }
 
 /**
@@ -66,7 +67,7 @@ void graph::init(uint64_t& top_size) {
  * @param color color flag
  * @param reverse merge complements
  */
-void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
+void graph::add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     uint64_t pos;    // current position in the string, from 0 to length
@@ -87,7 +88,7 @@ next_kmer:
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
             if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
-            color::set(kmer_table[rcmer], color);    // update the k-mer with the current color
+            color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
         }
     }
 }
@@ -100,7 +101,7 @@ next_kmer:
  * @param reverse merge complements
  * @param m number of k-mers to minimize
  */
-void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m) {
+void graph::add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -135,7 +136,7 @@ next_kmer:
             sequence_order.emplace_back(rcmer);
 
             if (sequence_order.size() == m) {
-                color::set(kmer_table[*value_order.begin()], color);    // update the k-mer with the current color
+                color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
             }
         }
     }
@@ -149,7 +150,7 @@ next_kmer:
  * @param reverse merge complements
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_kmers(string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac) {
+void graph::add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     hash_set<kmer_t> ping;    // create a new empty set for the k-mers
@@ -191,7 +192,7 @@ next_kmer:
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
                 if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
-                color::set(kmer_table[rcmer], color);    // update the k-mer with the current color
+                color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
             }
         }
     }
@@ -206,7 +207,7 @@ next_kmer:
  * @param m number of k-mers to minimize
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
+void graph::add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -266,7 +267,7 @@ next_kmer:
             inner_value_order.clear();
 
             if (sequence_order.size() == m) {
-                color::set(kmer_table[*value_order.begin()], color);    // update the k-mer with the current color
+                color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
             }
         }
     }
@@ -357,9 +358,9 @@ void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, char& in
 void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
     double min_value = numeric_limits<double>::min();    // current min. weight in the top list (>0)
     uint64_t cur = 0, prog = 0, next;
-    uint64_t max = kmer_table.size();
+    uint64_t max = kmer_table[0].size();
 loop:
-    for (auto it = kmer_table.begin(); it != kmer_table.end(); ++it) {    // iterate over k-mer hash table
+    for (auto it = kmer_table[0].begin(); it != kmer_table[0].end(); ++it) {    // iterate over k-mer hash table
         if (verbose) {
             next = 100*cur/max;
              if (prog < next)  cout << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
@@ -553,6 +554,28 @@ bool graph::test_weakly(color_t& color, vector<color_t>& color_set) {
         }
     }
     return true;
+}
+
+/**
+ * This function merges two thread-separate hash tables.
+ */
+void graph::reduce(uint64_t T1, uint64_t T2) {
+    for (auto it = kmer_table[T2].begin(); it != kmer_table[T2].end();) {
+        if (kmer_table[T1].find(it->first) != kmer_table[T1].end()) {
+            kmer_table[T1][it->first] |= it->second;
+        } else {
+            kmer_table[T1][it->first] = it->second;
+        }
+        it = kmer_table[T2].erase(it);
+    }
+}
+
+/**
+ * This function destructs a thread-separate hash table.
+ */
+void graph::erase(uint64_t T) {
+    kmer_table[T].clear();
+    kmer_table.erase(kmer_table.begin()+T);
 }
 
 /**
