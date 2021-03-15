@@ -1918,6 +1918,7 @@ private:
     template<tsl::sh::exception_safety U = ExceptionSafety,
              typename std::enable_if<U == tsl::sh::exception_safety::basic>::type* = nullptr>
     void rehash_impl(size_type count) {
+        std::cout << "Rehashing" << std::endl;
         sparse_hash new_table(count, static_cast<Hash&>(*this), static_cast<KeyEqual&>(*this),
                               static_cast<Allocator&>(*this), m_max_load_factor);
 
