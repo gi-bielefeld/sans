@@ -1,5 +1,5 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
- CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=5000
+ CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=1000
 
 ## IF DEBUG
 # CC = g++ -g -march=native -DmaxK=33 -DmaxN=1024
