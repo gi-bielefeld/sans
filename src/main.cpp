@@ -63,6 +63,8 @@ int main(int argc, char* argv[]) {
         cout << "                  \t          n-tree: compatible to a union of n trees" << endl;
         cout << "                  \t                  (where n is an arbitrary number)" << endl;
         cout << endl;
+        cout << "    -C, --cluster \t Clustering. Output clusters of genomes that are not split into given file." << endl;
+        cout << endl;
         cout << "    -x, --iupac   \t Extended IUPAC alphabet, resolve ambiguous bases or amino acids" << endl;
         cout << "                  \t Specify a number to limit the k-mers per position between" << endl;
         cout << "                  \t 1 (no ambiguity) and 4^k respectively 22^k (allows NNN...N)" << endl;
@@ -106,6 +108,7 @@ int main(int argc, char* argv[]) {
     auto mean = util::geometric_mean;    // weight function
     string filter;    // filter function
     uint64_t iupac = 1;    // allow extended iupac characters
+    string clusterfile;    // cluster genomes and write to this file
     bool reverse = true;    // consider reverse complement k-mers
     bool verbose = false;    // print messages during execution
     bool amino = false;      // input files are amino acid sequences
@@ -184,6 +187,9 @@ int main(int argc, char* argv[]) {
                 cerr << "Error: unknown argument: --filter " << filter << endl;
                 return 1;
             }
+        }
+        else if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--clustter") == 0) {
+            clusterfile = argv[++i]; // cluster genomes and write to this file
         }
         else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--iupac") == 0) {
             iupac = stoi(argv[++i]);    // Extended IUPAC alphabet, resolve ambiguous bases
@@ -552,6 +558,80 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+    
+    // CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING
+    if (!clusterfile.empty()) {
+		// create one big cluster with all IDs
+		std::set<uint64_t> initial_cluster;
+		for (uint64_t i=0; i<color::n; i++) initial_cluster.insert(i);
+		
+		//create bag of clusters
+		vector<set<uint64_t>> clusters;
+		clusters.push_back(initial_cluster);
+		
+		//iterate over all splits
+		for (auto& split : graph::split_list) {
+			//iterate over IDs in split
+			uint64_t zero=0;
+			color_t my_split = split.second;
+			for (uint64_t i = 0; i < num; ++i) {
+				if (color::test(my_split, zero)) { // we shift over the split, so always test at position 0
+					//find cluster containing i
+					set<uint64_t> new_c;
+					for (std::vector<set<uint64_t>>::iterator it_c = clusters.begin(); it_c != clusters.end(); ++it_c) {
+						set<uint64_t> & c = *it_c;
+
+						std::set<uint64_t>::iterator it;
+						uint64_t offset=0; // keep i at current pos, use offset instead
+						it=c.find(i+offset);
+						if (it!=c.end()) { //hit!
+							// identify overlap
+							while (it!=c.end()) {
+								new_c.insert(*it);
+								color::erase(my_split,offset);
+								while(!color::test(my_split, offset)) {
+									offset++;
+									if (i+offset>=num) break;
+								}
+								it=c.find(i+offset);
+							}
+							if (new_c.size() == c.size()){
+								break; //nothing to be done
+							}
+							//remove overlap from cluster
+							std::set<uint64_t>::iterator it1 = c.begin();
+							std::set<uint64_t>::iterator it2 = new_c.begin();
+							while ( (it1 != c.end()) && (it2 != new_c.end()) ) {
+								if (*it1 == *it2) {
+									it1=c.erase(it1);
+									++it2;
+								} else if (*it2 < *it1) {
+									++it2;
+								} else { // *it1 < *it2
+									++it1;
+								}
+							}
+							// add new cluster to bag of clusters
+							clusters.push_back(new_c);
+							// continue with next element in split
+							break;
+						}
+					}
+				}
+				// done with last splitting of cluster,
+				// shift, i.e. check next position in split
+				my_split >>= 01u;
+			}
+		}
+		// output
+		for (std::set<uint64_t> const &c : clusters) {
+			    std::cout << c.size() << '\n';
+// 			    for(const uint64_t i : c){std::cout << i << flush << " ";}
+// 			    std::cout << flush << endl;
+			    
+		}
+	}
+    // END_OF  CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING
 
     if (verbose) {
         cout << "\33[2K\r" << "Please wait..." << flush << endl;
