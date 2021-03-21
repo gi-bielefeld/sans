@@ -269,7 +269,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty()) {
+    if (output.empty() && newick.empty() && clusterfile.empty()) {
         cerr << "Error: missing argument: --output <file_name> or --newick <file_name>" << endl;
         return 1;
     }
