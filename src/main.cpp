@@ -624,12 +624,15 @@ int main(int argc, char* argv[]) {
 			}
 		}
 		// output
+		ofstream file(clusterfile);    // output file stream
+		ostream stream(file.rdbuf());
 		for (std::set<uint64_t> const &c : clusters) {
-			    std::cout << c.size() << '\n';
+			stream << c.size() << endl;
 // 			    for(const uint64_t i : c){std::cout << i << flush << " ";}
 // 			    std::cout << flush << endl;
 			    
 		}
+		file.close();
 	}
     // END_OF  CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING
 
