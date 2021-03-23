@@ -330,7 +330,7 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse, uint64_t& max
                     begin = pos-kmerAmino::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
                     goto next_kmerAmino;    // start a new k-mer from the beginning
                 }
-                iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
+                iupac_shift_amino(ball ? ping : pong, !ball ? ping : pong, str[pos]);
                 ball = !ball;    // shift each base in, resolve iupac character
             } else { wait = true; continue; }
 
@@ -456,7 +456,7 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
                    begin = pos-kmerAmino::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
                    goto next_kmerAmino;    // start a new k-mer from the beginning
                }
-               iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
+               iupac_shift_amino(ball ? ping : pong, !ball ? ping : pong, str[pos]);
                ball = !ball;    // shift each base in, resolve iupac character
            } else { wait = true; continue; }
 
@@ -593,7 +593,7 @@ void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, char& in
  * @param next set of k-mers
  * @param input iupac character
  */
-void graph::iupac_shift(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>& next, char& input) {
+void graph::iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>& next, char& input) {
     string acidsUnique = "ACDEFGHIKLMNOPQRSTUVWY*";
     string acidsB = "DN";
     string acidsZ = "EQ";

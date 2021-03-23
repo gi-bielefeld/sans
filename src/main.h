@@ -7,10 +7,12 @@
 #include "translator.h"
 #include "cleanliness.h"
 
-#ifndef MAX_KMER_SIZE
-    #define MAX_KMER_SIZE maxK+1
-#endif
 #ifdef useBF
+    #ifndef MAX_KMER_SIZE
+        #define MAX_KMER_SIZE (((maxK-1)/32) + 1) * 32
+    #else
+        #define maxK ((maxK) < (MAX_KMER_SIZE) ? : (maxK) : (MAX_KMER_SIZE))
+    #endif
     #include <bifrost/CompactedDBG.hpp>
     #include <bifrost/ColoredCDBG.hpp>
 #endif
@@ -19,7 +21,7 @@ using namespace std;
 
 // Symmetric Alignment-free phylogeNomic Splits
 // simple efficient re-implementation + filters
-#define SANS_VERSION "2.1_02A"    // SANS serif
+#define SANS_VERSION "2.1_03A"    // SANS serif
 
 /**
  * This is the entry point of the program.
@@ -27,5 +29,5 @@ using namespace std;
  * @param argc number of cmd args
  * @param argv cmd args
  * @return exit status
- */
+ */ 
 int main(int argc, char* argv[]);

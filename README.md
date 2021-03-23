@@ -7,7 +7,7 @@
 * Alignment-free
 * Assembled genomes or reads as input
 * Phylogenetic splits or tree as output
-* **NEW:** Coding sequences / amino acid sequneces as input (see --code and -- amino)
+* **NEW:** Coding sequences / amino acid sequences as input (see --code and -- amino)
 
 ### Publications
 
@@ -64,6 +64,7 @@ Usage: SANS [PARAMETERS]
   Input arguments:
 
     -i, --input   	 Input file: list of sequence files, one per line
+                     (use space-separated filenames if multiple files correspond to the same genome, i.e. paired-end data)
 
     -g, --graph   	 Graph file: load a Bifrost graph, file name prefix
                   	 (requires compiler flag -DuseBF, please edit makefile)
@@ -124,7 +125,7 @@ Usage: SANS [PARAMETERS]
   
 ```
 
-# Details on filter option
+## Details on filter option
 
 The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.
 

@@ -292,26 +292,83 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // determine the folder the list is contained in
+    string folder="";
+	uint64_t found=input.find_last_of("/\\");
+	if (found!=string::npos){
+	  folder=input.substr(0,found+1);
+	}
+
     // parse the list of input sequence files
-    vector<string> files;
-    hash_map<string, uint64_t> name_table;
+    hash_map<string, uint64_t> name_table; // the name to color map
+    vector<string> denom_names; // Storing the representative name per color
+    vector<vector<string>> gen_files; // file_name container
 
     if (!input.empty()) {
+        // check input file 
         ifstream file(input);
         if (!file.good()) {
             cerr << "Error: could not read input file: " << input << endl;
             return 1;
         }
-        string line;
-        while (getline(file, line)) {
-            files.emplace_back(line);
-            name_table[line] = num++;
-        }
-        file.close();
 
-        if (num > maxN) {
-            cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
-            return 1;
+        // parse the list of input sequence files
+
+        string line; // the iterated input line
+        string file_name; // the current file name 
+        size_t cut_at; // the index of the next cut
+        bool is_first; // indicating the first filename of a line
+
+        while (getline(file, line)) {
+            // extract all target files and update the name_table
+            vector<string> target_files; // container of the current target files
+            is_first = true;
+            cut_at = line.find_first_of(" ");
+            while (cut_at != string::npos){
+                if (cut_at == 0){line = line.substr(1, line.length()); cut_at = line.find_first_of(" "); continue;} // If multiple spaces are used
+                line = line.substr(0, line.length());
+                file_name = line.substr(0, cut_at); // add the file and cut the line
+                target_files.push_back(file_name);
+                name_table[file_name] = num;
+                // Store a representative for this color
+                if (is_first){
+                    denom_names.push_back(file_name);
+                    is_first = false;
+                }
+
+                line = line.substr(cut_at + 1, line.length());
+                cut_at = line.find_first_of(" ");
+            }
+
+            // add the last entry of the  line
+            file_name = line; // add the file and cut the line
+            target_files.push_back(file_name);
+
+            // Store a representative for this color if not already added
+            if (is_first){
+                denom_names.push_back(file_name);
+                is_first = false;
+            }
+
+            // check files
+            for(string file_name: target_files){
+                ifstream file_stream = ifstream(folder+file_name);
+                if (!file_stream.good()) { // catch unreadable file
+                    cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << folder+file_name << ">" << "\u001b[0m" << endl;
+                    file_stream.close();
+                    return 1;
+                }
+                else{
+                    file_stream.close();
+                }
+            }
+
+            gen_files.push_back(target_files); // store files for this target
+            num++;
+            if (num > maxN) {
+                cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
+                return 1;
+            }
         }
     }
 
@@ -321,11 +378,14 @@ int main(int argc, char* argv[]) {
     }
 
 #ifdef useBF
+    cout << "SANS: " << maxK << endl;
+    cout << "BF: " << MAX_KMER_SIZE << endl;
     // load an existing Bifrost graph
     ColoredCDBG<> cdbg(kmer);
     if (!graph.empty()) {
         if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) {
             num += cdbg.getNbColors();
+
         } else {
             cerr << "Error: could not load Bifrost graph" << endl;
             return 1;
@@ -368,8 +428,11 @@ int main(int argc, char* argv[]) {
                 curr = line.find('\t', next);
                 string name = line.substr(next, curr-next);
                 if (name_table.find(name) == name_table.end()) {
-                    files.emplace_back(name);
+                    vector<string> file_vec;
+                    file_vec.push_back(name);
+                    gen_files.emplace_back(file_vec);
                     name_table[name] = num++;
+                    denom_names.push_back(name);
                     if (num > maxN) {
                         cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
                         return 1;
@@ -394,81 +457,77 @@ int main(int argc, char* argv[]) {
         }
         string sequence;    // read in the sequence files and extract the k-mers
 
-	// determine folder the list is contained in
-        string folder="";
-	uint64_t found=input.find_last_of("/\\");
-	if (found!=string::npos){
-	  folder=input.substr(0,found+1);
-	}
 
-        for (uint64_t i = 0; i < files.size(); ++i) {
-            ifstream file(folder+files[i]);    // input file stream
-            if (!file.good()) {
-                cout << "\33[2K\r" << "\u001b[31m" << folder+files[i] << " (ERR)" << "\u001b[0m" << endl;    // could not read file
-            }
-            else if (verbose) {
-                cout << "\33[2K\r" << folder+files[i] << " (" << i+1 << "/" << files.size() << ")" << endl;    // print progress
-            }
-            count::deleteCount();
+        for (uint64_t i = 0; i < gen_files.size(); ++i) {
+            vector<string> target_files = gen_files[i]; // the filenames corresponding to the target  
 
-            string appendixChars; 
-            string line;    // read the file line by line
-            while (getline(file, line)) {
-                if (line.length() > 0) {
-                    if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
-                        if (window > 1) {
-                            iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
-                                      : graph::add_minimizers(sequence, i, reverse, window);
-                        } else {
-                            iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                                      : graph::add_kmers(sequence, i, reverse);
-                        }
+            for (string file_name: target_files){
+                ifstream file(folder+file_name);    // input file stream
+                if (verbose) {
+                    cout << "\33[2K\r" << folder+file_name<< " (" << i+1 << "/" << denom_names.size() << ")" << endl;    // print progress
+                }
+                count::deleteCount();
 
-                        sequence.clear();
-
-                        if (verbose) {
-                            cout << "\33[2K\r" << line << flush << endl;    // print progress
-                        }
-                    }
-                    else if (line[0] == '+') {    // FASTQ quality values -> ignore
-                        getline(file, line);
-                    }
-                    else {
-                        transform(line.begin(), line.end(), line.begin(), ::toupper);
-                        string newLine = line;
-                        if (shouldTranslate) {
-                            if (appendixChars.length() >0 ) {
-                                newLine= appendixChars + newLine;
-                                appendixChars = "";
-                            }
-                            auto toManyChars = line.length() % 3;
-                            if (toManyChars > 0) {
-                                appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
-                                newLine = newLine.substr(0, line.length() - toManyChars);
+                string appendixChars; 
+                string line;    // read the file line by line
+                while (getline(file, line)) {
+                    if (line.length() > 0) {
+                        if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
+                            if (window > 1) {
+                                iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
+                                        : graph::add_minimizers(sequence, i, reverse, window);
+                            } else {
+                                iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
+                                        : graph::add_kmers(sequence, i, reverse);
                             }
 
-                            newLine = translator::translate(newLine);
+                            sequence.clear();
+
+                            if (verbose) {
+                                cout << "\33[2K\r" << line << flush << endl;    // print progress
+                            }
                         }
-                        sequence += newLine;    // FASTA & FASTQ sequence -> read
+                        else if (line[0] == '+') {    // FASTQ quality values -> ignore
+                            getline(file, line);
+                        }
+                        else {
+                            transform(line.begin(), line.end(), line.begin(), ::toupper);
+                            string newLine = line;
+                            if (shouldTranslate) {
+                                if (appendixChars.length() >0 ) {
+                                    newLine= appendixChars + newLine;
+                                    appendixChars = "";
+                                }
+                                auto toManyChars = line.length() % 3;
+                                if (toManyChars > 0) {
+                                    appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
+                                    newLine = newLine.substr(0, line.length() - toManyChars);
+                                }
+
+                                newLine = translator::translate(newLine);
+                            }
+                            sequence += newLine;    // FASTA & FASTQ sequence -> read
+                        }
                     }
                 }
-            }
-            if (verbose && count::getCount() > 0) {
-                cerr << count::getCount()<< " triplets could not be translated."<< endl;
-            }
-            if (window > 1) {
-                iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
-                          : graph::add_minimizers(sequence, i, reverse, window);
-            } else {
-                iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
-                          : graph::add_kmers(sequence, i, reverse);
-            }
-            sequence.clear();
+                if (verbose && count::getCount() > 0) {
+                    cerr << count::getCount()<< " triplets could not be translated."<< endl;
+                }
+                if (window > 1) {
+                    iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
+                            : graph::add_minimizers(sequence, i, reverse, window);
+                } else {
+                    iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
+                            : graph::add_kmers(sequence, i, reverse);
+                }
+                sequence.clear();
 
-            if (verbose) {
-                cout << "\33[2K\r" << flush;
+                
+                if (verbose) {
+                    cout << "\33[2K\r" << flush;
+                }
+                file.close();
             }
-            file.close();
         }
     }
 
@@ -492,7 +551,7 @@ int main(int argc, char* argv[]) {
 
             for (; it != end; ++it) {
                 auto seq = sequence.substr(it.getKmerPosition(), kmer);
-                auto col = files.size() + it.getColorID();
+                auto col = denom_names.size() + it.getColorID();
                 graph::add_kmers(seq, col, reverse);
             }
         }
@@ -504,9 +563,9 @@ int main(int argc, char* argv[]) {
 
     // function to map color position to file name
     std::function<string(const uint64_t&)> map=[=](uint64_t i) {
-        if (i < files.size()) return files[i];
+        if (i < denom_names.size()) return denom_names[i];
         #ifdef useBF
-        else return cdbg.getColorName(i-files.size());
+        else return cdbg.getColorName(i-denom_names.size());
         #endif
         cerr << "Error: color bit does not correspond to color name" << endl;
         exit(EXIT_FAILURE);
@@ -567,11 +626,11 @@ int main(int argc, char* argv[]) {
         stream << weight;    // weight of the split
         for (uint64_t i = 0; i < num; ++i) {
             if (color::test(split.second, pos)) {
-                if (i < files.size())
-                    stream << '\t' << files[i];    // name of the file
+                if (i < denom_names.size())
+                    stream << '\t' << denom_names[i];    // name of the file
                 #ifdef useBF
                 else
-                    stream << '\t' << cdbg.getColorName(i-files.size());
+                    stream << '\t' << cdbg.getColorName(i-denom_names.size());
                 #endif
             }
             split.second >>= 01u;
@@ -594,6 +653,3 @@ int main(int argc, char* argv[]) {
     }
     return 0;
 }
-
-
-

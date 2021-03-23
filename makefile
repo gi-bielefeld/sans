@@ -1,5 +1,5 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
- CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=1024
+ CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64
 
 ## IF DEBUG
 # CC = g++ -g -march=native -DmaxK=33 -DmaxN=1024
@@ -12,7 +12,7 @@
 ifeq ($(OS), Windows_NT)
 	TD = obj
 	MK = mkdir obj
-	RM = rmdir /s /q obj 
+	RM = rmdir /s /q obj
 	MV = cmd /C move *.o obj
 
 else

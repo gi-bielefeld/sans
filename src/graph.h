@@ -253,7 +253,7 @@ protected:
    * @param next set of k-mers
    * @param input iupac character
    */
-    static void iupac_shift(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>& next, char& input);
+    static void iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>& next, char& input);
 
     /**
      * This function returns a tree structure (struct node) generated from the given list of color sets.
