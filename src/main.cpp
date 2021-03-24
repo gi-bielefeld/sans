@@ -270,7 +270,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (output.empty() && newick.empty() && clusterfile.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name>" << endl;
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --cluster <file_name>" << endl;
         return 1;
     }
     if (kmer > maxK && splits.empty()) {
@@ -568,6 +568,8 @@ int main(int argc, char* argv[]) {
 		//create bag of clusters
 		vector<set<uint64_t>> clusters;
 		clusters.push_back(initial_cluster);
+		uint64_t cur = 0;
+		uint64_t max = graph::split_list.size();
 		
 		//iterate over all splits
 		for (auto& split : graph::split_list) {
@@ -622,6 +624,12 @@ int main(int argc, char* argv[]) {
 				// shift, i.e. check next position in split
 				my_split >>= 01u;
 			}
+			if (verbose) {
+				cout << "\33[2K\r" << "Processed " << cur++ << " splits (" << 100*cur/max << "%) " << flush;
+			}
+		}
+		if (verbose) {
+			cout << "\33[2K\r" << "Processed " << max << " splits (100%)" << endl;
 		}
 		// output
 		ofstream file(clusterfile);    // output file stream
