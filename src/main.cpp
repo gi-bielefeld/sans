@@ -636,12 +636,24 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 		}
 		// output
 		ofstream file(clusterfile);    // output file stream
+		ofstream sizefile(clusterfile+".sizes");    // output file stream
 		ostream stream(file.rdbuf());
+		ostream sizestream(sizefile.rdbuf());
 		for (std::set<uint64_t> const &c : clusters) {
-			stream << c.size() << endl;
-// 			    for(const uint64_t i : c){std::cout << i << flush << " ";}
-// 			    std::cout << flush << endl;
-			    
+			sizestream << c.size() << endl;
+			bool first=true;
+			for(const uint64_t i : c){
+				if (!first) { stream << '\t';}
+				else {first=false;}
+                if (i < files.size())
+                    stream << files[i];    // name of the file
+                #ifdef useBF
+                else
+                    stream << cdbg.getColorName(i-files.size());
+                #endif				
+			}
+			stream << endl;
+			first=true;
 		}
 		file.close();
 	}
