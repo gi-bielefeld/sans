@@ -321,10 +321,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // Set dynamic top
-    if (dyn_top){
-        top = top * num;
-    }
+
 
 #ifdef useBF
     // load an existing Bifrost graph
@@ -355,7 +352,13 @@ int main(int argc, char* argv[]) {
     }
 #endif
 
-    chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
+
+    // Set dynamic top
+    if (dyn_top){
+        top = top * num;
+    }
+
+chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
     graph::init(top, amino); // initialize the toplist size and the allowed characters
     if (!splits.empty()) {
         ifstream file(splits);
