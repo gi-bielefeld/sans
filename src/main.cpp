@@ -662,6 +662,11 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
     if (verbose) {
         cout << "\33[2K\r" << "Please wait..." << flush << endl;
     }
+    
+    
+    if (!output.empty()) {
+
+    
     ofstream file(output);    // output file stream
     ostream stream(file.rdbuf());
 
@@ -688,6 +693,8 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
     //cleanliness.calculateWeightBeforeCounter();
 
     file.close();
+
+    }
 
     chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();    // time measurement
 
