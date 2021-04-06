@@ -564,9 +564,15 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
     
     // CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING CLUSTERING
     if (!clusterfile.empty()) {
+		//map from color to cluster
+		hash_map< uint64_t, uint64_t > color_table;
+
 		// create one big cluster with all IDs
 		std::set<uint64_t> initial_cluster;
-		for (uint64_t i=0; i<color::n; i++) initial_cluster.insert(i);
+		for (uint64_t i=0; i<color::n; i++) {
+			initial_cluster.insert(i);
+			color_table[i]= 0;
+		}
 		
 		//create bag of clusters
 		vector<set<uint64_t>> clusters;
@@ -583,45 +589,41 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 				if (color::test(my_split, zero)) { // we shift over the split, so always test at position 0
 					//find cluster containing i
 					set<uint64_t> new_c;
-					for (std::vector<set<uint64_t>>::iterator it_c = clusters.begin(); it_c != clusters.end(); ++it_c) {
-						set<uint64_t> & c = *it_c;
-
-						std::set<uint64_t>::iterator it;
-						uint64_t offset=0; // keep i at current pos, use offset instead
-						it=c.find(i+offset);
-						if (it!=c.end()) { //hit!
-							// identify overlap
-							while (it!=c.end()) {
-								new_c.insert(*it);
-								color::erase(my_split,offset);
-								while(!color::test(my_split, offset)) {
-									offset++;
-									if (i+offset>=num) break;
-								}
-								it=c.find(i+offset);
+					set<uint64_t>* c = &clusters[color_table[i]];
+					std::set<uint64_t>::iterator it;
+					uint64_t offset=0; // keep i at current pos, use offset instead
+					it=c->find(i+offset);
+						// identify overlap
+						while (it!=c->end()) {
+							new_c.insert(*it);
+							color::erase(my_split,offset);
+							while(!color::test(my_split, offset)) {
+								offset++;
+								if (i+offset>=num) break;
 							}
-							if (new_c.size() == c.size()){
-								break; //nothing to be done
-							}
-							//remove overlap from cluster
-							std::set<uint64_t>::iterator it1 = c.begin();
-							std::set<uint64_t>::iterator it2 = new_c.begin();
-							while ( (it1 != c.end()) && (it2 != new_c.end()) ) {
-								if (*it1 == *it2) {
-									it1=c.erase(it1);
-									++it2;
-								} else if (*it2 < *it1) {
-									++it2;
-								} else { // *it1 < *it2
-									++it1;
-								}
-							}
-							// add new cluster to bag of clusters
-							clusters.push_back(new_c);
-							// continue with next element in split
-							break;
+							it=c->find(i+offset);
 						}
-					}
+						if (new_c.size() == c->size()){
+							break; //nothing to be done
+						}
+						//remove overlap from cluster
+						uint64_t new_id = clusters.size();
+						std::set<uint64_t>::iterator it1 = c->begin();
+						std::set<uint64_t>::iterator it2 = new_c.begin();
+						while ( (it1 != c->end()) && (it2 != new_c.end()) ) {
+							if (*it1 == *it2) {
+								color_table[*it1]=new_id;
+								it1=c->erase(it1);
+								++it2;
+							} else if (*it2 < *it1) {
+								++it2;
+							} else { // *it1 < *it2
+								++it1;
+							}
+						}
+						// add new cluster to bag of clusters
+						clusters.push_back(new_c);
+						// continue with next element in split
 				}
 				// done with last splitting of cluster,
 				// shift, i.e. check next position in split
@@ -635,11 +637,12 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 			cout << "\33[2K\r" << "Processed " << max << " splits (100%)" << endl;
 		}
 		// output
+	
 		ofstream file(clusterfile);    // output file stream
 		ofstream sizefile(clusterfile+".sizes");    // output file stream
 		ostream stream(file.rdbuf());
 		ostream sizestream(sizefile.rdbuf());
-		for (std::set<uint64_t> const &c : clusters) {
+		for (std::set<uint64_t> c : clusters) {
 			sizestream << c.size() << endl;
 			bool first=true;
 			for(const uint64_t i : c){
@@ -667,32 +670,32 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
     if (!output.empty()) {
 
     
-    ofstream file(output);    // output file stream
-    ostream stream(file.rdbuf());
+		ofstream file(output);    // output file stream
+		ostream stream(file.rdbuf());
 
-    uint64_t pos = 0;
-    //cleanliness.setFilteredCount(graph::split_list.size());
-    for (auto& split : graph::split_list) {
-        double weight = split.first;
-       // cleanliness.setSmallestWeight(weight, split.second);
-        stream << weight;    // weight of the split
-        for (uint64_t i = 0; i < num; ++i) {
-            if (color::test(split.second, pos)) {
-                if (i < files.size())
-                    stream << '\t' << files[i];    // name of the file
-                #ifdef useBF
-                else
-                    stream << '\t' << cdbg.getColorName(i-files.size());
-                #endif
-            }
-            split.second >>= 01u;
-        }
-        stream << endl;
-    }
+		uint64_t pos = 0;
+		//cleanliness.setFilteredCount(graph::split_list.size());
+		for (auto& split : graph::split_list) {
+			double weight = split.first;
+		// cleanliness.setSmallestWeight(weight, split.second);
+			stream << weight;    // weight of the split
+			for (uint64_t i = 0; i < num; ++i) {
+				if (color::test(split.second, pos)) {
+					if (i < files.size())
+						stream << '\t' << files[i];    // name of the file
+					#ifdef useBF
+					else
+						stream << '\t' << cdbg.getColorName(i-files.size());
+					#endif
+				}
+				split.second >>= 01u;
+			}
+			stream << endl;
+		}
 
-    //cleanliness.calculateWeightBeforeCounter();
+		//cleanliness.calculateWeightBeforeCounter();
 
-    file.close();
+		file.close();
 
     }
 
