@@ -604,7 +604,7 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 							it=c->find(i+offset);
 						}
 						if (new_c.size() == c->size()){
-							break; //nothing to be done
+							continue; //nothing to be done
 						}
 						//remove overlap from cluster
 						uint64_t new_id = clusters.size();
