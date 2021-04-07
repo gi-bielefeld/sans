@@ -593,19 +593,21 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 					std::set<uint64_t>::iterator it;
 					uint64_t offset=0; // keep i at current pos, use offset instead
 					it=c->find(i+offset);
-						// identify overlap
-						while (it!=c->end()) {
-							new_c.insert(*it);
-							color::erase(my_split,offset);
-							while(!color::test(my_split, offset)) {
-								offset++;
-								if (i+offset>=num) break;
-							}
-							it=c->find(i+offset);
+					if (it==c->end()) {
+						cerr << "ERROR 1 in clustering";
+						exit(1);
+					}
+					// identify overlap
+					while (it!=c->end()) {
+						new_c.insert(*it);
+						color::erase(my_split,offset);
+						while(!color::test(my_split, offset)) {
+							offset++;
+							if (i+offset>=num) break;
 						}
-						if (new_c.size() == c->size()){
-							continue; //nothing to be done
-						}
+						it=c->find(i+offset);
+					}
+					if (new_c.size() < c->size()){ //otherwise the complete cluster is covered
 						//remove overlap from cluster
 						uint64_t new_id = clusters.size();
 						std::set<uint64_t>::iterator it1 = c->begin();
@@ -623,7 +625,8 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 						}
 						// add new cluster to bag of clusters
 						clusters.push_back(new_c);
-						// continue with next element in split
+					}
+					// continue with next element in split
 				}
 				// done with last splitting of cluster,
 				// shift, i.e. check next position in split
@@ -637,7 +640,6 @@ chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock:
 			cout << "\33[2K\r" << "Processed " << max << " splits (100%)" << endl;
 		}
 		// output
-	
 		ofstream file(clusterfile);    // output file stream
 		ofstream sizefile(clusterfile+".sizes");    // output file stream
 		ostream stream(file.rdbuf());
