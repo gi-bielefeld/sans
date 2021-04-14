@@ -12,6 +12,8 @@ bool graph::isAmino;
  */
 hash_map<kmer_t, color_t> graph::kmer_table;
 
+hash_map<kmer_t, vector<int>> graph::copyNumber;
+
 hash_map<kmerAmino_t, color_t> graph::kmer_tableAmino;
 
 /**
@@ -139,7 +141,32 @@ next_kmer:
             if (pos+1 - begin >= kmer::k) {
                 rcmer = kmer;
                 if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
-                color::set(kmer_table[rcmer], color);    // update the k-mer with the current color
+                color::set(kmer_table[rcmer], color);
+                std::cout << rcmer << " : " << kmer_table[rcmer] << endl;
+
+                //test if the kmer is already in copyNumber
+                if(!copyNumber.contains(rcmer)){
+                    vector<int> kmerCount;
+                    kmerCount.push_back(0);
+                    kmerCount.push_back(1);
+                    std::pair<color_t, vector<int>> newKmer (rcmer,kmerCount);
+                    copyNumber.insert({rcmer, kmerCount});
+
+                    //when the k-mer was found before
+                } else {
+                    // found in the same genome
+                    //number of ones in the color = current position in copyNumber
+                    int posCopyNumber = color::numberOnes(color);
+                    vector<int> kmerOcc = copyNumber.at(rcmer);
+                    if(posCopyNumber == copyNumber.size()+1) {
+                        kmerOcc[color]++;
+                        copyNumber.at(rcmer) = kmerOcc;
+                        // found in new genome
+                    } else {
+                        kmerOcc.push_back(1);
+                        copyNumber.at(rcmer) = kmerOcc;
+                    }
+                }
             }
         } else {
             kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
@@ -654,6 +681,10 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
     double min_value = numeric_limits<double>::min();    // current min. weight in the top list (>0)
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = !isAmino ? kmer_table.size() : kmer_tableAmino.size();
+
+    for(auto const& pair: copyNumber){
+        std::cout << "{" << pair.first << ": " << pair.second.at(0) << ", " << pair.second.at(1) << "}\n";
+    }
 
     if (!isAmino) {
         for (auto it = kmer_table.begin(); it != kmer_table.end(); ++it) {    // iterate over k-mer hash table

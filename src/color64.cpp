@@ -136,3 +136,15 @@ bool color64::is_weakly_compatible(uint64_t& c1, uint64_t& c2, uint64_t& c3) {
     return ((c1 & c2 & c3) == 0b0u || (c1 & n2 & n3) == 0b0u || (n1 & c2 & n3) == 0b0u || (n1 & n2 & c3) == 0b0u)
         && ((n1 & n2 & n3) == 0b0u || (n1 & c2 & c3) == 0b0u || (c1 & n2 & c3) == 0b0u || (c1 & c2 & n3) == 0b0u);
 }
+
+int color64::numberOnes(uint64_t &color) {
+    uint64_t bits = color;    // copy the original color
+    uint64_t ones = 0;    // counter for the number of ones
+
+    for (uint64_t i = 0; i < n; ++i) {
+        ones += bits & 0b1u;    // count the last bit
+        bits >>= 01u;    // shift to the next bit pos.
+    }
+    return ones;
+}
+

@@ -101,6 +101,13 @@ public:
      */
     static bool is_weakly_compatible(uint64_t& c1, uint64_t& c2, uint64_t& c3);
 
+    /**
+     * This function returns the number of ones
+     * @param color bit sequence
+     * @return number of ones
+     */
+    static int numberOnes(uint64_t& color);
+
 protected:
 
 };
