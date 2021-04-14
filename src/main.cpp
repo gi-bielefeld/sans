@@ -348,6 +348,7 @@ int main(int argc, char* argv[]) {
             if (is_first){
                 denom_names.push_back(file_name);
                 is_first = false;
+                name_table[file_name]=num; 
             }
 
             // check files
@@ -370,11 +371,6 @@ int main(int argc, char* argv[]) {
                 return 1;
             }
         }
-    }
-
-    // Set dynamic top
-    if (dyn_top){
-        top = top * num;
     }
 
 #ifdef useBF
@@ -406,6 +402,10 @@ int main(int argc, char* argv[]) {
         }
     }
 #endif
+    // Set dynamic top
+    if (dyn_top){
+        top = top * num;
+    }
 
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
     graph::init(top, amino); // initialize the toplist size and the allowed characters
