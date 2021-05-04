@@ -1,6 +1,5 @@
 #include "main.h"
-
-
+#include <regex>
 
 /**
  * This is the entry point of the program.
@@ -301,55 +300,76 @@ int main(int argc, char* argv[]) {
 
     // parse the list of input sequence files
     hash_map<string, uint64_t> name_table; // the name to color map
-    vector<string> denom_names; // Storing the representative name per color
-    vector<vector<string>> gen_files; // file_name container
+    vector<string> denom_names; // storing the representative name per color
+    vector<vector<string>> gen_files; // genome file collection
 
     if (!input.empty()) {
-        // check input file 
+        // check the input file 
         ifstream file(input);
         if (!file.good()) {
             cerr << "Error: could not read input file: " << input << endl;
             return 1;
         }
 
+
         // parse the list of input sequence files
-
         string line; // the iterated input line
-        string file_name; // the current file name 
-        size_t cut_at; // the index of the next cut
-        bool is_first; // indicating the first filename of a line
+        string file_name; // the current file name
+        bool is_first; // indicating the first filename of a line (For file list)
 
-        while (getline(file, line)) {
-            // extract all target files and update the name_table
+        getline(file, line);
+        // check the file format
+        std::smatch matches;
+        std::regex_search(line, matches, std::regex("(:)"));
+        bool is_kmt = !matches.empty();
+
+        // parse file of files
+        while(true){
             vector<string> target_files; // container of the current target files
-            is_first = true;
-            cut_at = line.find_first_of(" ");
-            while (cut_at != string::npos){
-                if (cut_at == 0){line = line.substr(1, line.length()); cut_at = line.find_first_of(" "); continue;} // If multiple spaces are used
-                line = line.substr(0, line.length());
-                file_name = line.substr(0, cut_at); // add the file and cut the line
-                target_files.push_back(file_name);
-                name_table[file_name] = num;
-                // Store a representative for this color
-                if (is_first){
-                    denom_names.push_back(file_name);
-                    is_first = false;
+            if (is_kmt){ // parse kmt format
+                // ensure the terminal signs " !" exists.
+                if (line.find_first_of('!') != line.npos){line = line.substr(0, line.find_first_of('!') + 1);} // cut off unused tail
+                else if (line.back() == ' '){line += '!';} // append terminal sign if missing
+                else {line += " !";} // append both terminal signs if missing
+
+                string denom = line.substr(0, line.find_first_of(" ")); // get the dataset-id
+                denom_names.push_back(denom); // add id to denominators
+                num ++;
+                line = line.substr(line.find_first_of(":") + 2, line.npos); // cut off the dataset-id
+
+                std::smatch matches; // Match files
+                while (std::regex_search(line, matches, std::regex("[ ; ]|[ !]"))){
+                    file_name = matches.prefix().str(); // get filename from match
+                    line=matches.suffix().str(); // update the line
+                    if (file_name.length() == 0){continue;} // skip empty file name
+                    else {target_files.push_back(file_name); name_table[file_name] = num;} // add the file name to target files and name table
+                    }
+            }
+
+            else{ // parse file list format
+                is_first = true;
+                string file_name = "";
+                size_t it = 0;
+                size_t line_length = line.length();
+                for (auto x: line){ // iterate the line
+                    it ++;
+                    if (x == ' ' | it == line_length){ // checkout the file name if a space occurs or the line ends
+                        if (it == line_length){file_name += x;} // add the last character to the last file name
+                        if (file_name.length() == 0){file_name = ""; continue;} // skip continuous spaces
+                        if (is_first){ // use first file name as denom name
+                            denom_names.push_back(file_name); // set denom name
+                            is_first = false;
+                            num ++;    
+                        }
+                        target_files.push_back(file_name); // add the file_name to the genome file vector
+                        name_table[file_name] = num; // add the file tp the name_table
+                        file_name = "";
+                    }
+                    else{file_name += x;}
                 }
-
-                line = line.substr(cut_at + 1, line.length());
-                cut_at = line.find_first_of(" ");
             }
 
-            // add the last entry of the  line
-            file_name = line; // add the file and cut the line
-            target_files.push_back(file_name);
-
-            // Store a representative for this color if not already added
-            if (is_first){
-                denom_names.push_back(file_name);
-                is_first = false;
-                name_table[file_name]=num; 
-            }
+            if (num > maxN) {cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl; return 1;} // check if the number of genomes exceeded maxN
 
             // check files
             for(string file_name: target_files){
@@ -363,13 +383,8 @@ int main(int argc, char* argv[]) {
                     file_stream.close();
                 }
             }
-
-            gen_files.push_back(target_files); // store files for this target
-            num++;
-            if (num > maxN) {
-                cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
-                return 1;
-            }
+            gen_files.push_back(target_files); // add the files of the current genome to the genome collection
+            if (!getline(file, line)) {break;}
         }
     }
 

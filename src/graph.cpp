@@ -682,8 +682,6 @@ void graph::iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>
     }
 }
 
-
-
 /**
  * This function iterates over the hash table and calculates the split weights.
  *
@@ -694,22 +692,15 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
     double min_value = numeric_limits<double>::min();    // current min. weight in the top list (>0)
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = !isAmino ? kmer_table.size() : kmer_tableAmino.size();
+
     if (!isAmino) {
         for (auto it = kmer_table.begin(); it != kmer_table.end(); ++it) {    // iterate over k-mer hash table
-
             if (verbose) {
                 next = 100*cur/max;
                 if (prog < next)  cout << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
                 prog = next; cur++;
             }
 
-            /*
-            kmer_t kmer = it.key();
-            vector<int> occurrences = copyNumber.at(kmer); // get the occurrences of the current k-mer
-            auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get the minimum of occurrences
-            int position = std::distance(occurrences.begin(), minOcc);
-            int abzuziehenderWert = occurrences[position];
-             */
             color_t& color = it.value();    // get the color set for each k-mer
             bool pos = color::complement(color, true);    // invert the color set, if necessary
             if (color == 0) continue;    // ignore empty splits
@@ -728,18 +719,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
             weight[pos]++;    // update the weight or the inverse weight of the current color set
 
             double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
-            /*
-            new_value *= abzuziehenderWert;
-            for (std::size_t i = 0; i < occurrences.size(); ++i){
-                occurrences[i] -= abzuziehenderWert;
-                if(kmer == 230481){
-                    cout << "Vorkommen ändern an der Stelle: " << i << " " << occurrences[i] << endl;
-                }
-            }
-            copyNumber.at(kmer) = occurrences;
-             //TODO Vorkommen aus Vektor abziehen
-            */
-
             if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
                 split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
                 if (split_list.size() > t) {
@@ -787,8 +766,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
 
 
 }
-
-
 
 /**
  * This function adds a single split (weight and colors) to the output list.

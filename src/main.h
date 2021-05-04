@@ -9,7 +9,7 @@
 
 #ifdef useBF
     #ifndef MAX_KMER_SIZE
-        #define MAX_KMER_SIZE maxK+1
+        #define MAX_KMER_SIZE (((maxK-1)/32) + 1) * 32
     #endif
     #include <bifrost/CompactedDBG.hpp>
     #include <bifrost/ColoredCDBG.hpp>
@@ -19,7 +19,7 @@ using namespace std;
 
 // Symmetric Alignment-free phylogeNomic Splits
 // simple efficient re-implementation + filters
-#define SANS_VERSION "2.1_04A"    // SANS serif
+#define SANS_VERSION "2.1_04B"    // SANS serif
 
 /**
  * This is the entry point of the program.
