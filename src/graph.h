@@ -163,6 +163,14 @@ public:
     static void add_weights(double mean(uint32_t&, uint32_t&), bool& verbose);
 
     /**
+     * This function iterates over the hash table of Copy Numbers and calculates the split weights.
+     *
+     * @param mean weight function
+     * @param verbose print progress
+     */
+    static void add_weightsCopyNumber(double mean(uint32_t&, uint32_t&), bool& verbose);
+
+    /**
      * This function adds a single split (weight and colors) to the output list.
      *
      * @param weight split weight

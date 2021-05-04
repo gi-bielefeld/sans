@@ -517,10 +517,6 @@ int main(int argc, char* argv[]) {
                 } else {
                     iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
                             : graph::add_kmers(sequence, i, reverse);
-                    if(i < 1){
-                        std::cout << "Sequence: " << ", genFile: " << i << endl;
-                    }
-
                 }
                 sequence.clear();
 
