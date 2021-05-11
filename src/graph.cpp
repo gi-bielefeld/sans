@@ -6,6 +6,7 @@
 uint64_t graph::t;
 
 bool graph::isAmino;
+bool graph::considerOccurrences;
 
 /**
  * This is a hash table mapping k-mers to colors [O(1)].
@@ -68,9 +69,10 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
  *
  * @param t top list size
  */
-void graph::init(uint64_t& top_size, bool amino) {
+void graph::init(uint64_t& top_size, bool amino, bool counting) {
     t = top_size;
     isAmino = amino;
+    considerOccurrences = counting;
 
     if(!isAmino){
         graph::allowedChars.push_back('A');
@@ -144,37 +146,27 @@ next_kmer:
                 color::set(kmer_table[rcmer], color);
                 std::cout << rcmer << " : " << kmer_table[rcmer] << endl;
 
-                //test if the kmer is already in copyNumber
-                if(!copyNumber.contains(rcmer)){
-                    vector<int> kmerCount;
-                    kmerCount.push_back(1);
-                    copyNumber.insert({rcmer, kmerCount});
-                    if(rcmer == 230481){
-                        cout << "Ich bin hier drinnen." << endl;
-                    }
+                if(considerOccurrences) {
+                    //test if the k-mer is already in copyNumber
+                    if(!copyNumber.contains(rcmer)){
+                        vector<int> kmerCount;
+                        kmerCount.push_back(1);
+                        copyNumber.insert({rcmer, kmerCount});
 
-                    //when the k-mer was found before
-                } else {
-                    // found in the same genome
-                    //number of ones in the color = current position in copyNumber
-                    int posCopyNumber = color::numberOnes(kmer_table[rcmer]);
-
-                    vector<int> kmerOcc = copyNumber.at(rcmer);
-                    if(rcmer == 230481){
-                        cout << "Anzahl Einsen: " << posCopyNumber << " Größe Kmer: " << kmerOcc.size() << " Color: " << color << endl;
-                    }
-                    if(posCopyNumber == kmerOcc.size()) {
-                        kmerOcc[posCopyNumber]++;
-                        copyNumber.at(rcmer) = kmerOcc;
-                        if(rcmer == 230481){
-                            cout << "Im gleichen Genom: <anzahl: " << kmerOcc[posCopyNumber] << endl;
-                        }
-                        // found in new genome
+                        //when the k-mer was found before
                     } else {
-                        kmerOcc.push_back(1);
-                        copyNumber.at(rcmer) = kmerOcc;
-                        if(rcmer == 230481){
-                            std::cout << "kmer neues Genom: " << endl;
+                        // found in the same genome
+                        //number of ones in the color = current position in copyNumber
+                        int posCopyNumber = color::numberOnes(kmer_table[rcmer]);
+
+                        vector<int> kmerOcc = copyNumber.at(rcmer);
+                        if(posCopyNumber == kmerOcc.size()) {
+                            kmerOcc[posCopyNumber]++;
+                            copyNumber.at(rcmer) = kmerOcc;
+                            // found in new genome
+                        } else {
+                            kmerOcc.push_back(1);
+                            copyNumber.at(rcmer) = kmerOcc;
                         }
                     }
                 }
@@ -716,8 +708,25 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
                     }
                 }
             }
-            weight[pos]++;    // update the weight or the inverse weight of the current color set
 
+            if(considerOccurrences){
+                kmer_t kmer = it.key();
+                vector<int> occurrences = copyNumber.at(kmer); // get the occurrences of the current k-mer
+                auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get the minimum of occurrences
+                int position = std::distance(occurrences.begin(), minOcc);
+                int abzuziehenderWert = occurrences[position];
+
+                weight[pos] += abzuziehenderWert;
+                //weight[pos]++;
+
+
+                for (std::size_t i = 0; i < occurrences.size(); ++i){
+                    occurrences[i] -= abzuziehenderWert;
+                }
+                copyNumber.at(kmer) = occurrences;
+            } else {
+                weight[pos]++; // update the weight or the inverse weight of the current color set
+            }
             double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
             if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
                 split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight

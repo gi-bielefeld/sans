@@ -72,6 +72,7 @@ class graph {
 private:
 
     static bool isAmino;
+    static bool considerOccurrences;
 
     /**
      * This is a hash table mapping k-mers to colors [O(1)].
@@ -111,8 +112,9 @@ public:
      * This function initializes the top list size and the allowed chars.
      *
      * @param t top list size
+     * @param copyNumber count k-mer occurrences
      */
-    static void init(uint64_t& top_size, bool isAmino);
+    static void init(uint64_t& top_size, bool isAmino, bool copyNumber);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.

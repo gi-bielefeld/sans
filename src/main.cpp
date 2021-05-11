@@ -72,6 +72,8 @@ int main(int argc, char* argv[]) {
         cout << "    -a, --amino   \t Consider amino acids: --input provides amino acid sequences" << endl;
         cout << "                  \t Implies --norev and a default k of 10" << endl;
         cout << endl;
+        cout << "    -copy        \t Detect the copy number variations." << endl;
+        cout << endl;
         cout << "    -c, --code   \t Translate DNA: --input provides coding sequences" << endl;
         cout << "                 \t Implies --norev and a default k of 10" << endl;
         cout << "                 \t optional: ID of the genetic code to be used" << endl;
@@ -110,6 +112,7 @@ int main(int argc, char* argv[]) {
     bool amino = false;      // input files are amino acid sequences
     bool shouldTranslate = false;   // translate input files
     bool userKmer = false; // is k-mer default or custom
+    bool counting = false; // count occurrences of k-mers
     uint64_t code = 1;
 
     // parse the command line arguments and update the variables above
@@ -207,6 +210,9 @@ int main(int argc, char* argv[]) {
 
             }
             shouldTranslate = true;
+        }
+        else if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--count") == 0) {
+            counting = true;
         }
         else {
             cerr << "Error: unknown argument: " << argv[i] <<  "\t type --help" << endl;
@@ -423,7 +429,7 @@ int main(int argc, char* argv[]) {
     }
 
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
-    graph::init(top, amino); // initialize the toplist size and the allowed characters
+    graph::init(top, amino, counting); // initialize the toplist size and the allowed characters
     if (!splits.empty()) {
         ifstream file(splits);
         if (!file.good()) {

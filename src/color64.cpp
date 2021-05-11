@@ -137,6 +137,11 @@ bool color64::is_weakly_compatible(uint64_t& c1, uint64_t& c2, uint64_t& c3) {
         && ((n1 & n2 & n3) == 0b0u || (n1 & c2 & c3) == 0b0u || (c1 & n2 & c3) == 0b0u || (c1 & c2 & n3) == 0b0u);
 }
 
+/**
+ * This function returns the number of ones of the color.
+ * @param color bit sequence
+ * @return number of ones
+ */
 int color64::numberOnes(uint64_t &color) {
     uint64_t bits = color;    // copy the original color
     uint64_t ones = 0;    // counter for the number of ones
