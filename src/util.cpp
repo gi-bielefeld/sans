@@ -30,7 +30,7 @@ double util::geometric_mean(uint32_t& x, uint32_t& y) {
  * @return geometric mean
  */
 double util::geometric_mean2(uint32_t& x, uint32_t& y) {
-    return sqrt(x+1) * sqrt(y+1) - 1;
+    return sqrt(x+1) * sqrt(y+1);
 }
 
 /**
