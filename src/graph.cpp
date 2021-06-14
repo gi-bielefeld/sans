@@ -157,7 +157,7 @@ next_kmer:
                     } else {
                         // found in the same genome
                         //number of ones in the color = current position in copyNumber
-                        int posCopyNumber = color::numberOnes(kmer_table[rcmer]);
+                        int posCopyNumber = color::size(kmer_table[rcmer], false);
                         vector<int> kmerOcc = copyNumber.at(rcmer);
 
                         if(posCopyNumber == kmerOcc.size()) {
