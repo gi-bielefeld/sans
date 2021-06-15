@@ -126,7 +126,7 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    kmerAmino_t kmerAmino;    // create a new empty bit sequence for the k-mer
+    kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
 
     uint64_t begin = 0;
 next_kmer:
@@ -204,7 +204,7 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    kmerAmino_t kmerAmino;    // create a new empty bit sequence for the k-mer
+    kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
 
     uint64_t begin = 0;
 next_kmer:
@@ -338,7 +338,7 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse, uint64_t& max
         long double product;    // stores the overall multiplicity of the k-mers
 
         uint64_t pos;    // current position in the string, from 0 to length
-        kmerAmino_t kmer;    // create an empty bit sequence for the initial k-mer
+        kmerAmino_t kmer=0;    // create an empty bit sequence for the initial k-mer
 
         uint64_t begin = 0;
         next_kmerAmino:
@@ -462,7 +462,7 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
        long double product;    // stores the overall multiplicity of the k-mers
 
        uint64_t pos;    // current position in the string, from 0 to length
-       kmerAmino_t kmer;    // create an empty bit sequence for the initial k-mer
+       kmerAmino_t kmer=0;    // create an empty bit sequence for the initial k-mer
 
        uint64_t begin = 0;
        next_kmerAmino:

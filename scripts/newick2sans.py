@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 
 import dendropy
+import os
 import sys
+
+
+fileext=[".fa",".fas",".fastq",".mfasta",".fasta",".fsa",".fna"]
+
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -28,6 +33,9 @@ if len(sys.argv)>2:
     #read taxa
     taxa=set()
     for line in (s.strip() for s in open(sys.argv[2])):
+        # remove file extensions
+        if os.path.splitext(line)[1] in fileext:
+            line=os.path.splitext(line)[0]
         taxa.add(line)
         if line not in leaflables:
             eprint("taxa from list not in tree: "+line)

@@ -5,7 +5,7 @@ import sys
 import os
 import pygtrie
 
-fileext=[".fa",".fas",".fastq",".mfasta",".fasta"]
+fileext=[".fa",".fas",".fastq",".mfasta",".fasta",".fsa",".fna"]
 
 
 def eprint(*args, **kwargs):
@@ -30,7 +30,7 @@ def unify(split, taxa):
 
 def readtaxa(filename):
     taxa=set()
-    for line in (s.strip() for s in open(filename)):
+    for line in (s.strip().split()[0] for s in open(filename)):
         # remove file extensions
         if os.path.splitext(line)[1] in fileext:
             line=os.path.splitext(line)[0]

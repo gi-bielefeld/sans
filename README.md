@@ -7,7 +7,7 @@
 * Alignment-free
 * Assembled genomes or reads as input
 * Phylogenetic splits or tree as output
-* **NEW:** Coding sequences / amino acid sequences as input (see --code and -- amino)
+* **NEW:** Coding sequences / amino acid sequences as input (see --code and --amino)
 
 ### Publications
 
@@ -94,14 +94,14 @@ Usage: SANS [PARAMETERS]
 
     -m, --mean    	 Mean weight function to handle asymmetric splits
                   	 options: arith: arithmetic mean
-                  	          geom:  geometric mean (default)
-                  	          geom2: geometric mean with pseudo-counts
+                  	          geom:  geometric mean
+                  	          geom2: geometric mean with pseudo-counts (default)
 
     -f, --filter  	 Output (-o, -N) is a greedy maximum weight subset (see README)
                   	 options: strict: compatible to a tree
                   	          weakly: weakly compatible network
                   	          n-tree: compatible to a union of n trees
-                  	                  (where n is an arbitrary number)
+                  	                  (where n is an arbitrary number, e.g. 2-tree)
 
     -x, --iupac   	 Extended IUPAC alphabet, resolve ambiguous bases or amino acids
                   	 Specify a number to limit the k-mers per position between 

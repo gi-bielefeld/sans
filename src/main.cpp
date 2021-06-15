@@ -51,8 +51,8 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -m, --mean    \t Mean weight function to handle asymmetric splits" << endl;
         cout << "                  \t options: arith: arithmetic mean" << endl;
-        cout << "                  \t          geom:  geometric mean (default)" << endl;
-        cout << "                  \t          geom2: geometric mean with pseudo-counts" << endl;
+        cout << "                  \t          geom:  geometric mean" << endl;
+        cout << "                  \t          geom2: geometric mean with pseudo-counts (default)" << endl;
         cout << endl;
         cout << "    -f, --filter  \t Output a greedy maximum weight subset" << endl;
         // cout << "                  \t additional output: (weighted) cleanliness, i.e., ratio of" << endl;
@@ -60,7 +60,7 @@ int main(int argc, char* argv[]) {
         cout << "                  \t options: strict: compatible to a tree" << endl;
         cout << "                  \t          weakly: weakly compatible network" << endl;
         cout << "                  \t          n-tree: compatible to a union of n trees" << endl;
-        cout << "                  \t                  (where n is an arbitrary number)" << endl;
+        cout << "                  \t                  (where n is an arbitrary number, e.g. 2-tree)" << endl;
         cout << endl;
         cout << "    -x, --iupac   \t Extended IUPAC alphabet, resolve ambiguous bases or amino acids" << endl;
         cout << "                  \t Specify a number to limit the k-mers per position between" << endl;
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     uint64_t top = -1;    // number of splits
     bool dyn_top = false; // bind number of splits to num
 
-    auto mean = util::geometric_mean;    // weight function
+    auto mean = util::geometric_mean2;    // weight function
     string filter;    // filter function
     uint64_t iupac = 1;    // allow extended iupac characters
     bool reverse = true;    // consider reverse complement k-mers
@@ -179,7 +179,22 @@ int main(int argc, char* argv[]) {
             else if (filter == "weakly") {
                 // weakly compatible network
             }
+            else if (filter.find("-tree") != -1 && filter.substr(filter.find("-tree")) == "-tree") {
+                for (const char &c: filter.substr(0, filter.find("-tree"))){
+                    if (!isdigit(c)){
+                        cerr << "Error: unexpected argument: --filter " << filter << ". Please specify n (Example usage: --filter 2-tree)" << endl;
+                        return 1;
+                    }
+                }
+                stoi(filter.substr(0, filter.find("-tree")));
+            }
             else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
+                for (const char &c: filter.substr(0, filter.find("tree"))){
+                    if (!isdigit(c)){
+                        cerr << "Error: unexpected argument: --filter " << filter << ". Please specify n (Example usage: --filter 2-tree)" << endl;
+                        return 1;
+                    }
+                }
                 stoi(filter.substr(0, filter.find("tree")));
             }
             else {
@@ -322,6 +337,7 @@ int main(int argc, char* argv[]) {
         string line; // the iterated input line
         string file_name; // the current file name
         bool is_first; // indicating the first filename of a line (For file list)
+        bool has_files; // indicating if a line contains filenames
 
         getline(file, line);
         // check the file format
@@ -354,6 +370,7 @@ int main(int argc, char* argv[]) {
 
             else{ // parse file list format
                 is_first = true;
+                has_files = false;
                 string file_name = "";
                 size_t it = 0;
                 size_t line_length = line.length();
@@ -363,9 +380,9 @@ int main(int argc, char* argv[]) {
                         if (it == line_length){file_name += x;} // add the last character to the last file name
                         if (file_name.length() == 0){file_name = ""; continue;} // skip continuous spaces
                         if (is_first){ // use first file name as denom name
+                            has_files = true;
                             denom_names.push_back(file_name); // set denom name
                             is_first = false;
-                            num ++;    
                         }
                         target_files.push_back(file_name); // add the file_name to the genome file vector
                         name_table[file_name] = num; // add the file tp the name_table
@@ -373,6 +390,7 @@ int main(int argc, char* argv[]) {
                     }
                     else{file_name += x;}
                 }
+                if (has_files) {num++;}
             }
 
             if (num > maxN) {cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl; return 1;} // check if the number of genomes exceeded maxN
@@ -448,8 +466,6 @@ int main(int argc, char* argv[]) {
                 string name = line.substr(next, curr-next);
                 if (name_table.find(name) == name_table.end()) {
                     vector<string> file_vec;
-                    file_vec.push_back(name);
-                    gen_files.emplace_back(file_vec);
                     name_table[name] = num++;
                     denom_names.push_back(name);
                     if (num > maxN) {
