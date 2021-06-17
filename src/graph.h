@@ -4,6 +4,7 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <math.h>
 
 #include <map>
 #include <set>
@@ -207,6 +208,8 @@ public:
      * @param verbose print progress
      */
     static string filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, bool& verbose);
+
+    static void entropy(int n);
 
 protected:
 

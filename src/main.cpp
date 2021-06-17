@@ -110,11 +110,15 @@ int main(int argc, char* argv[]) {
     bool amino = false;      // input files are amino acid sequences
     bool shouldTranslate = false;   // translate input files
     bool userKmer = false; // is k-mer default or custom
+    bool ent = false; // only calculating entropy
     uint64_t code = 1;
 
     // parse the command line arguments and update the variables above
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
+        if(strcmp(argv[i], "-e") == 0){
+            ent = true;
+        }
+        else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
             input = argv[++i];    // Input file: list of sequence files, one per line
         }
         else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graph") == 0) {
@@ -560,6 +564,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    if(ent){
+        graph::entropy(denom_names.size());
+    }
+
+
 #ifdef useBF
     if (!graph.empty()) {
         if (verbose) {
@@ -589,96 +598,98 @@ int main(int argc, char* argv[]) {
         }
     }
 #endif
+    if(!ent){
 
-    // function to map color position to file name
-    std::function<string(const uint64_t&)> map=[=](uint64_t i) {
-        if (i < denom_names.size()) return denom_names[i];
-        #ifdef useBF
-        else return cdbg.getColorName(i-denom_names.size());
-        #endif
-        cerr << "Error: color bit does not correspond to color name" << endl;
-        exit(EXIT_FAILURE);
-    };
+        // function to map color position to file name
+        std::function<string(const uint64_t&)> map=[=](uint64_t i) {
+            if (i < denom_names.size()) return denom_names[i];
+#ifdef useBF
+            else return cdbg.getColorName(i-denom_names.size());
+#endif
+            cerr << "Error: color bit does not correspond to color name" << endl;
+            exit(EXIT_FAILURE);
+        };
 
-    if (verbose) {
-        cout << "Processing splits..." << flush;
-    }
-    graph::add_weights(mean, verbose);    // accumulate split weights
+        if (verbose) {
+            cout << "Processing splits..." << flush;
+        }
+        graph::add_weights(mean, verbose);    // accumulate split weights
 
-    if (verbose) {
-        cout << "\33[2K\r" << "Filtering splits..." << flush;
-    }
+        if (verbose) {
+            cout << "\33[2K\r" << "Filtering splits..." << flush;
+        }
 
-    //cleanliness cleanliness;
-    if (!filter.empty()) {    // apply filter
+        //cleanliness cleanliness;
+        if (!filter.empty()) {    // apply filter
+            for (auto& split : graph::split_list) {
+                //cleanliness.addWeightStateBefore(split.first, split.second);
+            }
+
+            if (filter == "strict" || filter == "tree") {
+                if (!newick.empty()) {
+                    ofstream file(newick);    // output file stream
+                    ostream stream(file.rdbuf());
+                    stream << graph::filter_strict(map, verbose);    // filter and output
+                    file.close();
+                } else {
+                    graph::filter_strict(verbose);
+                }
+            }
+            else if (filter == "weakly") {
+                graph::filter_weakly(verbose);
+            }
+            else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
+                if (!newick.empty()) {
+                    ofstream file(newick);    // output file stream
+                    ostream stream(file.rdbuf());
+                    auto ot = graph::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), map, verbose);
+                    stream <<  ot;
+                    file.close();
+                } else {
+                    graph::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), verbose);
+                }
+            }
+        }
+
+        if (verbose) {
+            cout << "\33[2K\r" << "Please wait..." << flush << endl;
+        }
+        ofstream file(output);    // output file stream
+        ostream stream(file.rdbuf());
+
+        uint64_t pos = 0;
+        //cleanliness.setFilteredCount(graph::split_list.size());
         for (auto& split : graph::split_list) {
-            //cleanliness.addWeightStateBefore(split.first, split.second);
-        }
-
-        if (filter == "strict" || filter == "tree") {
-            if (!newick.empty()) {
-                ofstream file(newick);    // output file stream
-                ostream stream(file.rdbuf());
-                stream << graph::filter_strict(map, verbose);    // filter and output
-                file.close();
-            } else {
-               graph::filter_strict(verbose);
-            }
-        }
-        else if (filter == "weakly") {
-           graph::filter_weakly(verbose);
-        }
-        else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
-            if (!newick.empty()) {
-                ofstream file(newick);    // output file stream
-                ostream stream(file.rdbuf());
-                auto ot = graph::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), map, verbose);
-                stream <<  ot;
-                file.close();
-            } else {
-               graph::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), verbose);
-            }
-        }
-    }
-
-    if (verbose) {
-        cout << "\33[2K\r" << "Please wait..." << flush << endl;
-    }
-    ofstream file(output);    // output file stream
-    ostream stream(file.rdbuf());
-
-    uint64_t pos = 0;
-    //cleanliness.setFilteredCount(graph::split_list.size());
-    for (auto& split : graph::split_list) {
-        double weight = split.first;
-       // cleanliness.setSmallestWeight(weight, split.second);
-        stream << weight;    // weight of the split
-        for (uint64_t i = 0; i < num; ++i) {
-            if (color::test(split.second, pos)) {
-                if (i < denom_names.size())
-                    stream << '\t' << denom_names[i];    // name of the file
-                #ifdef useBF
-                else
+            double weight = split.first;
+            // cleanliness.setSmallestWeight(weight, split.second);
+            stream << weight;    // weight of the split
+            for (uint64_t i = 0; i < num; ++i) {
+                if (color::test(split.second, pos)) {
+                    if (i < denom_names.size())
+                        stream << '\t' << denom_names[i];    // name of the file
+#ifdef useBF
+                    else
                     stream << '\t' << cdbg.getColorName(i-denom_names.size());
-                #endif
+#endif
+                }
+                split.second >>= 01u;
             }
-            split.second >>= 01u;
+            stream << endl;
         }
-        stream << endl;
-    }
 
-    //cleanliness.calculateWeightBeforeCounter();
+        //cleanliness.calculateWeightBeforeCounter();
 
-    file.close();
+        file.close();
 
-    chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();    // time measurement
+        chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();    // time measurement
 
-    if (verbose) {
-        if (!filter.empty()) {
-          // cleanliness.reportCleanliness();
+        if (verbose) {
+            if (!filter.empty()) {
+                // cleanliness.reportCleanliness();
+            }
+            cout << " Done!" << flush << endl;    // print progress and time
+            cout << " (" << util::format_time(end - begin) << ")" << endl;
         }
-        cout << " Done!" << flush << endl;    // print progress and time
-        cout << " (" << util::format_time(end - begin) << ")" << endl;
     }
     return 0;
 }

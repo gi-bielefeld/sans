@@ -1039,3 +1039,22 @@ string graph::print_tree(node* root, std::function<string(const uint64_t&)> map)
         return s;
     }
 }
+
+void graph::entropy(int n){
+    double ent = 0;
+    //cout << kmer_table.size() << endl;
+    /*for(auto test: kmer_table){
+        color_t col = test.second;
+        int freq = color64::size(col, false);
+        cout << "Frequency : "<< freq << endl;
+        ent = ent + freq * log2(freq * 1.0);
+    }*/
+    for(auto it = kmer_table.begin(); it != kmer_table.end(); ++it){
+        color_t col = it.value();
+        int freq = color64::size(col, false);
+        double rel = (freq *1.0)/n;
+        ent = ent + rel * log2(rel);
+    }
+
+    cout << "entropy = " << ent << endl;
+}
