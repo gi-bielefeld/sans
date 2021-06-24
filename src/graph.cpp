@@ -6,6 +6,7 @@
 uint64_t graph::t;
 
 bool graph::isAmino;
+bool graph::considerOccurrences;
 
 /**
  * This is a hash table mapping k-mers to colors [O(1)].
@@ -66,9 +67,10 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
  *
  * @param t top list size
  */
-void graph::init(uint64_t& top_size, bool amino) {
+void graph::init(uint64_t& top_size, bool amino, bool counting) {
     t = top_size;
     isAmino = amino;
+    considerOccurrences = counting;
 
     if(!isAmino){
         graph::allowedChars.push_back('A');
