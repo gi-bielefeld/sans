@@ -712,21 +712,19 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
                     }
                 }
             }
-
-            //TODO: color-set/pos für k-mer ändern & weight betrachten, bis abzuziehenderWert = 0
             if (considerOccurrences) {
                 kmer_t kmer = it.key();
                 vector<int> occurrences = copyNumber.at(kmer); // get the occurrences of the current k-mer
                 auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get the minimum of occurrences
-                int position, abzuziehenderWert;
+                int position, splitOccurrence;
                 position = std::distance(occurrences.begin(), minOcc);
-                abzuziehenderWert = occurrences[position];
-                //weight[pos] += abzuziehenderWert;
+                splitOccurrence = occurrences[position];
+                //weight[pos] +=  splitOccurrence;
 
-                //only consider splits where the k-mer occurrence is > 0, when abzuziehenderWert = 0 the k-mer is finished
-                while (abzuziehenderWert > 0) {
+                //only consider splits where the k-mer occurrence is > 0, when splitOccurrence = 0 the k-mer is finished
+                while (splitOccurrence > 0) {
 
-                    weight[pos] += abzuziehenderWert;
+                    weight[pos] += splitOccurrence;
                     double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
                     if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
                         split_list.emplace(new_value, newColor);    // insert it at the correct position ordered by weight
@@ -737,21 +735,22 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
                     }
                     //update the occurrence-vector
                     for (std::size_t i = 0; i < occurrences.size(); ++i) {
-                        if (occurrences[i] -= abzuziehenderWert == 0)  {
+                        if (occurrences[i] -= splitOccurrence == 0)  {
                             //update color-set, consider different split
                             color::erase(newColor, i);
                         }
-                        occurrences[i] -= abzuziehenderWert;
+                        occurrences[i] -= splitOccurrence;
                     }
                     copyNumber.at(kmer) = occurrences;
 
                     //update minValue from occurrences-vector
                     position = std::distance(occurrences.begin(), minOcc);
-                    abzuziehenderWert = occurrences[position];
+                    splitOccurrence = occurrences[position];
                     pos = color::complement(newColor, true);    // invert the color set, if necessary
                     if (newColor == 0) continue;    // ignore empty splits
                     array<uint32_t,2>& weight = color_table[newColor];    // get the weight and inverse weight for the color set
 
+                    /*
                     old_value = mean(weight[0], weight[1]);    // calculate the old mean value
                     if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
                         auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
@@ -761,7 +760,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
                                 break;
                             }
                         }
-                    }
+                    }*/
                 }
             } else {
                 weight[pos]++; // update the weight or the inverse weight of the current color set
@@ -799,6 +798,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
                 }
             }
             weight[pos]++;    // update the weight or the inverse weight of the current color set
+
 
             double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
             if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
