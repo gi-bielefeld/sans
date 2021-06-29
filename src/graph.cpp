@@ -1051,7 +1051,7 @@ void graph::entropy(int n){
     }*/
     for(auto it = kmer_table.begin(); it != kmer_table.end(); ++it){
         color_t col = it.value();
-        int freq = color64::size(col, false);
+        int freq = color::size(col, false);
         double rel = (freq *1.0)/n;
         ent = ent + rel * log2(rel);
     }
