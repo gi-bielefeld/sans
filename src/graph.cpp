@@ -1056,5 +1056,7 @@ void graph::entropy(int n){
         ent = ent + rel * log2(rel);
     }
 
+    ent = - ent;
+
     cout << "entropy = " << ent << endl;
 }
