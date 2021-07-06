@@ -1040,6 +1040,10 @@ string graph::print_tree(node* root, std::function<string(const uint64_t&)> map)
     }
 }
 
+/**
+ * This function calculates the k-mer entropy for the input genomes
+ * @param n the number of genomes in the input
+ */
 void graph::entropy(int n){
     double ent = 0;
     //cout << kmer_table.size() << endl;
@@ -1053,10 +1057,41 @@ void graph::entropy(int n){
         color_t col = it.value();
         int freq = color::size(col, false);
         double rel = (freq *1.0)/n;
-        ent = ent + rel * log2(rel);
+        ent = ent - rel * log2(rel);
     }
 
-    ent = - ent;
+    //ent = - ent;
 
     cout << "entropy = " << ent << endl;
+}
+
+/**
+ * This function calculates the Shannon diversity for the input genomes
+ * @param n the number of genomes in the input
+ */
+void graph::diversity(int n){
+
+    double div = 0.0;
+
+    int ok = kmer_table.size();
+
+    for(int i = 1; i <= n; i++){
+        int ci = 0;
+        for(auto it = kmer_table.begin(); it != kmer_table.end(); ++it){
+            color_t col = it.value();
+            int freq = color::size(col, false);
+            if(freq == i){
+                ci = ci+1;
+            }
+        }
+        //cout << ci << endl;
+        if(ci != 0){
+            double rel = (ci*1.0)/(ok*1.0);
+            div = div + rel * log2(rel);
+        }
+    }
+
+    div = -div;
+    cout << "shannon diversity: " << div << endl;
+
 }

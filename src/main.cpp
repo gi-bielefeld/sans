@@ -565,7 +565,7 @@ int main(int argc, char* argv[]) {
     }
 
     if(ent){
-        graph::entropy(denom_names.size());
+        graph::diversity(denom_names.size());
     }
 
 

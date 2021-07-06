@@ -209,7 +209,17 @@ public:
      */
     static string filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, bool& verbose);
 
+    /**
+     * This function calculates the k-mer entropy for the input genomes
+     * @param n the number of genomes in the input
+     */
     static void entropy(int n);
+
+    /**
+     * This function calculates the Shannon diversity for the input genomes
+     * @param n the number of genomes in the input
+     */
+    static void diversity(int n);
 
 protected:
 
