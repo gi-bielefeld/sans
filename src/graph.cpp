@@ -1077,11 +1077,22 @@ void graph::diversity(int n){
 
     for(int i = 1; i <= n; i++){
         int ci = 0;
-        for(auto it = kmer_table.begin(); it != kmer_table.end(); ++it){
-            color_t col = it.value();
-            int freq = color::size(col, false);
-            if(freq == i){
-                ci = ci+1;
+        if(isAmino){
+            for(auto it = kmer_tableAmino.begin(); it != kmer_tableAmino.end(); ++it){
+                color_t col = it.value();
+                int freq = color::size(col, false);
+                if(freq == i){
+                    ci = ci+1;
+                }
+            }
+        }
+        else{
+            for(auto it = kmer_table.begin(); it != kmer_table.end(); ++it){
+                color_t col = it.value();
+                int freq = color::size(col, false);
+                if(freq == i){
+                    ci = ci+1;
+                }
             }
         }
         //cout << ci << endl;
