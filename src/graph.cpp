@@ -715,6 +715,11 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
             if (considerOccurrences) {
                 kmer_t kmer = it.key();
                 vector<int> occurrences = copyNumber.at(kmer); // get the occurrences of the current k-mer
+                cout << " Kmer: " << kmer << " ";
+                for(auto i: occurrences){
+                    std::cout << i << ' ';
+                }
+                cout << " " << endl;
                 auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get the minimum of occurrences
                 int position, splitOccurrence;
                 position = std::distance(occurrences.begin(), minOcc);
