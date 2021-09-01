@@ -161,8 +161,10 @@ public:
      *
      * @param mean weight function
      * @param verbose print progress
+     * @param min_value the minimal weight currently represented in the top list
+     * @return The minimal weight currently represented in the top list
      */
-    static void add_weights(double mean(uint32_t&, uint32_t&), bool& verbose);
+    static void add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
 
     /**
      * This function iterates over the hash table of Copy Numbers and calculates the split weights.
@@ -179,6 +181,18 @@ public:
      * @param color split colors
      */
     static void add_split(double& weight, color_t& color);
+
+    /**
+     * This funtion adds a sigle split from a cdbg to the output list.
+     * 
+     * @param mean mean function
+     * @param kmer_seq kmer
+     * @param kmer_color split colors
+     * @param min_value the minimal weight currently represented in the top list
+     * @return The minimal weight currently represented in the top list
+     */
+     static double add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value); 
+     
 
     /**
      * This function filters a greedy maximum weight tree compatible subset.
