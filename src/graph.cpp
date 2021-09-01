@@ -686,14 +686,18 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
 
     // check table (Amino or base)
     uint64_t max; // table size
+    //int splitOccurrence = 1; //default occurrence of split
     if (isAmino){max=kmer_tableAmino.size();} // use amino table size
     else {max=kmer_table.size();} // use base table size
+
 
     if (max==0){
         return;
     }
     auto amino_it = kmer_tableAmino.begin(); // amino table iterator
     auto base_it = kmer_table.begin(); // base table iterator
+    kmer_t kmerC;
+    vector<int> occurrences;
 
     while (true) { // process splits
         // show progress
@@ -710,10 +714,11 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             }
         else { // if the base tables is used update the base iterator
             if (base_it == kmer_table.end()){break;} // stop itearating if done
-            else {color_ref = &base_it.value(); ++base_it;} // iterate the base table
+            else {color_ref = &base_it.value(); kmerC = base_it.key(); ++base_it;} // iterate the base table
             }
         // process
         color_t& color = *color_ref;
+        color_t& newColor = color;
         bool pos = color::complement(color, true);    // invert the color set, if necessary
         if (color == 0) continue;    // ignore empty splits
         array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
@@ -728,14 +733,49 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 }
             }
         }
-        weight[pos]++;    // update the weight or the inverse weight of the current color set
 
-        double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
-        if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
-            split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
-            if (split_list.size() > t) {
-                split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
-                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+        if (considerOccurrences) {
+            occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
+            // calculate occurrence of current split
+            auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get minimum
+            int position = std::distance(occurrences.begin(), minOcc);
+            int splitOccurrence = occurrences[position];
+
+            while (splitOccurrence > 0) {
+                weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
+                double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+                if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+                    split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
+                    if (split_list.size() > t) {
+                        split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+                        min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+                    }
+                }
+                // update the occurrences-vector
+                for (std::size_t i = 0; i < occurrences.size(); ++i) {
+                    if (occurrences[i] -= splitOccurrence == 0) {
+                        color::erase(newColor, i);
+                    }
+                    occurrences[i] -= splitOccurrence;
+                }
+                copyNumber.at(kmerC) = occurrences;
+                // update minValue from occurrences-vector
+                position = std::distance(occurrences.begin(), minOcc);
+                splitOccurrence = occurrences[position];
+                pos = color::complement(newColor, true);
+                if (newColor == 0) continue;
+                array<uint32_t ,2>& weight = color_table[newColor];
+            }
+        } else {
+            weight[pos]++;    // update the weight or the inverse weight of the current color set
+
+            double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+            if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+                split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
+                if (split_list.size() > t) {
+                    split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+                    min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+                }
             }
         }
     }
