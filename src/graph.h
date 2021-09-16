@@ -133,6 +133,16 @@ public:
     static void add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m);
 
     /**
+     * This function extracts syncmers from a sequence and adds them to the hash table.
+     *
+     * @param str dna sequence
+     * @param color color flag
+     * @param reverse merge complements
+     * @param s syncmer length
+     */
+    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s);
+
+	/**
      * This function extracts k-mers from a sequence and adds them to the hash table.
      *
      * @param str dna sequence
@@ -154,6 +164,17 @@ public:
     static void add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
 
     /**
+     * This function extracts syncmers from a sequence and adds them to the hash table.
+     *
+     * @param str dna sequence
+     * @param color color flag
+     * @param reverse merge complements
+     * @param w syncmer length
+     * @param max_iupac allowed number of ambiguous k-mers per position
+     */
+    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& max_iupac);
+
+	/**
      * This function iterates over the hash table and calculates the split weights.
      *
      * @param mean weight function

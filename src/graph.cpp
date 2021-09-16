@@ -227,6 +227,140 @@ next_kmer:
 
     }
 }
+
+
+
+/**
+ * This function extracts syncmers from a sequence and adds them to the hash table.
+ *
+ * @param str dna sequence
+ * @param color color flag
+ * @param reverse merge complements
+ * @param s syncmer length
+ */
+void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s) {
+	if (isAmino) {
+		cerr << "syncmers not implemented for amino acids yet." << endl;
+		exit(1);
+	}
+
+	// s-mers
+	uint64_t s_mask=kmer32::generateMask(s);
+	
+	vector<kmer_t> sequence_order;    // s-mers ordered by their position in sequence
+    multiset<kmer_t> value_order;    // s-mers ordered by their lexicographical value
+	multiset<kmer_t> value_order_rc;    // reverse-complement s-mers ordered by their lexicographical value
+
+
+    uint64_t pos;    // current position in the string, from 0 to length
+    kmer_t kmer;    // create a new empty bit sequence for the k-mer
+    kmer_t rcmer;    // create a bit sequence for the reverse complement
+	kmer_t smer;
+	kmer_t rcsmer;
+
+
+    uint64_t begin = 0;
+next_kmer:
+    pos = begin;
+    sequence_order.clear();
+    value_order.clear();
+    value_order_rc.clear();
+
+    for (; pos < str.length(); ++pos) {    // collect the bases from the string
+        if (!isAllowedChar(pos, str)) {
+            begin = pos+1;    // str = str.substr(pos+1, string::npos);
+            goto next_kmer;    // unknown base, start a new k-mer from the beginning
+        }
+        if (!isAmino) {
+            kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
+            kmer::shift_right(smer, str[pos],s,s_mask);    // shift each base into the bit sequence of the first s-mer
+            if (pos+1 - begin >= s) {
+// 				cerr << "s-mer: " << smer << endl;
+                value_order.emplace(smer);    // insert s-mer ordered by its lexicographical value
+                sequence_order.emplace_back(smer);
+// 				cerr << "sequence_order: ";
+// 				for (vector<kmer_t>::const_iterator i(sequence_order.begin()), end(sequence_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+// 				cerr << "value_order: ";
+// 				for (std::multiset<kmer_t>::const_iterator i(value_order.begin()), end(value_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+				if (reverse){
+					rcsmer = smer;
+					kmer::reverse_complement(rcsmer, false,s);    // invert the s-mer (in any case)
+					value_order_rc.emplace(rcsmer);    // insert s-mer ordered by its lexicographical value
+// 					cerr << "value_order_rc: ";
+// 					for (std::multiset<kmer_t>::const_iterator i(value_order_rc.begin()), end(value_order_rc.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+				}
+			}
+            if (pos+1 - begin >= kmer::k) {
+				//remove s-mer that "leaves" the k-mer
+				if (pos+1 - begin > kmer::k) {
+// 					cerr << "erase: " << *sequence_order.begin() << endl;
+					value_order.erase(*sequence_order.begin());
+// 					cerr << "value_order: ";
+// 					for (std::multiset<kmer_t>::const_iterator i(value_order.begin()), end(value_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+					if (reverse){
+						kmer_t rc = *sequence_order.begin();
+						kmer::reverse_complement(rc, false,s);    // invert the s-mer (in any case)
+						value_order_rc.erase(rc);    // remove s-mer from ordered list
+// 						cerr << "value_order_rc: ";
+// 						for (std::multiset<kmer_t>::const_iterator i(value_order_rc.begin()), end(value_order_rc.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+					}
+					sequence_order.erase(sequence_order.begin());
+// 					cerr << "sequence_order: ";
+// 					for (vector<kmer_t>::const_iterator i(sequence_order.begin()), end(sequence_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
+				}
+				
+			
+				rcmer = kmer;
+				bool rev=false;
+                if (reverse)  rev=kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+
+// 				if (reverse) {
+// 					cerr << "reverse case: " << rev << endl;
+// 					cerr << "current min rc s-mer:   " << *value_order_rc.begin()  << endl;
+// 					cerr << "current last rc s-mer:   " << rcsmer  << endl;
+// 				}
+// 				cerr << "current min s-mer:   " << *value_order.begin()  << endl;
+// 				cerr << "current first s-mer: " << *sequence_order.begin() << endl;
+
+				
+				
+				
+				// is the current k-mer a syncmer, i.e., is its first s-mer a lexicographically smalles one?
+				bool is_syncmer;
+				if (!rev){
+					is_syncmer = *sequence_order.begin() == *value_order.begin();
+				} else {
+					is_syncmer = rcsmer == *value_order_rc.begin();
+				}
+				
+// 				cerr << pos << " is syncmer: " << is_syncmer << endl << endl;
+				
+				// store k-mer if it is a syncmer
+				if (is_syncmer){
+                    color::set(kmer_table[rcmer], color);    // update the k-mer with the current color
+                }
+            }
+        } else {
+//             kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
+// 
+//             if (pos+1 - begin >= kmerAmino::k) {
+//                 if (sequence_order.size() == m) {
+//                     value_order_Amino.erase(*sequence_order_Amino.begin());    // remove k-mer outside the window
+//                     sequence_order_Amino.erase(sequence_order_Amino.begin());
+//                 }
+//                 value_order_Amino.emplace(kmerAmino);    // insert k-mer ordered by its lexicographical value
+//                 sequence_order_Amino.emplace_back(kmerAmino);
+// 
+//                 if (sequence_order_Amino.size() == m) {
+// 
+//                     color::set(kmer_tableAmino[*value_order_Amino.begin()], color);    // update the k-mer with the current color
+//                 }
+//             }
+        }
+
+    }
+}
+
 /**
  * This function checks if the character at the given position is allowed.
  * @param pos position in str
@@ -479,6 +613,20 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
            }
        }
    }
+}
+
+/**
+ * This function extracts syncmers from a sequence and adds them to the hash table.
+ *
+ * @param str dna sequence
+ * @param color color flag
+ * @param reverse merge complements
+ * @param s syncmer length
+ * @param max_iupac allowed number of ambiguous k-mers per position
+ */
+void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& a, uint64_t& max_iupac) {
+	cerr << "Combination of syncmers and IUPAC not implemented yet." << endl;
+	exit(1);
 }
 
 /**
