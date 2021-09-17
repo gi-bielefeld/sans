@@ -237,8 +237,9 @@ next_kmer:
  * @param color color flag
  * @param reverse merge complements
  * @param s syncmer length
+ * @param t syncmer offset
  */
-void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s) {
+void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& t) {
 	if (isAmino) {
 		cerr << "syncmers not implemented for amino acids yet." << endl;
 		exit(1);
@@ -327,10 +328,28 @@ next_kmer:
 				
 				// is the current k-mer a syncmer, i.e., is its first s-mer a lexicographically smalles one?
 				bool is_syncmer;
-				if (!rev){
-					is_syncmer = *sequence_order.begin() == *value_order.begin();
+				if (t==1) {
+					if (!rev){
+						is_syncmer = *sequence_order.begin() == *value_order.begin();
+					} else {
+						is_syncmer = rcsmer == *value_order_rc.begin();
+					}
 				} else {
-					is_syncmer = rcsmer == *value_order_rc.begin();
+					is_syncmer=true;
+					int i=0;
+					if (!rev){
+						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+							i++;
+							is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
+						}
+					} else {
+						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+							i++;
+							kmer_t rc = *it;
+							kmer::reverse_complement(rc, false,s);
+							is_syncmer &= i<t?(rc!=*value_order_rc.begin()):(rc==*value_order_rc.begin());
+						}
+					}
 				}
 				
 // 				cerr << pos << " is syncmer: " << is_syncmer << endl << endl;
@@ -622,9 +641,10 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
  * @param color color flag
  * @param reverse merge complements
  * @param s syncmer length
+ * @param t syncmer offset
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& a, uint64_t& max_iupac) {
+void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& t, uint64_t& max_iupac) {
 	cerr << "Combination of syncmers and IUPAC not implemented yet." << endl;
 	exit(1);
 }

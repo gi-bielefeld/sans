@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 //        cout << endl;
         cout << "    -S, --syncmer \t Only consider open syncmers, i.e., k-mers whose first s-mer is a" << endl;
         cout << "                  \t lexikographically smallest among all s-mers within the k-mer." << endl;
-        cout << "                  \t Specify s-mer length (default = 8)" << endl;
+        cout << "                  \t s t: specify s-mer length (default = k/2) and offset t (default 1)." << endl;
         cout << endl;
         cout << "    -t, --top     \t Number of splits in the output list (default: all)." << endl;
         cout << "                  \t Use -t <integer>n to limit relative to number of input files, or" << endl;
@@ -105,6 +105,7 @@ int main(int argc, char* argv[]) {
     uint64_t kmer = 31;    // length of k-mers
     uint64_t window = 1;    // number of k-mers
     uint64_t syncmerlength = 0;    // length of syncmers
+    uint64_t syncmeroffset = 1;    // offset parameter for syncmers
     uint64_t num = 0;    // number of input files
     uint64_t top = -1;    // number of splits
     bool dyn_top = false; // bind number of splits to num
@@ -156,9 +157,21 @@ int main(int argc, char* argv[]) {
 				exit(1);
 			}
             cerr << "Warning: using experimental feature --syncmer" << endl;
-			syncmerlength = 8; // length of syncmers (default: 8)
+			syncmerlength = kmer/2; // length of syncmers (default: k/2)
 			if (i+1 < argc && argv[i+1][0] != '-'){
-				syncmerlength = stoi(argv[++i]);    // specified length of syncmers
+					syncmerlength = stoi(argv[++i]);    // specified length of syncmers
+					// t specified as well?
+					if (i+1 < argc && argv[i+1][0] != '-'){
+						syncmeroffset = stoi(argv[++i]);
+					}
+			}
+			if (syncmerlength>kmer) {
+				cerr << "S cannot be larger than k!" << endl;
+				exit(1);
+			}
+			if (syncmeroffset>kmer-syncmerlength+1) {
+				cerr << "Syncmer offset cannot be larger than k-s+1!" << endl;
+				exit(1);
 			}
         }
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0) {
@@ -540,8 +553,8 @@ int main(int argc, char* argv[]) {
                                 iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
                                         : graph::add_minimizers(sequence, i, reverse, window);
                             } else if (syncmerlength > 0) {
-                                iupac > 1 ? graph::add_syncmers(sequence, i, reverse, syncmerlength, iupac)
-                                        : graph::add_syncmers(sequence, i, reverse, syncmerlength);
+                                iupac > 1 ? graph::add_syncmers(sequence, i, reverse, syncmerlength, syncmeroffset, iupac)
+                                        : graph::add_syncmers(sequence, i, reverse, syncmerlength, syncmeroffset);
                             } else {
                                 iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
                                         : graph::add_kmers(sequence, i, reverse);
@@ -583,8 +596,8 @@ int main(int argc, char* argv[]) {
                     iupac > 1 ? graph::add_minimizers(sequence, i, reverse, window, iupac)
                             : graph::add_minimizers(sequence, i, reverse, window);
                 } else if (syncmerlength > 0) {
-                    iupac > 1 ? graph::add_syncmers(sequence, i, reverse, syncmerlength, iupac)
-                            : graph::add_syncmers(sequence, i, reverse, syncmerlength);
+                    iupac > 1 ? graph::add_syncmers(sequence, i, reverse, syncmerlength, syncmeroffset, iupac)
+                            : graph::add_syncmers(sequence, i, reverse, syncmerlength, syncmeroffset);
 				} else {
                     iupac > 1 ? graph::add_kmers(sequence, i, reverse, iupac)
                             : graph::add_kmers(sequence, i, reverse);

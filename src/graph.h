@@ -139,8 +139,9 @@ public:
      * @param color color flag
      * @param reverse merge complements
      * @param s syncmer length
+	 * @param t syncmer offset
      */
-    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s);
+    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& t);
 
 	/**
      * This function extracts k-mers from a sequence and adds them to the hash table.
@@ -169,10 +170,11 @@ public:
      * @param str dna sequence
      * @param color color flag
      * @param reverse merge complements
-     * @param w syncmer length
+     * @param s syncmer length
+	 * @param t syncmer offset
      * @param max_iupac allowed number of ambiguous k-mers per position
      */
-    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& max_iupac);
+    static void add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& s, uint64_t& t, uint64_t& max_iupac);
 
 	/**
      * This function iterates over the hash table and calculates the split weights.
