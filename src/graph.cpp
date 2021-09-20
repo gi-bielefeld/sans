@@ -276,6 +276,7 @@ next_kmer:
             kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
             kmer::shift_right(smer, str[pos],s,s_mask);    // shift each base into the bit sequence of the first s-mer
             if (pos+1 - begin >= s) {
+// 				cerr << "k-mer: " << kmer << endl;
 // 				cerr << "s-mer: " << smer << endl;
                 value_order.emplace(smer);    // insert s-mer ordered by its lexicographical value
                 sequence_order.emplace_back(smer);
@@ -338,7 +339,7 @@ next_kmer:
 					is_syncmer=true;
 					int i=0;
 					if (!rev){
-						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<t; ++it){
 							i++;
 							is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
 						}
@@ -352,7 +353,7 @@ next_kmer:
 					}
 				}
 				
-// 				cerr << pos << " is syncmer: " << is_syncmer << endl << endl;
+//  				cerr << pos << " is syncmer: " << is_syncmer << endl << endl;
 				
 				// store k-mer if it is a syncmer
 				if (is_syncmer){
