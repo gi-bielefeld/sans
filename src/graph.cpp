@@ -327,29 +327,22 @@ next_kmer:
 				
 				
 				
-				// is the current k-mer a syncmer, i.e., is its first s-mer a lexicographically smalles one?
-				bool is_syncmer;
-				if (t==1) {
-					if (!rev){
-						is_syncmer = *sequence_order.begin() == *value_order.begin();
-					} else {
-						is_syncmer = rcsmer == *value_order_rc.begin();
+				// is the current k-mer a syncmer, i.e., is its t-th s-mer the leftmost lexicographically smalles one?
+				bool is_syncmer=true;
+				int i=1;
+				if (!rev){
+					// Are there other occurrences of the smallest s-mer to left of the t-th s-mer?
+					// AND: ist the t-th s-mer a smallest?
+					for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+						is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
+						i++;
 					}
 				} else {
-					is_syncmer=true;
-					int i=0;
-					if (!rev){
-						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<t; ++it){
-							i++;
-							is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
-						}
-					} else {
-						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<t; ++it){
-							i++;
-							kmer_t rc = *it;
-							kmer::reverse_complement(rc, false,s);
-							is_syncmer &= i<t?(rc!=*value_order_rc.begin()):(rc==*value_order_rc.begin());
-						}
+					for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+						kmer_t rc = *it;
+						kmer::reverse_complement(rc, false,s);
+						is_syncmer &= i<t?(rc!=*value_order_rc.begin()):(rc==*value_order_rc.begin());
+						i++;
 					}
 				}
 				
