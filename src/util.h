@@ -3,10 +3,12 @@
 
 
 #include <iostream>
+#include <fstream>
 #include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <vector>
+#include <regex>
 
 using namespace std;
 
@@ -18,6 +20,16 @@ class util {
 private:
 
 public:
+
+    /**
+	* This function compares the number of input genomes (n) to the compile parameter DmaxN (maxN).
+	* Produces new makefile and exits (code 3) if they disagree (too much) and a re-compilation is necessary (n>maxN) or recommended (n much smaller maxN).
+	*
+	* @param n number of input genomes
+	* @return nothing
+	*/ 
+	static void check_n(uint64_t& n, string &path);
+
 
     /**
      * This function calculates the arithmetic mean of two values.

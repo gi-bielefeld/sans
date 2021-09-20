@@ -26,14 +26,13 @@ void kmerAminoXX::init(uint64_t& kmer_length) {
 /**
  * This function shifts a k-mer adding a new character to the left.
  * * http://www.cplusplus.com/forum/general/97378/
- * TODO debuggen!!!
  * @param kmer bit sequence
  * @param c left character
  * @return right character
  */
 char kmerAminoXX::shift_left(bitset<5 * maxK>& kmer, char& c) {
     uint64_t left = util::amino_char_to_bits(c);    // new leftmost character
-    uint64_t right = 5*kmer[4]+4*kmer[3]+3*kmer[2]+2*kmer[1]+1*kmer[0];    // old rightmost character
+    uint64_t right = 16*kmer[4]+8*kmer[3]+4*kmer[2]+2*kmer[1]+1*kmer[0];    // old rightmost character
 
     kmer >>= 05u;    // shift all current bits to the right by five positions
 
@@ -50,13 +49,12 @@ char kmerAminoXX::shift_left(bitset<5 * maxK>& kmer, char& c) {
 /**
  * This function shifts a k-mer adding a new character to the right.
  * http://www.cplusplus.com/forum/general/97378/
- * TODO debuggen!!!
  * @param kmer bit sequence
  * @param c right character
  * @return left character
  */
 char kmerAminoXX::shift_right(bitset<5 * maxK>& kmer, char& c) {
-    uint64_t left = 5*kmer[5*k-1]+4*kmer[5*k-2]+3*kmer[5*k-3]+2*kmer[5*k-4]+1*kmer[5*k-5];    // old leftmost character
+    uint64_t left = 16*kmer[5*k-1]+8*kmer[5*k-2]+4*kmer[5*k-3]+2*kmer[5*k-4]+1*kmer[5*k-5];    // old leftmost character
     uint64_t right = util::amino_char_to_bits(c);    // new rightmost character
 
     kmer <<= 05u;    // shift all current bits to the left by five positions

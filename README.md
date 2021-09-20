@@ -7,12 +7,11 @@
 * Alignment-free
 * Assembled genomes or reads as input
 * Phylogenetic splits or tree as output
-* **NEW:** Coding sequences / amino acid sequences as input (see --code and -- amino)
+* **NEW:** Coding sequences / amino acid sequences as input (see --code and --amino), implemented by Marco Sohn
 
 ### Publications
 
-Rempel, A. and Wittler, R.: [SANS serif: alignment-free, whole-genome based phylogenetic reconstruction](https://www.biorxiv.org/content/10.1101/2020.12.31.424643v1.full.pdf).
-bioRxiv. doi:10.1101/2020.12.31.424643 (2021).
+Rempel, A., Wittler, R.: [SANS serif: alignment-free, whole-genome based phylogenetic reconstruction](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab444/6300510). Bioinformatics. (2021).
 
 Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](https://pub.uni-bielefeld.de/download/2942421/2942423/s13015-020-00164-3.wittler.pdf).
 Algorithms for Molecular Biology. 15: 4 (2020).
@@ -25,6 +24,9 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 * [Requirements](#requirements)
 * [Compilation](#compilation)
 * [Usage](#usage)
+* [Details on filter option](#details-on-filter-option)
+* [Examples](#examples)
+* [Performance evaluation on predicted open reading frames](#performance-evaluation-on-predicted-open-reading-frames)
 * [Contact](#contact)
 * [License](#license)
 
@@ -51,7 +53,21 @@ You may want to make the binary (*SANS*) accessible via your *PATH* variable.
 
 Optional: If Bifrost should be used, change the SANS makefile accordingly (easy to see how). Please note the installation instructions regarding the default maximum *k*-mer size of Bifrost in its README. If during the compilation, the Bifrost library files are not found, make sure that the corresponding folder is found as include path by the C++ compiler. You may have to add `-I/usr/local/include` (with the corresponding folder) to the compiler flags in the makefile. We also recommend to have a look at the [FAQs of Bifrost](https://github.com/pmelsted/bifrost#faq).
 
-## Usage:
+In the *makefile*, two parameters are specified:
+
+* *-DmaxK*: Maximum k-mer length that can be chosen when running SANS.  Default: 32
+* *-DmaxN*: Maximum number of input files for SANS. Default: 64
+
+These values can simply be increased if necessary. To keep memory requirements small, do not choose these values unnecessarily large.
+
+**New:** Compile parameter *DmaxN* can be set automatically by using the *SANS-autoN.sh* (Unix) or *SANS-autoN.BAT* (Windows) scripts. The scripts can be used exactly as the main binary *SANS*. They run *SANS* with all provided parameters and add option *-M* to compare *DmaxN* and the actual number of input files.
+If SANS has been compiled with a value for *DmaxN* that is neither too small nor much too large, SANS is executed as usual.
+If *DmaxN* has been chosen too small or much too large, the scripts generate a new makefile (*makefile_auton*), re-compile *SANS* and re-run *SANS*.
+The comparison of *DmaxN* and the actual number of input files comes without extra computational cost.
+
+
+
+## Usage
 
 ```
 SANS
@@ -63,8 +79,9 @@ Usage: SANS [PARAMETERS]
 
   Input arguments:
 
-    -i, --input   	 Input file: list of sequence files, one per line
-                     (use space-separated filenames if multiple files correspond to the same genome, i.e. paired-end data)
+    -i, --input   	 Input file: file of files format
+                  	 Either: list of files, one genome per line (space-separated for multifile genomes)
+                  	 Or: kmtricks input format (see https://github.com/tlemane/kmtricks)
 
     -g, --graph   	 Graph file: load a Bifrost graph, file name prefix
                   	 (requires compiler flag -DuseBF, please edit makefile)
@@ -93,14 +110,14 @@ Usage: SANS [PARAMETERS]
 
     -m, --mean    	 Mean weight function to handle asymmetric splits
                   	 options: arith: arithmetic mean
-                  	          geom:  geometric mean (default)
-                  	          geom2: geometric mean with pseudo-counts
+                  	          geom:  geometric mean
+                  	          geom2: geometric mean with pseudo-counts (default)
 
     -f, --filter  	 Output (-o, -N) is a greedy maximum weight subset (see README)
                   	 options: strict: compatible to a tree
                   	          weakly: weakly compatible network
                   	          n-tree: compatible to a union of n trees
-                  	                  (where n is an arbitrary number)
+                  	                  (where n is an arbitrary number, e.g. 2-tree)
 
     -x, --iupac   	 Extended IUPAC alphabet, resolve ambiguous bases or amino acids
                   	 Specify a number to limit the k-mers per position between 
@@ -119,6 +136,9 @@ Usage: SANS [PARAMETERS]
                   	 Use 11 for Bacterial, Archaeal, and Plant Plastid Code
                   	 (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)
 
+    -M, --maxN    	 Compare number of input genomes to compile paramter DmaxN
+                  	 Add path/to/makefile (default is makefile in current working directory).
+
     -v, --verbose 	 Print information messages during execution
 
     -h, --help    	 Display this help page and quit
@@ -136,13 +156,6 @@ The sorted list of splits is greedily filtered, i.e., splits are iterated from s
 <!--**Cleanliness:** The filtered set of splits is compared to the originally given (`--splits`) or computed (`--input`, `--graph`) set of splits to obtain a measure of how many incompatible splits have been filtered out. Consider a list of splits *S* that has been filtered to the sublist *F*, both sorted in descending order. To make the measure robust against low weighting splits and the choice of paramter `--top`, we truncate *S* to "just contain F": let *S'* be the shortest prefix of *S* that contains *F*. Then the **cleanliness** is the ratio of the length of *F* to the length of *S'*. The **weighted cleanliness** is the ratio of the corresponding sum of weights of splits in *F* and *S'*, resp. 
 -->
 
-## Contact
-
-For any question, feedback, or problem, please feel free to file an issue on this Git repository or write an email and we will get back to you as soon as possible.
-
-[sans-service@cebitec.uni-bielefeld.de](mailto:sans-service@cebitec.uni-bielefeld.de)
-
-SANS is provided as a service of the [German Network for Bioinformatics Infrastructure (de.NBI)](https://www.denbi.de/). We would appriciate if you would participate in the evaluation of SANS by completing this [very short survey](https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans).
 
 ## Examples
 
@@ -200,6 +213,65 @@ SANS is provided as a service of the [German Network for Bioinformatics Infrastr
    ../../scripts/comp.py sans.splits Reference_Fig4.splits fa/list.txt > fig4.comp
    ```
 
+## Performance evaluation on predicted open reading frames
+SANS-serif can predict phylogenies based on amino acid sequences as input. Processing coding sequences is faster than processing whole genome data. Experiments show that the reconstruction quality is comparable. 
+
+If you want to use selected marker genes, the number of genes should be as high as possible to provide sufficient sequence information for extracting phylogenetic signals.
+
+If the genomes at hand are not annotated, you can use a tool to predict open reading frames. The following experiment shows that the reconstruction quality does not suffer from such a simple pre-processing or even improves, while saving total running time, especially because genomes can easily be pre-processed in parallel. 
+
+The following tools have been used with the parameters shown in the table.
+
+| Tool | Parameters| Reference |
+|:--|:--|:--|
+| SANS | -k (see below) -m geom2 -t 10n -filter strict [-a (if preprocessed)]| |
+| Getorf (EMBOSS)| -find (see below) -t 11 | Gary Williams, 2000 |
+| ORFfinder | -n true -g 11 | NCBI |
+| Prodigal | -q | V2.6.3,Doug Hyatt, 2016 |
+
+For estimating the reconstruction accuracy, the (weighted) F1 score has been determined as follows.
+
+| Measure ||
+|--|--|
+|F1-score  | harmonic mean of precision and recall |
+|precision | (number of called splits that are also in reference) <br> / (total number of called splits) |
+|recall    | (number of reference splits that are also called) <br> / (total number of reference splits) |
+|weighted precision | (total weight of called splits that are also in reference) <br> / (total weight of all called splits) |
+|weighted recall | (total weight of reference splits that are also called) <br> / (total weight of all reference splits) |
+
+Further information on the datasets can be found in the initial publication of SANS (Wittler, 2019), see above.
+
+### *Salmonella enterica* Para C
+220 genomes, k=31
+
+| Preprocessing | Running time <br> pre-processing | Running time <br>SANS | Running time both <br>(parall. pre-proc.,<br> factor 16) | F1-Score <br> (weighted) |
+|:--|--:|--:|--:|--:|
+| none (whole genome) | -- | **610s** | -- | **0.878 <br> (0.999)** |
+| Getorf (-find 0) | 247s | 459s | 706s <br> (474s) | 0.881 <br> (0.999) |
+| Getorf (-find 1) | 199s | 339s | 538s <br> (351s) | 0.868 <br> (0.999) |
+| ORFfinder | 5195s | 166s | 5361s <br> (491s) | 0.858 <br> (0.997) |
+| Prodigal | 6292s | 134s | 6326s <br> (521s) |0.853 <br> (0.998)  |
+
+### *Salmonella enterica* subspecies enterica
+2964 genomes, k=21
+
+| Preprocessing | Running time <br> pre-processing | Running time <br>SANS | Running time both <br>(parall. pre-proc.,<br> factor 16) | F1-Score <br> (weighted) |
+|:--|--:|--:|--:|--:|
+| none (whole genome) | -- | **190min** | -- | **0.587 <br> (0.792)** |
+| Getorf (-find 0) | 55min | 220min | 274min <br> (223min) | 0.624 <br> (0.807) |
+| Getorf (-find 1) | 48min | 165min | 213min <br> (168min) | 0.620 <br> (0.799) |
+| ORFfinder | 1621min | 78min | 1698min <br> (179min) | 0.594 <br> (0.766) |
+| Prodigal | 1322min | 50min | 1372min <br> (133min) |0.587 <br> (0.792)  |
+
+## Contact
+
+For any question, feedback, or problem, please feel free to file an issue on this Git repository or write an email and we will get back to you as soon as possible.
+
+[sans-service@cebitec.uni-bielefeld.de](mailto:sans-service@cebitec.uni-bielefeld.de)
+
+SANS is provided as a service of the [German Network for Bioinformatics Infrastructure (de.NBI)](https://www.denbi.de/). We would appriciate if you would participate in the evaluation of SANS by completing this [very short survey](https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans).
+
+
 ## License
 
 * The sparse-map library is licensed under the [MIT license](https://github.com/Tessil/sparse-map/blob/master/LICENSE).
@@ -207,3 +279,6 @@ SANS is provided as a service of the [German Network for Bioinformatics Infrastr
 * SANS is licensed under the [GNU general public license](https://gitlab.ub.uni-bielefeld.de/gi/sans/blob/master/LICENSE).
 
 <img src="https://piwik.cebitec.uni-bielefeld.de/matomo.php?idsite=12&rec=1&action_name=VisitGitLab&url=https://gitlab.ub.uni-bielefeld.de/gi/sans" style="border:0;" alt="" />
+
+
+

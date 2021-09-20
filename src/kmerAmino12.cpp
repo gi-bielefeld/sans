@@ -32,7 +32,7 @@ void kmerAmino12::init(uint64_t& kmer_length) {
  */
 char kmerAmino12::shift_left(uint64_t& kmer, char& c) {
     uint64_t left = util::amino_char_to_bits(c);    // new leftmost character
-    uint64_t right = right = kmer & 0b11111u;    // old rightmost character
+    uint64_t right = kmer & 0b11111u;    // old rightmost character
 
     kmer >>= 05u;    // shift all current bits to the right by five positions
     kmer |= left << (5*k-05u);    // encode the new character within the leftmost five bits

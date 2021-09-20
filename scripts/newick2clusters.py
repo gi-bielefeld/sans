@@ -111,12 +111,13 @@ def proc_root_roughly(root,cluster):
 
 
 # USAGE
-if len(sys.argv)<3 or sys.argv[2] not in ["fine","rough"]:
-	eprint("Usage: newick2clusters.py <newick file> <mode> [<gold standard>]")
-	eprint(" mode: fine OR rough")
-	eprint(" gold standard: tab-separated file: taxon_name<tab>cluster_ID")
-	eprint(" output: tab separated file: taxon_name<tab>cluster_ID")
-	sys.exit(1)
+if len(sys.argv)<2 or (len(sys.argv)>3 and "-r" not in sys.argv):
+        eprint("Usage: newick2clusters.py <newick file> [-r] [<gold standard>]")
+        eprint(" -r: more rough clustering")
+        eprint(" gold standard: tab-separated file: taxon_name<tab>cluster_ID")
+        eprint("                (output statistics on stderr if given)")
+        eprint(" output: tab separated on stdout: taxon_name<tab>cluster_ID")
+        sys.exit(1)
 
 
 # read tree file
@@ -145,9 +146,9 @@ tree.reroot_at_node(root, update_bipartitions=True)
 
 # CLUSTERING
 
-if sys.argv[2]=="fine":
+if "-r" not in sys.argv:
 	#compute clusters recursively
-	clusters=proc_node(root,set(root.leaf_nodes()),0)
+        clusters=proc_node(root,set(root.leaf_nodes()),0)
 else: #rough
 	#split below root
 	clusters=proc_root_roughly(root,set(root.leaf_nodes()))
@@ -156,10 +157,14 @@ else: #rough
 print_clusters(clusters)
 
 # statistics
-if len(sys.argv)>3:
+if (len(sys.argv)==3 and sys.argv[2]!="-r") or len(sys.argv)>3:
 	#read file
 	gold_standard=dict()
-	for line in (s.strip() for s in open(sys.argv[3])):
+	if sys.argv[2]!="-r":
+		fn=sys.argv[2]
+	else:
+		fn=sys.argv[3]
+	for line in (s.strip() for s in open(fn)):
 		#split line
 		fields = line.split('\t')
 		taxon = fields[0]

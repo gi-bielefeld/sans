@@ -1,6 +1,5 @@
 #include "main.h"
-
-
+#include <regex>
 
 /**
  * This is the entry point of the program.
@@ -10,8 +9,15 @@
  * @return exit status
  */
 int main(int argc, char* argv[]) {
+    
 
-    // print a help message describing the program arguments
+    /**
+    * [Info]
+    * --- Help page ---
+    * - Print the help page to console
+    * - Describes the program arguments
+    */
+
     if (argc <= 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         cout << endl;
         cout << "SANS serif | version " << SANS_VERSION << endl;
@@ -19,7 +25,9 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "  Input arguments:" << endl;
         cout << endl;
-        cout << "    -i, --input   \t Input file: list of sequence files, one per line" << endl;
+        cout << "    -i, --input   \t Input file: file of files format" << endl;
+        cout << "                  \t Either: one genome per line (space-separated for multifile genomes)" << endl;
+        cout << "                  \t Or: kmtricks input format (see https://github.com/tlemane/kmtricks)" << endl;
         cout << endl;
         cout << "    -g, --graph   \t Graph file: load a Bifrost graph, file name prefix" << endl;
 #ifndef useBF
@@ -52,8 +60,8 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -m, --mean    \t Mean weight function to handle asymmetric splits" << endl;
         cout << "                  \t options: arith: arithmetic mean" << endl;
-        cout << "                  \t          geom:  geometric mean (default)" << endl;
-        cout << "                  \t          geom2: geometric mean with pseudo-counts" << endl;
+        cout << "                  \t          geom:  geometric mean" << endl;
+        cout << "                  \t          geom2: geometric mean with pseudo-counts (default)" << endl;
         cout << endl;
         cout << "    -f, --filter  \t Output a greedy maximum weight subset" << endl;
         // cout << "                  \t additional output: (weighted) cleanliness, i.e., ratio of" << endl;
@@ -61,7 +69,7 @@ int main(int argc, char* argv[]) {
         cout << "                  \t options: strict: compatible to a tree" << endl;
         cout << "                  \t          weakly: weakly compatible network" << endl;
         cout << "                  \t          n-tree: compatible to a union of n trees" << endl;
-        cout << "                  \t                  (where n is an arbitrary number)" << endl;
+        cout << "                  \t                  (where n is an arbitrary number, e.g. 2-tree)" << endl;
         cout << endl;
         cout << "    -x, --iupac   \t Extended IUPAC alphabet, resolve ambiguous bases or amino acids" << endl;
         cout << "                  \t Specify a number to limit the k-mers per position between" << endl;
@@ -80,6 +88,9 @@ int main(int argc, char* argv[]) {
         cout << "                 \t Use 11 for Bacterial, Archaeal, and Plant Plastid Code" << endl;
         cout << "                 \t (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)" << endl;
         cout << endl;
+        cout << "    -M, --maxN \t Compare number of input genomes to compile paramter DmaxN" << endl;
+        cout << "               \t Add path/to/makefile (default is makefile in current working directory)." << endl;
+        cout << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -h, --help    \t Display this help page and quit" << endl;
@@ -90,11 +101,18 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+
+    /**
+    * [Meta]
+    * --- Defaults ---
+    * - Initialise meta variables and set defaults
+    */
+
     string input;    // name of input file
     string graph;    // name of graph file
     string splits;    // name of splits file
     string output;    // name of output file
-    string newick;    // name of newick output file
+    string newick;    // name of newick output file // Todo
     string translate; // name of translate file
 
     uint64_t kmer = 31;    // length of k-mers
@@ -103,7 +121,7 @@ int main(int argc, char* argv[]) {
     uint64_t top = -1;    // number of splits
     bool dyn_top = false; // bind number of splits to num
 
-    auto mean = util::geometric_mean;    // weight function
+    auto mean = util::geometric_mean2;    // weight function
     string filter;    // filter function
     uint64_t iupac = 1;    // allow extended iupac characters
     bool reverse = true;    // consider reverse complement k-mers
@@ -111,9 +129,16 @@ int main(int argc, char* argv[]) {
     bool amino = false;      // input files are amino acid sequences
     bool shouldTranslate = false;   // translate input files
     bool userKmer = false; // is k-mer default or custom
+    bool check_n = false; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
+    string path = "./makefile"; // path to makefile
     uint64_t code = 1;
 
-    // parse the command line arguments and update the variables above
+
+    /**
+     * --- Argument parser ---
+     * - Parse the command line arguments and update the meta variables accordingly
+     */
+
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
             input = argv[++i];    // Input file: list of sequence files, one per line
@@ -177,7 +202,22 @@ int main(int argc, char* argv[]) {
             else if (filter == "weakly") {
                 // weakly compatible network
             }
+            else if (filter.find("-tree") != -1 && filter.substr(filter.find("-tree")) == "-tree") {
+                for (const char &c: filter.substr(0, filter.find("-tree"))){
+                    if (!isdigit(c)){
+                        cerr << "Error: unexpected argument: --filter " << filter << ". Please specify n (Example usage: --filter 2-tree)" << endl;
+                        return 1;
+                    }
+                }
+                stoi(filter.substr(0, filter.find("-tree")));
+            }
             else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
+                for (const char &c: filter.substr(0, filter.find("-tree"))){
+                    if (!isdigit(c)){
+                        cerr << "Error: unexpected argument: --filter " << filter << ". Please specify n (Example usage: --filter 2-tree)" << endl;
+                        return 1;
+                    }
+                }
                 stoi(filter.substr(0, filter.find("tree")));
             }
             else {
@@ -197,6 +237,12 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--amino") == 0) {
             amino = true;   // Input provides amino acid sequences
         }
+        else if (strcmp(argv[i], "-M") == 0 || strcmp(argv[i], "--maxN") == 0) {
+            check_n = true; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
+            if (i+1 < argc && argv[i+1][0] != '-'){
+				path = argv[++i]; // path to makefile
+			}
+		}
         else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
             if (i+1 < argc) {
                 string param = argv[++i];
@@ -215,7 +261,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // check for a new version of SANS at program start.
+    
+    /**
+     * --- Version check --- 
+     * - Request the current SANS version from gitlab and check if this version is up to date (Requires wget)
+     */
+
     if (verbose){cout << "Checking for updates" << endl;}
     bool version_checked = false;
     if (!system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/master/src/main.h | grep -q SANS_VERSION")){
@@ -228,6 +279,10 @@ int main(int argc, char* argv[]) {
     if (!version_checked && verbose) {cout << "Could not fetch version information" << endl;}
 
 
+    /**
+     * --- Restriction check ---
+     * - Check if the given argument configuration does violate any run restrictions
+     */ 
     if (!userKmer) {
         if (!amino) {
             kmer = 31;
@@ -244,7 +299,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: too many input arguments: --input, --graph, and --splits" << endl;
         return 1;
     }
-    if (!graph.empty() && !splits.empty()) {
+    if (!graph.empty() && !splits.empty()) { // ---- Why not?
         cerr << "Error: too many input arguments: --graph and --splits" << endl;
         return 1;
     }
@@ -292,6 +347,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    /**
+     * [Indexing]
+     * --- Indexing inputs ---
+     * - Collect all target file names and locations
+     * - Check if the given files exist
+     */ 
+
     // determine the folder the list is contained in
     string folder="";
 	uint64_t found=input.find_last_of("/\\");
@@ -301,90 +363,108 @@ int main(int argc, char* argv[]) {
 
     // parse the list of input sequence files
     hash_map<string, uint64_t> name_table; // the name to color map
-    vector<string> denom_names; // Storing the representative name per color
-    vector<vector<string>> gen_files; // file_name container
+    vector<string> denom_names; // storing the representative name per color
+    vector<vector<string>> gen_files; // genome file collection
 
     if (!input.empty()) {
-        // check input file 
+        // check the input file 
         ifstream file(input);
         if (!file.good()) {
             cerr << "Error: could not read input file: " << input << endl;
             return 1;
         }
 
+
         // parse the list of input sequence files
-
         string line; // the iterated input line
-        string file_name; // the current file name 
-        size_t cut_at; // the index of the next cut
-        bool is_first; // indicating the first filename of a line
+        string file_name; // the current file name
+        bool is_first; // indicating the first filename of a line (For file list)
+        bool has_files; // indicating if a line contains filenames
 
-        while (getline(file, line)) {
-            // extract all target files and update the name_table
+        getline(file, line);
+        // check the file format
+        std::smatch matches;
+        std::regex_search(line, matches, std::regex("(:)"));
+        bool is_kmt = !matches.empty();
+
+        // parse file of files
+        while(true){
             vector<string> target_files; // container of the current target files
-            is_first = true;
-            cut_at = line.find_first_of(" ");
-            while (cut_at != string::npos){
-                if (cut_at == 0){line = line.substr(1, line.length()); cut_at = line.find_first_of(" "); continue;} // If multiple spaces are used
-                line = line.substr(0, line.length());
-                file_name = line.substr(0, cut_at); // add the file and cut the line
-                target_files.push_back(file_name);
-                name_table[file_name] = num;
-                // Store a representative for this color
-                if (is_first){
-                    denom_names.push_back(file_name);
-                    is_first = false;
+            if (is_kmt){ // parse kmt format
+                // ensure the terminal signs " !" exists.
+                if (line.find_first_of('!') != line.npos){line = line.substr(0, line.find_first_of('!') + 1);} // cut off unused tail
+                else if (line.back() == ' '){line += '!';} // append terminal sign if missing
+                else {line += " !";} // append both terminal signs if missing
+
+                string denom = line.substr(0, line.find_first_of(" ")); // get the dataset-id
+                denom_names.push_back(denom); // add id to denominators
+                num ++;
+                line = line.substr(line.find_first_of(":") + 2, line.npos); // cut off the dataset-id
+
+                std::smatch matches; // Match files
+                while (std::regex_search(line, matches, std::regex("[ ; ]|[ !]"))){
+                    file_name = matches.prefix().str(); // get filename from match
+                    line=matches.suffix().str(); // update the line
+                    if (file_name.length() == 0){continue;} // skip empty file name
+                    else {target_files.push_back(file_name); name_table[file_name] = num;} // add the file name to target files and name table
+                    }
+            }
+
+            else{ // parse file list format
+                is_first = true;
+                has_files = false;
+                string file_name = "";
+                size_t it = 0;
+                size_t line_length = line.length();
+                for (auto x: line){ // iterate the line
+                    it ++;
+                    if (x == ' ' | it == line_length){ // checkout the file name if a space occurs or the line ends
+                        if (it == line_length){file_name += x;} // add the last character to the last file name
+                        if (file_name.length() == 0){file_name = ""; continue;} // skip continuous spaces
+                        if (is_first){ // use first file name as denom name
+                            has_files = true;
+                            denom_names.push_back(file_name); // set denom name
+                            is_first = false;
+                        }
+                        target_files.push_back(file_name); // add the file_name to the genome file vector
+                        name_table[file_name] = num; // add the file tp the name_table
+                        file_name = "";
+                    }
+                    else{file_name += x;}
                 }
-
-                line = line.substr(cut_at + 1, line.length());
-                cut_at = line.find_first_of(" ");
+                if (has_files) {num++;}
             }
 
-            // add the last entry of the  line
-            file_name = line; // add the file and cut the line
-            target_files.push_back(file_name);
-
-            // Store a representative for this color if not already added
-            if (is_first){
-                denom_names.push_back(file_name);
-                is_first = false;
-            }
 
             // check files
-            for(string file_name: target_files){
-                ifstream file_stream = ifstream(folder+file_name);
-                if (!file_stream.good()) { // catch unreadable file
-                    cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << folder+file_name << ">" << "\u001b[0m" << endl;
-                    file_stream.close();
-                    return 1;
-                }
-                else{
-                    file_stream.close();
-                }
-            }
-
-            gen_files.push_back(target_files); // store files for this target
-            num++;
-            if (num > maxN) {
-                cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
-                return 1;
-            }
+	    if (!splits.empty()){
+            	for(string file_name: target_files){
+                    ifstream file_stream = ifstream(folder+file_name);
+                    if (!file_stream.good()) { // catch unreadable file
+                        cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << folder+file_name << ">" << "\u001b[0m" << endl;
+                    	file_stream.close();
+                    	return 1;
+                    }
+                    else{ file_stream.close();}	
+            	}
+	    }
+            gen_files.push_back(target_files); // add the files of the current genome to the genome collection
+            if (!getline(file, line)) {break;}
         }
     }
+    int denom_file_count = denom_names.size(); 
 
-    // Set dynamic top
-    if (dyn_top){
-        top = top * num;
-    }
+
+    /**
+     * --- Indexing CDBG input --- 
+     * - Collect all target sequence names from the Bifrost CDBG
+     */ 
 
 #ifdef useBF
-    cout << "SANS: " << maxK << endl;
-    cout << "BF: " << MAX_KMER_SIZE << endl;
     // load an existing Bifrost graph
     ColoredCDBG<> cdbg(kmer);
     if (!graph.empty()) {
-        if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) {
-            num += cdbg.getNbColors();
+        if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) { // Allow parallel reading with new t parameter.
 
         } else {
             cerr << "Error: could not load Bifrost graph" << endl;
@@ -399,53 +479,101 @@ int main(int argc, char* argv[]) {
             }
             cerr << "Warning: setting k-mer length to " << kmer << endl;
         }
-        if (num > maxN) {
-            cerr << "Error: number of colors exceeds -DmaxN=" << maxN << endl;
-            return 1;
+
+        vector<string> cdbg_names = cdbg.getColorNames(); // color names of the cdbg compacted genomes.
+        for (auto it=0; it != cdbg_names.size(); ++it){ // iterate the cdbg names and transcribe them to the name table
+            if (name_table.find(cdbg_names[it]) == name_table.end()){
+                            name_table[cdbg_names[it]] = num++;
+                            denom_names.push_back(cdbg_names[it]);
+			    vector<string> dummy;	
+			    gen_files.push_back(dummy);
+	        }
+            else
+            {
+                cout << "Warning: " << cdbg_names[it] << " exists in input and graph. It is treated as one sequence" << endl;
+            }
         }
+
         if (verbose) {
             cout << endl;
-        }
+	}
     }
+
 #endif
+
+
+    /**
+     * --- Post indexing check ---
+     * - Update and check validity of input dependent meta variables
+     */ 
+
+    // check if the number of genomes is reasonably close the maximal storable color set
+    if (check_n) {
+       util::check_n(num,path);
+	}
+
+    // check if the number of gernomes exceeds the maximal storable color set
+    if (num > maxN) {
+        cerr << "Error: number of input genomes ("<<num<<") exceeds -DmaxN=" << maxN << endl;
+        return 1;
+    }
+
+    // Set dynamic top by filenum
+    if (dyn_top){
+        top = top * num;
+    }
+
+
+    /**
+     * [Input processing]
+     * - Transcribe each given input to the graph
+     */ 
 
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
     graph::init(top, amino); // initialize the toplist size and the allowed characters
+
+
+    /**
+     *  --- Split processing ---
+     *  - Transcibe all splits from the input split file
+     */
+
+    // iterate splits and add them to the toplist
     if (!splits.empty()) {
-        ifstream file(splits);
-        if (!file.good()) {
-            cerr << "Error: could not read splits file: " << splits << endl;
-            return 1;
-        }
-        string line;
-        while (getline(file, line)) {
-            uint64_t curr = line.find('\t');
-            double weight = stod(line.substr(0, curr));
-            uint64_t next = curr + 1;
-
-            color_t color = 0;
-            do {
-                curr = line.find('\t', next);
-                string name = line.substr(next, curr-next);
-                if (name_table.find(name) == name_table.end()) {
-                    vector<string> file_vec;
-                    file_vec.push_back(name);
-                    gen_files.emplace_back(file_vec);
-                    name_table[name] = num++;
-                    denom_names.push_back(name);
-                    if (num > maxN) {
-                        cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
-                        return 1;
-                    }
-                }
-                color::set(color, name_table[name]);
-                next = curr + 1;
-            } while (curr != string::npos);
-
-            graph::add_split(weight, color);
-        }
-        file.close();
+    ifstream file(splits);
+    if (!file.good()) { // check if the target splits file exists
+        cerr << "Error: could not read splits file: " << splits << endl;
+        return 1;
     }
+    string line;
+    while (getline(file, line)) { // Iterate each split
+        uint64_t curr = line.find('\t');
+        double weight = stod(line.substr(0, curr));
+        uint64_t next = curr + 1;
+
+        color_t color = 0;
+        do {
+            curr = line.find('\t', next);
+            string name = line.substr(next, curr-next);
+            if (name_table.find(name) == name_table.end()) { // check if the splits genome names are already indexed
+                vector<string> file_vec;
+                name_table[name] = num++;
+                denom_names.push_back(name);
+            }
+            color::set(color, name_table[name]);
+            next = curr + 1;
+        } while (curr != string::npos);
+
+        graph::add_split(weight, color); // add the split to the graph
+    }
+    file.close();
+    }
+
+    /**
+     * --- Sequence processing ---
+     * - Translate all given sequence k-mers
+     * - Transcribe all given sequence k-mers to the graph
+     */ 
     
     kmer::init(kmer);      // initialize the k-mer length
     kmerAmino::init(kmer); // initialize the k-mer length
@@ -464,7 +592,7 @@ int main(int argc, char* argv[]) {
             for (string file_name: target_files){
                 ifstream file(folder+file_name);    // input file stream
                 if (verbose) {
-                    cout << "\33[2K\r" << folder+file_name<< " (" << i+1 << "/" << denom_names.size() << ")" << endl;    // print progress
+                    cout << "\33[2K\r" << folder+file_name<< " (" << i+1 << "/" << denom_file_count << ")" << endl;    // print progress
                 }
                 count::deleteCount();
 
@@ -531,6 +659,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
+
+    /**
+     * --- Bifrost CDBG processing ---
+     * - Iterate all colored k-mers from a CDBG
+     * - Compute the splits created by the CDBG k-mers given the graphs colore k-mer collection
+     * (Has to be executed after sequence processing)
+     */ 
+
+double min_value = numeric_limits<double>::min(); // Current minimal weight represented in the top list
 #ifdef useBF
     if (!graph.empty()) {
         if (verbose) {
@@ -544,29 +681,42 @@ int main(int argc, char* argv[]) {
                 cout << "\33[2K\r" << "Processed " << cur << " unitigs (" << 100*cur/max << "%) " << flush;
             }   cur++;
 
-            auto sequence = unitig.mappedSequenceToString();
-            auto *colors = unitig.getData()->getUnitigColors(unitig);
+            auto num_kmers = unitig.size - kmer::k + 1; // the number of kmers in this unitig
+            auto uc_kmers = new UnitigColors[num_kmers]; // storage for unitig colored kmers
+            auto unitig_map = UnitigMapBase(0, 1, kmer::k, true);
+
+            auto sequence = unitig.mappedSequenceToString(); // the mapped unitig sequence
+            auto *colors = unitig.getData()->getUnitigColors(unitig); // the k-mer-position-per-color iterator of this unitig
             auto it = colors->begin(unitig);
             auto end = colors->end();
 
-            for (; it != end; ++it) {
-                auto seq = sequence.substr(it.getKmerPosition(), kmer);
-                auto col = denom_names.size() + it.getColorID();
-                graph::add_kmers(seq, col, reverse);
+            for (; it != end; ++it) { // iterate the unitig and collect the colors and corresponding k-mer starts
+                uc_kmers[it.getKmerPosition()].add(unitig_map, it.getColorID());
             }
-        }
-        if (verbose) {
-            cout << "\33[2K\r" << "Processed " << max << " unitigs (100%)" << endl;
+            
+            for (unsigned int i = 0; i != num_kmers; ++i){ // iterate the k-mers
+                string kmer_sequence = sequence.substr(i, kmer::k); // the k-mer sequence
+                color_t color = 0;
+                for (auto uc_it=uc_kmers[i].begin(unitig_map); uc_it != uc_kmers[i].end(); ++uc_it){
+                    color::set(color, name_table[cdbg.getColorName(uc_it.getColorID())]); // set the k-mer color
+		}
+                min_value = graph::add_cdbg_colored_kmer(mean, kmer_sequence, color, min_value);
+	   }
         }
     }
 #endif
 
+
+    /**
+     * [Output]
+     * - Compute the weighted splits of the k-mers that are left in the graph
+     * - Apply the target filter method
+     * - Write to output
+     */ 
+
     // function to map color position to file name
     std::function<string(const uint64_t&)> map=[=](uint64_t i) {
         if (i < denom_names.size()) return denom_names[i];
-        #ifdef useBF
-        else return cdbg.getColorName(i-denom_names.size());
-        #endif
         cerr << "Error: color bit does not correspond to color name" << endl;
         exit(EXIT_FAILURE);
     };
@@ -574,7 +724,7 @@ int main(int argc, char* argv[]) {
     if (verbose) {
         cout << "Processing splits..." << flush;
     }
-    graph::add_weights(mean, verbose);    // accumulate split weights
+    graph::add_weights(mean, min_value, verbose);  // accumulate split weights
 
     if (verbose) {
         cout << "\33[2K\r" << "Filtering splits..." << flush;
@@ -612,6 +762,11 @@ int main(int argc, char* argv[]) {
         }
     }
 
+
+    /**
+     * --- Write to output ---
+     */ 
+
     if (verbose) {
         cout << "\33[2K\r" << "Please wait..." << flush << endl;
     }
@@ -628,10 +783,6 @@ int main(int argc, char* argv[]) {
             if (color::test(split.second, pos)) {
                 if (i < denom_names.size())
                     stream << '\t' << denom_names[i];    // name of the file
-                #ifdef useBF
-                else
-                    stream << '\t' << cdbg.getColorName(i-denom_names.size());
-                #endif
             }
             split.second >>= 01u;
         }

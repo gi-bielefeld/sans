@@ -154,12 +154,23 @@ public:
     static void add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
 
     /**
+     * This function calculates the split weight for a single entry of the hash table
+     * 
+     * @param mean weight function
+     * @param verbose print progress
+     * @param min_value the minimal weight represented in the top list
+     * @return the new minimal weight represented in the top list
+     */
+    static double add_weight(color_t& color, double mean(uint32_t&, uint32_t&), double min_value, bool pos);
+
+    /**
      * This function iterates over the hash table and calculates the split weights.
      *
      * @param mean weight function
      * @param verbose print progress
+     * @param min_value the minimal weight currently represented in the top list
      */
-    static void add_weights(double mean(uint32_t&, uint32_t&), bool& verbose);
+    static void add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
 
     /**
      * This function adds a single split (weight and colors) to the output list.
@@ -170,9 +181,21 @@ public:
     static void add_split(double& weight, color_t& color);
 
     /**
+     * This funtion adds a sigle split from a cdbg to the output list.
+     * 
+     * @param mean mean function
+     * @param kmer_seq kmer
+     * @param kmer_color split colors
+     * @param min_value the minimal weight currently represented in the top list
+     * @return The minimal weight currently represented in the top list
+     */
+     static double add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value);       
+
+    /**
      * This function filters a greedy maximum weight tree compatible subset.
      *
      * @param verbose print progress
+     * @return the new minimal weight represented in the top list
      */
     static void filter_strict(bool& verbose);
 
