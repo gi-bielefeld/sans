@@ -344,7 +344,7 @@ next_kmer:
 							is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
 						}
 					} else {
-						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+						for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<t; ++it){
 							i++;
 							kmer_t rc = *it;
 							kmer::reverse_complement(rc, false,s);
