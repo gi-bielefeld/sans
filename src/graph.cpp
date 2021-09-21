@@ -189,8 +189,8 @@ next_kmer:
                     } else {
                         // found in the same genome
                         //number of ones in the color = current position in copyNumber
-                        int posCopyNumber = color::size(kmer_tableAmino[rcmer], false);
-                        vector<int> kmerOcc = copyNumberAmino.at(rcmer);
+                        int posCopyNumber = color::size(kmer_tableAmino[kmerAmino], false);
+                        vector<int> kmerOcc = copyNumberAmino.at(kmerAmino);
 
                         if(posCopyNumber == kmerOcc.size()) {
                             kmerOcc[posCopyNumber-1]++;
@@ -720,10 +720,10 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     if (max==0){
         return;
     }
-    auto amino_it = kmer_tableAmino.begin(); // amino table iterator
+    auto amino_it = kmer_tableAmino.begin();// amino table iterator
+    auto amino2_it = copyNumberAmino.begin(); //amino occurrence table iterator
     auto base_it = kmer_table.begin(); // base table iterator
     kmer_t kmerC;
-    kmerAmino_t kmerA;
     vector<int> occurrences;
 
     while (true) { // process splits
@@ -737,7 +737,14 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         color_t* color_ref; // reference of the current color
         if (isAmino) { // if the amino table is used, update the amino iterator
             if (amino_it == kmer_tableAmino.end()){break;} // stop iterating if done
-            else{color_ref = &amino_it.value(); kmerA = amino_it.key(); ++amino_it;} // iterate the amino table
+            else {
+                color_ref = &amino_it.value();
+                ++amino_it;
+                if (considerOccurrences) {
+                    occurrences = amino2_it.value();
+                    ++amino2_it;
+                }
+            } // iterate the amino table
             }
         else { // if the base tables is used update the base iterator
             if (base_it == kmer_table.end()){break;} // stop itearating if done
@@ -746,6 +753,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         // process
         color_t& color = *color_ref;
         color_t& newColor = *color_ref;
+        //vector<int>& occurrences = *occurrences_ref;
         bool pos = color::complement(color, true);    // invert the color set, if necessary
         if (color == 0) continue;    // ignore empty splits
         array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
@@ -762,10 +770,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         }
 
         if (considerOccurrences) {
-            if (isAmino) {
-                occurrences = copyNumberAmino.at(kmerA);
-            }
-            else {
+            if (!isAmino) {
                 occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
             }
             // calculate occurrence of current split
@@ -774,9 +779,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             int splitOccurrence = occurrences[position];
 
             while (splitOccurrence > 0) {
-                if (splitOccurrence > 1) {
-                    cout << " Mehrmaliges Vorkommen: " << splitOccurrence << " color: " << color << endl;
-                }
                 weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
                 double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
                 if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
@@ -793,10 +795,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                     }
                     occurrences[i] -= splitOccurrence;
                 }
-                if (isAmino) {
-                    occurrences = copyNumberAmino.at(kmerA);
-                }
-                else {
+                if (!isAmino) {
                     occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
                 }
                 // update minValue from occurrences-vector
