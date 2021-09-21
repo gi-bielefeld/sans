@@ -85,6 +85,8 @@ private:
 
     static hash_map<kmer_t, vector<int>> copyNumber;
 
+    static hash_map<kmerAmino_t, vector<int>> copyNumberAmino;
+
     /**
      * This is a hash table mapping colors to weights [O(1)].
      */
