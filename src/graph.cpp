@@ -338,7 +338,8 @@ next_kmer:
 						i++;
 					}
 				} else {
-					for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+					//iterate backwards and compare reverse complements
+					for (vector<kmer_t>::const_reverse_iterator it(sequence_order.rbegin()), end(sequence_order.rend()); it != end && i<=t; ++it){
 						kmer_t rc = *it;
 						kmer::reverse_complement(rc, false,s);
 						is_syncmer &= i<t?(rc!=*value_order_rc.begin()):(rc==*value_order_rc.begin());
