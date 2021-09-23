@@ -260,6 +260,8 @@ void graph::add_minspace(string& str, uint64_t& color, bool& reverse, uint64_t& 
 	uint64_t rcmmer;
 	char c;
 	char a='A';
+	uint64_t num_mmer=0;
+	uint64_t num_kmer=0;
 	
     uint64_t begin = 0;
 next_kmer:
@@ -283,6 +285,7 @@ next_kmer:
 				uint64_t threshold=pow(4,m)/100;
 				if (rcmmer<threshold){
 					minimizers.emplace_back(rcmmer);
+					num_mmer++;
 				}
 			}
 			// k/m minimizers?
@@ -309,7 +312,8 @@ next_kmer:
 				}
 				//store 
 				color::set(kmer_table[kmer], color);    // update the k-mer with the current color
-// 				cerr << kmer << endl;
+//  				cerr << kmer << endl;
+				num_kmer++;
 				//remove m-mer that "leaves" the k-mer
 				minimizers.erase(minimizers.begin());
             }
@@ -318,6 +322,7 @@ next_kmer:
         }
 
     }
+    cerr << num_kmer << " k-mers and " << num_mmer << " minimizers" << endl;
 }
 
 /**

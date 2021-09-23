@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
 //        cout << "    -w, --window  \t Number of k-mers per minimizer window (default: 1)" << endl;
 //        cout << endl;
         cout << "    -M, --minimizer\t Work in minimizer space" << endl;
-        cout << "                   \t specify minimizer length (default = 5)" << endl;
+        cout << "                   \t specify minimizer length (default = 5, max=32)" << endl;
         cout << endl;
         cout << "    -t, --top     \t Number of splits in the output list (default: all)." << endl;
         cout << "                  \t Use -t <integer>n to limit relative to number of input files, or" << endl;
@@ -158,6 +158,10 @@ int main(int argc, char* argv[]) {
 			minimizerlength = 5; // length of minimizers (default: 5)
 			if (i+1 < argc && argv[i+1][0] != '-'){
 					minimizerlength = stoi(argv[++i]);    // specified length of minimizers
+			}
+			if (minimizerlength>32){
+				cerr << "Error: minimizer length must not exceed 32." << endl;
+				exit(1);
 			}
 			kmer*=minimizerlength;
 			cerr << "Set k-mer length to k*M for internal handling of minimizers and k-mers." << endl;
