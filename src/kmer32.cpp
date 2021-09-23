@@ -141,6 +141,16 @@ bool kmer32::reverse_complement(uint64_t& kmer, bool minimize, uint64_t& k) {
     }
 }
 
+bool kmer32::smaller(uint64_t& kmer1, uint64_t& kmer2) {
+	return kmer32::smaller(kmer1, kmer2, k);
+}
+
+
+
+bool kmer32::smaller(uint64_t& kmer1, uint64_t& kmer2, uint64_t& k) {
+		return kmer1<kmer2;
+}
+
 
 /**
  * This function encodes a single character to two bits.

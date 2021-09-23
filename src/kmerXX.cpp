@@ -120,6 +120,27 @@ bool kmerXX::reverse_complement(bitset<2*maxK>& kmer, bool minimize, uint64_t& k
     return true;    // reversed
 }
 
+
+
+bool kmerXX::smaller(bitset<2*maxK>& kmer1, bitset<2*maxK>& kmer2) {
+    return kmerXX::smaller(kmer1, kmer2, kmerXX::k);    // reversed
+}
+
+
+
+bool kmerXX::smaller(bitset<2*maxK>& kmer1, bitset<2*maxK>& kmer2, uint64_t& k) {
+    for (uint64_t i = 2*k-1; i != -1; --i) {
+            if (kmer1[i] > kmer2[i]) {
+                return true;
+            }
+            if (kmer1[i] < kmer2[i]) {
+                return false;
+            }
+        }
+    return false;
+}
+
+
 /**
  * This function encodes a single character to two bits.
  *

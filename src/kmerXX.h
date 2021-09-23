@@ -67,6 +67,9 @@ public:
      */
     static bool reverse_complement(bitset<2*maxK>& kmer, bool minimize);
     static bool reverse_complement(bitset<2*maxK>& kmer, bool minimize, uint64_t& k);
+	
+    static bool smaller(bitset<2*maxK>& kmer1, bitset<2*maxK>& kmer2);
+    static bool smaller(bitset<2*maxK>& kmer1, bitset<2*maxK>& kmer2, uint64_t& k);
 
 protected:
 

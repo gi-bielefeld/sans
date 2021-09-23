@@ -305,7 +305,7 @@ next_kmer:
 						}
 					}
 					// store lexographically smaller of k-mer and reverse k-mer
-					if(rkmer<kmer)kmer=rkmer;
+					if(kmer::smaller(rkmer,kmer))kmer=rkmer;
 				}
 				//store 
 				color::set(kmer_table[kmer], color);    // update the k-mer with the current color
