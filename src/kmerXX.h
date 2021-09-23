@@ -36,6 +36,8 @@ public:
      */
     static void init(uint64_t& kmer_length);
 
+	static bitset<2*maxK> generateMask(uint64_t& kmer_length);
+	
     /**
      * This function shifts a k-mer adding a new character to the left.
      *
@@ -44,6 +46,7 @@ public:
      * @return right character
      */
     static char shift_left(bitset<2*maxK>& kmer, char& c);
+    static char shift_left(bitset<2*maxK>& kmer, char& c, uint64_t& k, bitset<2*maxK> mask);
 
     /**
      * This function shifts a k-mer adding a new character to the right.
@@ -53,6 +56,7 @@ public:
      * @return left character
      */
     static char shift_right(bitset<2*maxK>& kmer, char& c);
+    static char shift_right(bitset<2*maxK>& kmer, char& c, uint64_t& k, bitset<2*maxK> mask);
 
     /**
      * This function constructs the reverse complement of a given k-mer.
@@ -62,6 +66,7 @@ public:
      * @return 1 if inverted, 0 otherwise
      */
     static bool reverse_complement(bitset<2*maxK>& kmer, bool minimize);
+    static bool reverse_complement(bitset<2*maxK>& kmer, bool minimize, uint64_t& k);
 
 protected:
 

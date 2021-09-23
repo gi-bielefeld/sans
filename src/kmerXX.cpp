@@ -16,11 +16,19 @@ bitset<2*maxK> kmerXX::mask = mask.set();
  * @param kmer_length k-mer length
  */
 void kmerXX::init(uint64_t& kmer_length) {
-    k = kmer_length; mask.reset();
+    k = kmer_length;
+	kmerXX::mask = generateMask(kmer_length);
+}
+
+
+bitset<2*maxK> kmerXX::generateMask(uint64_t& kmer_length){
+	bitset<2*maxK> mask;
+	mask.reset();
     for (uint64_t i = 0; i < 2*k; ++i) {
         mask <<= 01u;    // fill all bits within the k-mer length with ones
         mask |= 01u;    // the remaining zero bits can be used to mask bits
     }
+    return mask;
 }
 
 /**
@@ -31,6 +39,11 @@ void kmerXX::init(uint64_t& kmer_length) {
  * @return right character
  */
 char kmerXX::shift_left(bitset<2*maxK>& kmer, char& c) {
+    return kmerXX::shift_left(kmer, c, kmerXX::k, kmerXX::mask);    // return the dropped rightmost character
+}
+
+
+char kmerXX::shift_left(bitset<2*maxK>& kmer, char& c, uint64_t& k, bitset<2*maxK> mask) {
     uint64_t left = char_to_bits(c);    // new leftmost character
     uint64_t right = 2*kmer[1]+kmer[0];    // old rightmost character
 
@@ -50,6 +63,11 @@ char kmerXX::shift_left(bitset<2*maxK>& kmer, char& c) {
  * @return left character
  */
 char kmerXX::shift_right(bitset<2*maxK>& kmer, char& c) {
+	return kmerXX::shift_right(kmer, c, kmerXX::k, kmerXX::mask);    // return the dropped leftmost character
+}
+
+
+char kmerXX::shift_right(bitset<2*maxK>& kmer, char& c, uint64_t& k, bitset<2*maxK> mask) {
     uint64_t left = 2*kmer[2*k-1]+kmer[2*k-2];    // old leftmost character
     uint64_t right = char_to_bits(c);    // new rightmost character
 
@@ -61,6 +79,8 @@ char kmerXX::shift_right(bitset<2*maxK>& kmer, char& c) {
     return bits_to_char(left);    // return the dropped leftmost character
 }
 
+
+
 /**
  * This function constructs the reverse complement of a given k-mer.
  *
@@ -69,6 +89,12 @@ char kmerXX::shift_right(bitset<2*maxK>& kmer, char& c) {
  * @return 1 if inverted, 0 otherwise
  */
 bool kmerXX::reverse_complement(bitset<2*maxK>& kmer, bool minimize) {
+    return kmerXX::reverse_complement(kmer, minimize, kmerXX::k);    // reversed
+}
+
+
+
+bool kmerXX::reverse_complement(bitset<2*maxK>& kmer, bool minimize, uint64_t& k) {
     bitset<2*maxK> bits = kmer;    // copy the original k-mer
     bitset<2*maxK> rcmp;    // empty reverse complement
 
