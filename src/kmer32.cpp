@@ -16,11 +16,23 @@ uint64_t kmer32::mask = -1;
  * @param kmer_length k-mer length
  */
 void kmer32::init(uint64_t& kmer_length) {
-    k = kmer_length; mask = 0;
-    for (uint64_t i = 0; i < 2*k; ++i) {
+    k = kmer_length;
+    mask = kmer32::generateMask(kmer_length);
+}
+
+/**
+ * This function initializes a bit-mask.
+ *
+ * @param kmer_length k-mer length
+ * @return bit-mask to erase all bits that exceed the k-mer length.
+ */
+uint64_t kmer32::generateMask(uint64_t& kmer_length){
+    uint64_t mask = 0;
+    for (uint64_t i = 0; i < 2*kmer_length; ++i) {
         mask <<= 01u;    // fill all bits within the k-mer length with ones
         mask |= 01u;    // the remaining zero bits can be used to mask bits
     }
+    return mask;
 }
 
 /**
@@ -31,6 +43,20 @@ void kmer32::init(uint64_t& kmer_length) {
  * @return right character
  */
 char kmer32::shift_left(uint64_t& kmer, char& c) {
+	return kmer32::shift_left(kmer, c, k, mask);	
+}
+
+
+/**
+ * This function shifts a k-mer adding a new character to the left.
+ *
+ * @param kmer bit sequence
+ * @param c left character
+ * @param k k-mer length
+ * @param mask bit-mask to erase all bits that exceed the k-mer length
+ * @return right character
+ */
+char kmer32::shift_left(uint64_t& kmer, char& c, uint64_t& k, uint64_t& mask) {
     uint64_t left = char_to_bits(c);    // new leftmost character
     uint64_t right = kmer & 0b11u;    // old rightmost character
 
@@ -41,6 +67,7 @@ char kmer32::shift_left(uint64_t& kmer, char& c) {
     return bits_to_char(right);    // return the dropped rightmost character
 }
 
+
 /**
  * This function shifts a k-mer adding a new character to the right.
  *
@@ -49,6 +76,20 @@ char kmer32::shift_left(uint64_t& kmer, char& c) {
  * @return left character
  */
 char kmer32::shift_right(uint64_t& kmer, char& c) {
+    return kmer32::shift_right(kmer, c, k, mask);
+}
+
+
+/**
+ * This function shifts a k-mer adding a new character to the right.
+ *
+ * @param kmer bit sequence
+ * @param c right character
+ * @param k k-mer length
+ * @param mask bit-mask to erase all bits that exceed the k-mer length
+ * @return left character
+ */
+char kmer32::shift_right(uint64_t& kmer, char& c, uint64_t& k, uint64_t& mask) {
     uint64_t left = (kmer >> (2*k-02u)) & 0b11u;    // old leftmost character
     uint64_t right = char_to_bits(c);    // new rightmost character
 
@@ -59,6 +100,7 @@ char kmer32::shift_right(uint64_t& kmer, char& c) {
     return bits_to_char(left);    // return the dropped leftmost character
 }
 
+
 /**
  * This function constructs the reverse complement of a given k-mer.
  *
@@ -67,6 +109,19 @@ char kmer32::shift_right(uint64_t& kmer, char& c) {
  * @return 1 if inverted, 0 otherwise
  */
 bool kmer32::reverse_complement(uint64_t& kmer, bool minimize) {
+	return kmer32::reverse_complement(kmer,minimize,k);
+}
+
+
+/**
+ * This function constructs the reverse complement of a given k-mer.
+ *
+ * @param kmer bit sequence
+ * @param minimize only invert, if smaller
+ * @param k k-mer length
+ * @return 1 if inverted, 0 otherwise
+ */
+bool kmer32::reverse_complement(uint64_t& kmer, bool minimize, uint64_t& k) {
     uint64_t bits = kmer;    // copy the original k-mer
     uint64_t rcmp = 0b0u;    // empty reverse complement
 
@@ -85,6 +140,8 @@ bool kmer32::reverse_complement(uint64_t& kmer, bool minimize) {
         return true;    // reversed
     }
 }
+
+
 
 /**
  * This function encodes a single character to two bits.

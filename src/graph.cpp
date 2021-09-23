@@ -227,6 +227,98 @@ next_kmer:
 
     }
 }
+
+
+
+/**
+ * This function extracts syncmers from a sequence and adds them to the hash table.
+ *
+ * @param str dna sequence
+ * @param color color flag
+ * @param reverse merge complements
+ * @param m minimizer length
+ */
+void graph::add_minspace(string& str, uint64_t& color, bool& reverse, uint64_t& m) {
+	if (isAmino) {
+		cerr << "minimizer space not implemented for amino acids yet." << endl;
+		exit(1);
+	}
+	
+
+	// minimizers
+	uint64_t m_mask=kmer32::generateMask(m);
+	
+	uint64_t num=kmer::k/m; // number of minimizers that fit into a k-mer
+	
+	vector<kmer_t> minimizers; // list of previous k/m minimizers
+
+
+    uint64_t pos;    // current position in the string, from 0 to length
+    kmer_t kmer;    // create a new empty bit sequence for the k-mer
+    kmer_t rkmer;    // create a bit sequence for the reverse complement
+	kmer_t mmer;
+	kmer_t rcmmer;
+	char c;
+	char a='A';
+	
+    uint64_t begin = 0;
+next_kmer:
+    pos = begin;
+    minimizers.clear();
+
+    for (; pos < str.length(); ++pos) {    // collect the bases from the string
+        if (!isAllowedChar(pos, str)) {
+            begin = pos+1;    // str = str.substr(pos+1, string::npos);
+            goto next_kmer;    // unknown base, start a new k-mer from the beginning
+        }
+        if (!isAmino) {
+            kmer::shift_right(mmer, str[pos],m,m_mask); // shift each base into the bit sequence of the first m-mer
+            if (pos+1 - begin >= m) {
+ 				// rc the m-mer if rc smaller
+				rcmmer = mmer;
+// 				if (reverse){
+					kmer::reverse_complement(rcmmer, true,m);
+// 				}
+				// is the current m-mer a minimizer?
+				if (rcmmer<pow(4,m)/2){
+					minimizers.emplace_back(rcmmer);
+				}
+			}
+			// k/m minimizers?
+            if (minimizers.size()==num) {
+				// compose k-mer
+				for (vector<kmer_t>::const_iterator i(minimizers.begin()), end(minimizers.end()); i != end; ++i){
+					kmer_t mmer_tmp=*i;
+					for (int j=1;j<=m;j++){
+						c = kmer::shift_right(mmer_tmp,a,m,m_mask);
+						kmer::shift_right(kmer,c);
+					}
+				}
+				if (reverse){
+					// compose reverse (not complemented) k-mer
+					for (vector<kmer_t>::const_reverse_iterator i(minimizers.rbegin()), end(minimizers.rend()); i != end; ++i){
+						kmer_t mmer_tmp=*i;
+						for (int j=1;j<=m;j++){
+							c=kmer::shift_right(mmer_tmp,a,m,m_mask);
+							kmer::shift_right(rkmer,c);
+						}
+					}
+					// store lexographically smaller of k-mer and reverse k-mer
+					if(rkmer<kmer)kmer=rkmer;
+				}
+				//store 
+				color::set(kmer_table[kmer], color);    // update the k-mer with the current color
+// 				cerr << kmer << endl;
+				//remove m-mer that "leaves" the k-mer
+				minimizers.erase(minimizers.begin());
+            }
+      
+        } else {
+        }
+
+    }
+}
+
 /**
  * This function checks if the character at the given position is allowed.
  * @param pos position in str
@@ -482,6 +574,20 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
 }
 
 /**
+ * This function extracts syncmers from a sequence and adds them to the hash table.
+ *
+ * @param str dna sequence
+ * @param color color flag
+ * @param reverse merge complements
+ * @param m minimizer length
+ * @param max_iupac allowed number of ambiguous k-mers per position
+ */
+void graph::add_minspace(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
+	cerr << "Combination of syncmers and IUPAC not implemented yet." << endl;
+	exit(1);
+}
+
+/**
  * This function calculates the multiplicity of iupac k-mers.
  *
  * @param product overall multiplicity
@@ -645,39 +751,7 @@ void graph::iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>
 }
 
 /**
- * This function calculates the weight of a single hash table entry
- * @param mean weight function
- * @param verbose print progress
- * @param min_value the minimal weight represented in the top list
- * @return the new minimal weight represented in the top list
- */
-double graph::add_weight(color_t& color, double mean(uint32_t&, uint32_t&), double min_value, bool pos)
-{
-    array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-    double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
-    if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
-        auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
-        for (auto it = range.first; it != range.second; ++it) {
-            if (it->second == color) {    // iterate over the color sets to find the correct one
-                split_list.erase(it);    // erase the entry with the old weight
-                break;
-            }
-        }
-    }
-    weight[pos]++; // update the weight or the inverse weight of the current color set
-    double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
-    if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
-        split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
-        if (split_list.size() > t) {
-            split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
-            min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
-        }
-    }
-    return min_value;
-}
-
-/**
- * This function iterates over the hash table and calculates the split weights.
+ * Theos function iterates over the hash table and calculates the split weights.
  * 
  * @param mean weight function
  * @param verbose print progess
@@ -704,7 +778,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             if (prog < next)  cout << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
             prog = next; cur++;
         }
-        // update the iterator
+        // update iterator
         color_t* color_ref; // reference of the current color
         if (isAmino) { // if the amino table is used, update the amino iterator
             if (amino_it == kmer_tableAmino.end()){break;} // stop iterating if done
@@ -718,8 +792,28 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         color_t& color = *color_ref;
         bool pos = color::complement(color, true);    // invert the color set, if necessary
         if (color == 0) continue;    // ignore empty splits
+        array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
 
-        add_weight(color, mean, min_value, pos);
+        double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
+        if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
+            auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
+            for (auto it = range.first; it != range.second; ++it) {
+                if (it->second == color) {    // iterate over the color sets to find the correct one
+                    split_list.erase(it);    // erase the entry with the old weight
+                    break;
+                }
+            }
+        }
+        weight[pos]++;    // update the weight or the inverse weight of the current color set
+
+        double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+        if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+            split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
+            if (split_list.size() > t) {
+                split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+            }
+        }
     }
 }
 
@@ -752,7 +846,7 @@ double graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string km
 
         if (kmer_table.contains(kmer)){ // Check if additional colors are stored for this kmer
            color_t hashed_color = kmer_table[kmer]; // the currently stored colores of the kmer
-	    for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
+	   for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
               	if(color::test(hashed_color, pos) && !color::test(kmer_color, pos)){ // test if the color is set in the stored color set
               		color::set(kmer_color, pos);
                	}
@@ -760,10 +854,32 @@ double graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string km
            kmer_table.erase(kmer); // remove the kmer from the table
 	}
     }
-    bool pos = color::complement(kmer_color, true);  // invert the color set, if necessary
-    if (kmer_color == 0) return min_value; // ignore empty splits
-    min_value = add_weight(kmer_color, mean, min_value, pos); // compute weight
-    return min_value; // return new minimal weight
+    bool pos = color::complement(kmer_color, true);    // invert the color set, if necessary
+    if (kmer_color == 0) return min_value;
+
+    array<uint32_t,2>& weight = color_table[kmer_color];    // get the weight and inverse weight of the color set
+    double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
+
+    if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
+        auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
+        for (auto it = range.first; it != range.second; ++it) {
+            if (it->second == kmer_color) {    // iterate over the color sets to find the correct one
+                split_list.erase(it);    // erase the entry with the old weight
+                break;
+            }
+        }
+    }
+    weight[pos]++;    // update the weight or the inverse weight of the current color set
+
+    double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+    if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+        split_list.emplace(new_value, kmer_color);    // insert it at the correct position ordered by weight
+        if (split_list.size() > t) {
+            split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+            min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+        }
+    }
+    return min_value;
 }
 
 /**
