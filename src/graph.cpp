@@ -280,7 +280,8 @@ next_kmer:
 					kmer::reverse_complement(rcmmer, true,m);
 // 				}
 				// is the current m-mer a minimizer?
-				if (rcmmer<pow(4,m)/2){
+				uint64_t threshold=pow(4,m)/100;
+				if (rcmmer<threshold){
 					minimizers.emplace_back(rcmmer);
 				}
 			}
