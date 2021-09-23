@@ -159,10 +159,8 @@ int main(int argc, char* argv[]) {
 			if (i+1 < argc && argv[i+1][0] != '-'){
 					minimizerlength = stoi(argv[++i]);    // specified length of minimizers
 			}
-			if (minimizerlength>kmer) {
-				cerr << "minimizer length cannot be larger than k." << endl;
-				exit(1);
-			}
+			kmer*=minimizerlength;
+			cerr << "Set k-mer length to k*M for internal handling of minimizers and k-mers." << endl;
         }
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0) {
             i++;
