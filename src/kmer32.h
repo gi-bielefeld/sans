@@ -72,6 +72,7 @@ public:
     static bool reverse_complement(uint64_t& kmer, bool minimize);
     static bool reverse_complement(uint64_t& kmer, bool minimize, uint64_t& k);
 
+		
 protected:
 
     /**

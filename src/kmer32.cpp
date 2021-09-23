@@ -142,7 +142,6 @@ bool kmer32::reverse_complement(uint64_t& kmer, bool minimize, uint64_t& k) {
 }
 
 
-
 /**
  * This function encodes a single character to two bits.
  *

@@ -250,14 +250,14 @@ void graph::add_minspace(string& str, uint64_t& color, bool& reverse, uint64_t& 
 	
 	uint64_t num=kmer::k/m; // number of minimizers that fit into a k-mer
 	
-	vector<kmer_t> minimizers; // list of previous k/m minimizers
+	vector<uint64_t> minimizers; // list of previous k/m minimizers
 
 
     uint64_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rkmer;    // create a bit sequence for the reverse complement
-	kmer_t mmer;
-	kmer_t rcmmer;
+	uint64_t mmer;
+	uint64_t rcmmer;
 	char c;
 	char a='A';
 	
@@ -272,12 +272,12 @@ next_kmer:
             goto next_kmer;    // unknown base, start a new k-mer from the beginning
         }
         if (!isAmino) {
-            kmer::shift_right(mmer, str[pos],m,m_mask); // shift each base into the bit sequence of the first m-mer
+            kmer32::shift_right(mmer, str[pos],m,m_mask); // shift each base into the bit sequence of the first m-mer
             if (pos+1 - begin >= m) {
  				// rc the m-mer if rc smaller
 				rcmmer = mmer;
 // 				if (reverse){
-					kmer::reverse_complement(rcmmer, true,m);
+					kmer32::reverse_complement(rcmmer, true,m);
 // 				}
 				// is the current m-mer a minimizer?
 				uint64_t threshold=pow(4,m)/100;
@@ -288,19 +288,19 @@ next_kmer:
 			// k/m minimizers?
             if (minimizers.size()==num) {
 				// compose k-mer
-				for (vector<kmer_t>::const_iterator i(minimizers.begin()), end(minimizers.end()); i != end; ++i){
-					kmer_t mmer_tmp=*i;
+				for (vector<uint64_t>::const_iterator i(minimizers.begin()), end(minimizers.end()); i != end; ++i){
+					uint64_t mmer_tmp=*i;
 					for (int j=1;j<=m;j++){
-						c = kmer::shift_right(mmer_tmp,a,m,m_mask);
+						c = kmer32::shift_right(mmer_tmp,a,m,m_mask);
 						kmer::shift_right(kmer,c);
 					}
 				}
 				if (reverse){
 					// compose reverse (not complemented) k-mer
-					for (vector<kmer_t>::const_reverse_iterator i(minimizers.rbegin()), end(minimizers.rend()); i != end; ++i){
-						kmer_t mmer_tmp=*i;
+					for (vector<uint64_t>::const_reverse_iterator i(minimizers.rbegin()), end(minimizers.rend()); i != end; ++i){
+						uint64_t mmer_tmp=*i;
 						for (int j=1;j<=m;j++){
-							c=kmer::shift_right(mmer_tmp,a,m,m_mask);
+							c=kmer32::shift_right(mmer_tmp,a,m,m_mask);
 							kmer::shift_right(rkmer,c);
 						}
 					}
