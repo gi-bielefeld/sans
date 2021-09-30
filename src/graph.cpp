@@ -783,9 +783,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             // calculate mean for occurences for k-mer
             meanOcc = 0;
             for(auto i : occurrences) {
-                if (i > 5) {
-                    cout << "Vorkommen > 1" << endl;
-                }
                 meanOcc += i;
             }
             meanOcc /= occurrences.size();
