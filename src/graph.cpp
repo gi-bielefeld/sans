@@ -725,6 +725,8 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     auto base_it = kmer_table.begin(); // base table iterator
     kmer_t kmerC;
     vector<int> occurrences;
+    vector<double> allMean;
+    double meanOcc, meanWholeGenomes = 0;
 
     while (true) { // process splits
         // show progress
@@ -778,6 +780,17 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             int position = std::distance(occurrences.begin(), minOcc);
             int splitOccurrence = occurrences[position];
 
+            // calculate mean for occurences for k-mer
+            meanOcc = 0;
+            for(auto i : occurrences) {
+                if (i > 5) {
+                    cout << "Vorkommen > 1" << endl;
+                }
+                meanOcc += i;
+            }
+            meanOcc /= occurrences.size();
+            allMean.push_back(meanOcc);
+
             while (splitOccurrence > 0) {
                 weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
                 double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
@@ -818,6 +831,12 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             }
         }
     }
+    for(auto i : allMean) {
+        meanWholeGenomes += i;
+    }
+    meanWholeGenomes /= allMean.size();
+    cout << "Mean for all: " << meanWholeGenomes << endl;
+
 }
 
 /**
