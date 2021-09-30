@@ -248,16 +248,16 @@ void graph::add_syncmers(string& str, uint64_t& color, bool& reverse, uint64_t& 
 	// s-mers
 	uint64_t s_mask=kmer32::generateMask(s);
 	
-	vector<kmer_t> sequence_order;    // s-mers ordered by their position in sequence
-    multiset<kmer_t> value_order;    // s-mers ordered by their lexicographical value
-	multiset<kmer_t> value_order_rc;    // reverse-complement s-mers ordered by their lexicographical value
+	vector<uint64_t> sequence_order;    // s-mers ordered by their position in sequence
+    multiset<uint64_t> value_order;    // s-mers ordered by their lexicographical value
+	multiset<uint64_t> value_order_rc;    // reverse-complement s-mers ordered by their lexicographical value
 
 
     uint64_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
-	kmer_t smer;
-	kmer_t rcsmer;
+	uint64_t smer;
+	uint64_t rcsmer;
 
 
     uint64_t begin = 0;
@@ -274,7 +274,7 @@ next_kmer:
         }
         if (!isAmino) {
             kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
-            kmer::shift_right(smer, str[pos],s,s_mask);    // shift each base into the bit sequence of the first s-mer
+            kmer32::shift_right(smer, str[pos],s,s_mask);    // shift each base into the bit sequence of the first s-mer
             if (pos+1 - begin >= s) {
 // 				cerr << "k-mer: " << kmer << endl;
 // 				cerr << "s-mer: " << smer << endl;
@@ -286,7 +286,7 @@ next_kmer:
 // 				for (std::multiset<kmer_t>::const_iterator i(value_order.begin()), end(value_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
 				if (reverse){
 					rcsmer = smer;
-					kmer::reverse_complement(rcsmer, false,s);    // invert the s-mer (in any case)
+					kmer32::reverse_complement(rcsmer, false,s);    // invert the s-mer (in any case)
 					value_order_rc.emplace(rcsmer);    // insert s-mer ordered by its lexicographical value
 // 					cerr << "value_order_rc: ";
 // 					for (std::multiset<kmer_t>::const_iterator i(value_order_rc.begin()), end(value_order_rc.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
@@ -300,8 +300,8 @@ next_kmer:
 // 					cerr << "value_order: ";
 // 					for (std::multiset<kmer_t>::const_iterator i(value_order.begin()), end(value_order.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
 					if (reverse){
-						kmer_t rc = *sequence_order.begin();
-						kmer::reverse_complement(rc, false,s);    // invert the s-mer (in any case)
+						uint64_t rc = *sequence_order.begin();
+						kmer32::reverse_complement(rc, false,s);    // invert the s-mer (in any case)
 						value_order_rc.erase(rc);    // remove s-mer from ordered list
 // 						cerr << "value_order_rc: ";
 // 						for (std::multiset<kmer_t>::const_iterator i(value_order_rc.begin()), end(value_order_rc.end()); i != end; ++i) cerr << *i << " "; cerr << endl;
@@ -333,15 +333,15 @@ next_kmer:
 				if (!rev){
 					// Are there other occurrences of the smallest s-mer to left of the t-th s-mer?
 					// AND: ist the t-th s-mer a smallest?
-					for (vector<kmer_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
+					for (vector<uint64_t>::const_iterator it(sequence_order.begin()), end(sequence_order.end()); it != end && i<=t; ++it){
 						is_syncmer &= i<t?(*it!=*value_order.begin()):(*it==*value_order.begin());
 						i++;
 					}
 				} else {
 					//iterate backwards and compare reverse complements
-					for (vector<kmer_t>::const_reverse_iterator it(sequence_order.rbegin()), end(sequence_order.rend()); it != end && i<=t; ++it){
-						kmer_t rc = *it;
-						kmer::reverse_complement(rc, false,s);
+					for (vector<uint64_t>::const_reverse_iterator it(sequence_order.rbegin()), rend(sequence_order.rend()); it != rend && i<=t; ++it){
+						uint64_t rc = *it;
+						kmer32::reverse_complement(rc, false,s);
 						is_syncmer &= i<t?(rc!=*value_order_rc.begin()):(rc==*value_order_rc.begin());
 						i++;
 					}
