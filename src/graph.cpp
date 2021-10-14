@@ -215,7 +215,9 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
 
 
     }
-    counterMean /= counterKmer;
+    if (counterKmer != 0 && counterMean != 0) {
+        counterMean /= counterKmer;
+    }
     cout << "Genome: " << color << " , Mean: " << counterMean << endl;
 }
 
@@ -799,7 +801,9 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             for(auto i : occurrences) {
                 meanOcc += i;
             }
-            meanOcc /= occurrences.size();
+            if (meanOcc != 0 && !occurrences.empty()) {
+                meanOcc /= occurrences.size();
+            }
             allMean.push_back(meanOcc);
             if (meanOcc > 1) {
                 cout << endl;
