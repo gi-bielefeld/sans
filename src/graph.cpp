@@ -37,7 +37,7 @@ vector<char> graph::allowedChars;
 
 /**
  * This is a comparison function extending std::bitset.
- */ 
+ */
 #if (maxK > 12 || maxN > 64)
 namespace std {
     template <size_t N>
@@ -131,8 +131,10 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
     kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
 
     uint64_t begin = 0;
-next_kmer:
+    next_kmer:
     pos = begin;
+    int counterMean = 0;
+    int counterKmer = 0;
 
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         if (!isAllowedChar(pos, str)) {
@@ -149,11 +151,13 @@ next_kmer:
                 //std::cout << rcmer << " : " << kmer_table[rcmer] << endl;
 
                 if(considerOccurrences) {
+                    counterMean++;
                     //test if the k-mer is already in copyNumber
                     if(!copyNumber.contains(rcmer)){
                         vector<int> kmerCount;
                         kmerCount.push_back(1);
                         copyNumber.insert({rcmer, kmerCount});
+                        counterKmer++;
 
                         //when the k-mer was found before
                     } else {
@@ -169,6 +173,7 @@ next_kmer:
                         } else {
                             kmerOcc.push_back(1);
                             copyNumber.at(rcmer) = kmerOcc;
+                            counterKmer++;
                         }
                     }
                 }
@@ -179,11 +184,13 @@ next_kmer:
             if (pos+1 - begin >= kmerAmino::k) {
                 color::set(kmer_tableAmino[kmerAmino], color);    // update the k-mer with the current color
                 if(considerOccurrences) {
+                    counterMean++;
                     //test if the k-mer is already in copyNumber
                     if(!copyNumberAmino.contains(kmerAmino)){
                         vector<int> kmerCount;
                         kmerCount.push_back(1);
                         copyNumberAmino.insert({kmerAmino, kmerCount});
+                        counterKmer++;
 
                         //when the k-mer was found before
                     } else {
@@ -199,6 +206,7 @@ next_kmer:
                         } else {
                             kmerOcc.push_back(1);
                             copyNumberAmino.at(kmerAmino) = kmerOcc;
+                            counterKmer++;
                         }
                     }
                 }
@@ -207,6 +215,8 @@ next_kmer:
 
 
     }
+    counterMean /= counterKmer;
+    cout << "Genome: " << color << " , Mean: " << counterMean << endl;
 }
 
 /**
@@ -233,7 +243,7 @@ void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t
     kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
 
     uint64_t begin = 0;
-next_kmer:
+    next_kmer:
     pos = begin;
     sequence_order.clear();
     sequence_order_Amino.clear();
@@ -413,128 +423,128 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse, uint64_t& max
 void graph::add_minimizers(string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
     if (str.length() < (!isAmino ? kmer::k : kmerAmino::k)) return;    // not enough characters
 
-   if (!isAmino) {
-       vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
-       multiset<kmer_t> value_order;    // k-mers ordered by their lexicographical value
-       multiset<kmer_t> inner_value_order;
+    if (!isAmino) {
+        vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
+        multiset<kmer_t> value_order;    // k-mers ordered by their lexicographical value
+        multiset<kmer_t> inner_value_order;
 
-       hash_set<kmer_t> ping;    // create a new empty set for the k-mers
-       hash_set<kmer_t> pong;    // create another new set for the k-mers
-       bool ball; bool wait;    // indicates which of the two sets should be used
+        hash_set<kmer_t> ping;    // create a new empty set for the k-mers
+        hash_set<kmer_t> pong;    // create another new set for the k-mers
+        bool ball; bool wait;    // indicates which of the two sets should be used
 
-       vector<uint8_t> factors;    // stores the multiplicity of iupac bases
-       long double product;    // stores the overall multiplicity of the k-mers
+        vector<uint8_t> factors;    // stores the multiplicity of iupac bases
+        long double product;    // stores the overall multiplicity of the k-mers
 
-       uint64_t pos;    // current position in the string, from 0 to length
-       kmer_t kmer;    // create an empty bit sequence for the initial k-mer
-       kmer_t rcmer;    // create a bit sequence for the reverse complement
+        uint64_t pos;    // current position in the string, from 0 to length
+        kmer_t kmer;    // create an empty bit sequence for the initial k-mer
+        kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-       uint64_t begin = 0;
-       next_kmer:
-       pos = begin;
-       sequence_order.clear();
-       value_order.clear();
+        uint64_t begin = 0;
+        next_kmer:
+        pos = begin;
+        sequence_order.clear();
+        value_order.clear();
 
-       ping.clear(); pong.clear(); factors.clear();
-       ball = true; wait = false; product = 1;
-       (ball ? ping : pong).emplace(kmer);
+        ping.clear(); pong.clear(); factors.clear();
+        ball = true; wait = false; product = 1;
+        (ball ? ping : pong).emplace(kmer);
 
-       for (; pos < str.length(); ++pos) {    // collect the bases from the string
-           if (str[pos] == '.' || str[pos] == '-') {
-               begin = pos+1;    // str = str.substr(pos+1, string::npos);
-               goto next_kmer;    // gap character, start a new k-mer from the beginning
-           }
-           iupac_calc(product, factors, str[pos]);
+        for (; pos < str.length(); ++pos) {    // collect the bases from the string
+            if (str[pos] == '.' || str[pos] == '-') {
+                begin = pos+1;    // str = str.substr(pos+1, string::npos);
+                goto next_kmer;    // gap character, start a new k-mer from the beginning
+            }
+            iupac_calc(product, factors, str[pos]);
 
-           if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
-               if (wait) {
-                   begin = pos-kmer::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
-                   goto next_kmer;    // start a new k-mer from the beginning
-               }
-               iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
-               ball = !ball;    // shift each base in, resolve iupac character
-           } else { wait = true; continue; }
+            if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
+                if (wait) {
+                    begin = pos-kmer::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
+                    goto next_kmer;    // start a new k-mer from the beginning
+                }
+                iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
+                ball = !ball;    // shift each base in, resolve iupac character
+            } else { wait = true; continue; }
 
-           if (pos+1 - begin >= kmer::k) {
-               for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
-                   rcmer = kmer;
-                   if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
-                   inner_value_order.emplace(rcmer);
-               }
+            if (pos+1 - begin >= kmer::k) {
+                for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
+                    rcmer = kmer;
+                    if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+                    inner_value_order.emplace(rcmer);
+                }
 
-               if (sequence_order.size() == m) {
-                   value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
-                   sequence_order.erase(sequence_order.begin());
-               }
-               value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by its lexicographical value
-               sequence_order.emplace_back(*inner_value_order.begin());
-               inner_value_order.clear();
+                if (sequence_order.size() == m) {
+                    value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
+                    sequence_order.erase(sequence_order.begin());
+                }
+                value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by its lexicographical value
+                sequence_order.emplace_back(*inner_value_order.begin());
+                inner_value_order.clear();
 
-               if (sequence_order.size() == m) {
-                   color::set(kmer_table[*value_order.begin()], color);    // update the k-mer with the current color
-               }
-           }
-       }
-   } else {
-       vector<kmerAmino_t> sequence_order;    // k-mers ordered by their position in sequence
-       multiset<kmerAmino_t> value_order;    // k-mers ordered by their lexicographical value
-       multiset<kmerAmino_t> inner_value_order;
+                if (sequence_order.size() == m) {
+                    color::set(kmer_table[*value_order.begin()], color);    // update the k-mer with the current color
+                }
+            }
+        }
+    } else {
+        vector<kmerAmino_t> sequence_order;    // k-mers ordered by their position in sequence
+        multiset<kmerAmino_t> value_order;    // k-mers ordered by their lexicographical value
+        multiset<kmerAmino_t> inner_value_order;
 
-       hash_set<kmerAmino_t> ping;    // create a new empty set for the k-mers
-       hash_set<kmerAmino_t> pong;    // create another new set for the k-mers
-       bool ball; bool wait;    // indicates which of the two sets should be used
+        hash_set<kmerAmino_t> ping;    // create a new empty set for the k-mers
+        hash_set<kmerAmino_t> pong;    // create another new set for the k-mers
+        bool ball; bool wait;    // indicates which of the two sets should be used
 
-       vector<uint8_t> factors;    // stores the multiplicity of iupac bases
-       long double product;    // stores the overall multiplicity of the k-mers
+        vector<uint8_t> factors;    // stores the multiplicity of iupac bases
+        long double product;    // stores the overall multiplicity of the k-mers
 
-       uint64_t pos;    // current position in the string, from 0 to length
-       kmerAmino_t kmer=0;    // create an empty bit sequence for the initial k-mer
+        uint64_t pos;    // current position in the string, from 0 to length
+        kmerAmino_t kmer=0;    // create an empty bit sequence for the initial k-mer
 
-       uint64_t begin = 0;
-       next_kmerAmino:
-       pos = begin;
-       sequence_order.clear();
-       value_order.clear();
+        uint64_t begin = 0;
+        next_kmerAmino:
+        pos = begin;
+        sequence_order.clear();
+        value_order.clear();
 
-       ping.clear(); pong.clear(); factors.clear();
-       ball = true; wait = false; product = 1;
-       (ball ? ping : pong).emplace(kmer);
+        ping.clear(); pong.clear(); factors.clear();
+        ball = true; wait = false; product = 1;
+        (ball ? ping : pong).emplace(kmer);
 
-       for (; pos < str.length(); ++pos) {    // collect the bases from the string
-           if (str[pos] == '.' || str[pos] == '-') {
-               begin = pos+1;    // str = str.substr(pos+1, string::npos);
-               goto next_kmerAmino;    // gap character, start a new k-mer from the beginning
-           }
-           iupac_calc(product, factors, str[pos]);
+        for (; pos < str.length(); ++pos) {    // collect the bases from the string
+            if (str[pos] == '.' || str[pos] == '-') {
+                begin = pos+1;    // str = str.substr(pos+1, string::npos);
+                goto next_kmerAmino;    // gap character, start a new k-mer from the beginning
+            }
+            iupac_calc(product, factors, str[pos]);
 
-           if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
-               if (wait) {
-                   begin = pos-kmerAmino::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
-                   goto next_kmerAmino;    // start a new k-mer from the beginning
-               }
-               iupac_shift_amino(ball ? ping : pong, !ball ? ping : pong, str[pos]);
-               ball = !ball;    // shift each base in, resolve iupac character
-           } else { wait = true; continue; }
+            if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
+                if (wait) {
+                    begin = pos-kmerAmino::k+1;    // str = str.substr(pos-kmer::k+1, string::npos);
+                    goto next_kmerAmino;    // start a new k-mer from the beginning
+                }
+                iupac_shift_amino(ball ? ping : pong, !ball ? ping : pong, str[pos]);
+                ball = !ball;    // shift each base in, resolve iupac character
+            } else { wait = true; continue; }
 
-           if (pos+1 - begin >= kmerAmino::k) {
-               for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
-                   inner_value_order.emplace(kmer);
-               }
+            if (pos+1 - begin >= kmerAmino::k) {
+                for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
+                    inner_value_order.emplace(kmer);
+                }
 
-               if (sequence_order.size() == m) {
-                   value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
-                   sequence_order.erase(sequence_order.begin());
-               }
-               value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by its lexicographical value
-               sequence_order.emplace_back(*inner_value_order.begin());
-               inner_value_order.clear();
+                if (sequence_order.size() == m) {
+                    value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
+                    sequence_order.erase(sequence_order.begin());
+                }
+                value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by its lexicographical value
+                sequence_order.emplace_back(*inner_value_order.begin());
+                inner_value_order.clear();
 
-               if (sequence_order.size() == m) {
-                   color::set(kmer_tableAmino[*value_order.begin()], color);    // update the k-mer with the current color
-               }
-           }
-       }
-   }
+                if (sequence_order.size() == m) {
+                    color::set(kmer_tableAmino[*value_order.begin()], color);    // update the k-mer with the current color
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -747,11 +757,15 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                     ++amino2_it;
                 }
             } // iterate the amino table
-            }
+        }
         else { // if the base tables is used update the base iterator
             if (base_it == kmer_table.end()){break;} // stop itearating if done
-            else {color_ref = &base_it.value(); kmerC = base_it.key(); ++base_it;} // iterate the base table
-            }
+            else {
+                color_ref = &base_it.value();
+                kmerC = base_it.key();
+                //occurrences = copyNumber.at(kmerC);
+                ++base_it;} // iterate the base table
+        }
         // process
         color_t& color = *color_ref;
         color_t& newColor = *color_ref;
@@ -787,6 +801,14 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             }
             meanOcc /= occurrences.size();
             allMean.push_back(meanOcc);
+            if (meanOcc > 1) {
+                cout << endl;
+                if (!isAmino) {
+                    cout << "Mean for k-mer: " << kmerC << " Value: " << meanOcc << endl;
+                } else {
+                    cout << "Mean for k-mer: " << amino2_it.key() << " Value: " << meanOcc << endl;
+                }
+            }
 
             while (splitOccurrence > 0) {
                 weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
@@ -805,9 +827,9 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                     }
                     occurrences[i] -= splitOccurrence;
                 }
-                if (!isAmino) {
+                /*if (!isAmino) {
                     occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
-                }
+                } */
                 // update minValue from occurrences-vector
                 position = std::distance(occurrences.begin(), minOcc);
                 splitOccurrence = occurrences[position];
@@ -828,11 +850,14 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             }
         }
     }
+    // calculate mean for all genomes
     for(auto i : allMean) {
         meanWholeGenomes += i;
     }
     meanWholeGenomes /= allMean.size();
+    cout << endl;
     cout << "Mean for all: " << meanWholeGenomes << endl;
+
 
 }
 
@@ -861,17 +886,17 @@ double graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string km
 
         for (int pos=0; pos < kmer_seq.length(); ++pos) {kmer::shift_right(kmer, kmer_seq[pos]);} // collect the bases from the k-mer sequence.
 
-	kmer::reverse_complement(kmer,true);
+        kmer::reverse_complement(kmer,true);
 
         if (kmer_table.contains(kmer)){ // Check if additional colors are stored for this kmer
-           color_t hashed_color = kmer_table[kmer]; // the currently stored colores of the kmer
-	   for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
-              	if(color::test(hashed_color, pos) && !color::test(kmer_color, pos)){ // test if the color is set in the stored color set
-              		color::set(kmer_color, pos);
-               	}
-           }
-           kmer_table.erase(kmer); // remove the kmer from the table
-	}
+            color_t hashed_color = kmer_table[kmer]; // the currently stored colores of the kmer
+            for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
+                if(color::test(hashed_color, pos) && !color::test(kmer_color, pos)){ // test if the color is set in the stored color set
+                    color::set(kmer_color, pos);
+                }
+            }
+            kmer_table.erase(kmer); // remove the kmer from the table
+        }
     }
     bool pos = color::complement(kmer_color, true);    // invert the color set, if necessary
     if (kmer_color == 0) return min_value;
@@ -921,11 +946,11 @@ string graph::filter_strict(std::function<string(const uint64_t&)> map, bool& ve
     auto it = split_list.begin();
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = split_list.size();
-loop:
+    loop:
     while (it != split_list.end()) {
         if (verbose) {
             next = 100*cur/max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+            if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         if (test_strict(it->second, tree)) {
@@ -952,11 +977,11 @@ void graph::filter_weakly(bool& verbose) {
     auto it = split_list.begin();
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = split_list.size();
-loop:
+    loop:
     while (it != split_list.end()) {
         if (verbose) {
             next = 100*(cur*cur)/(max*max);
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+            if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         if (test_weakly(it->second, network)) {
@@ -989,18 +1014,18 @@ string graph::filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> m
     auto it = split_list.begin();
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = split_list.size();
-loop:
+    loop:
     while (it != split_list.end()) {
         if (verbose) {
             next = 100*cur/max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+            if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
-       for (auto& tree : forest)
-        if (test_strict(it->second, tree)) {
-            tree.emplace_back(it->second);
-            ++it; goto loop;    // if compatible, add the new split to the set
-        }
+        for (auto& tree : forest)
+            if (test_strict(it->second, tree)) {
+                tree.emplace_back(it->second);
+                ++it; goto loop;    // if compatible, add the new split to the set
+            }
         it = split_list.erase(it);    // otherwise, remove split
     }
     // output
@@ -1079,7 +1104,7 @@ bool graph::refine_tree(node* current_set, color_t& split, color_t& allTaxa) {
         if ((split & subtaxa) == split) { return refine_tree(subset, split, allTaxa); }
         // subtaxa.issubset(split):
         if ((subtaxa & split) == subtaxa) { fullycoveredsubsets.push_back(subset); }
-        // elif not subtaxa.isdisjoint(split): # does intersect
+            // elif not subtaxa.isdisjoint(split): # does intersect
         else if ((subtaxa & split) != 0b0u) {
             // if partiallycoveredsubset:
             if (partiallycoveredsubset != nullptr) { return false; } //there cannot be more than one
