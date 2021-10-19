@@ -133,8 +133,8 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
     uint64_t begin = 0;
     next_kmer:
     pos = begin;
-    int counterMean = 0;
-    int counterKmer = 0;
+    double counterMean = 0;
+    double counterKmer = 0;
 
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         if (!isAllowedChar(pos, str)) {
@@ -218,7 +218,9 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
     if (counterKmer != 0 && counterMean != 0) {
         counterMean /= counterKmer;
     }
-    cout << "Genome: " << color << " , Mean: " << counterMean << endl;
+    if (counterMean > 5.0) {
+        cout << "Genome: " << color << " , Mean: " << counterMean << endl;
+    }
 }
 
 /**
@@ -805,7 +807,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 meanOcc /= occurrences.size();
             }
             allMean.push_back(meanOcc);
-            if (meanOcc > 1) {
+            if (meanOcc > 3.0) {
                 cout << endl;
                 if (!isAmino) {
                     cout << "Mean for k-mer: " << kmerC << " Value: " << meanOcc << endl;
