@@ -133,8 +133,6 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
     uint64_t begin = 0;
     next_kmer:
     pos = begin;
-    int counterMean = 0;
-    int counterKmer = 0;
 
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         if (!isAllowedChar(pos, str)) {
@@ -148,17 +146,13 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
                 rcmer = kmer;
                 if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
                 color::set(kmer_table[rcmer], color);
-                //std::cout << rcmer << " : " << kmer_table[rcmer] << endl;
 
                 if(considerOccurrences) {
-                    counterMean++;
                     //test if the k-mer is already in copyNumber
                     if(!copyNumber.contains(rcmer)){
                         vector<int> kmerCount;
                         kmerCount.push_back(1);
                         copyNumber.insert({rcmer, kmerCount});
-                        counterKmer++;
-
                         //when the k-mer was found before
                     } else {
                         // found in the same genome
@@ -173,25 +167,20 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
                         } else {
                             kmerOcc.push_back(1);
                             copyNumber.at(rcmer) = kmerOcc;
-                            counterKmer++;
                         }
                     }
                 }
             }
         } else {
             kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
-
             if (pos+1 - begin >= kmerAmino::k) {
                 color::set(kmer_tableAmino[kmerAmino], color);    // update the k-mer with the current color
                 if(considerOccurrences) {
-                    counterMean++;
                     //test if the k-mer is already in copyNumber
                     if(!copyNumberAmino.contains(kmerAmino)){
                         vector<int> kmerCount;
                         kmerCount.push_back(1);
                         copyNumberAmino.insert({kmerAmino, kmerCount});
-                        counterKmer++;
-
                         //when the k-mer was found before
                     } else {
                         // found in the same genome
@@ -206,19 +195,12 @@ void graph::add_kmers(string& str, uint64_t& color, bool& reverse) {
                         } else {
                             kmerOcc.push_back(1);
                             copyNumberAmino.at(kmerAmino) = kmerOcc;
-                            counterKmer++;
                         }
                     }
                 }
             }
         }
-
-
     }
-    if (counterKmer != 0 && counterMean != 0) {
-        counterMean /= counterKmer;
-    }
-    cout << "Genome: " << color << " , Mean: " << counterMean << endl;
 }
 
 /**
@@ -805,18 +787,32 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 meanOcc /= occurrences.size();
             }
             allMean.push_back(meanOcc);
-            if (meanOcc > 1) {
-                cout << endl;
+            if (meanOcc >= 1) {
                 if (!isAmino) {
-                    cout << "Mean for k-mer: " << kmerC << " Value: " << meanOcc << endl;
+                    std::cout << "#M Mean for k-mer:" << kmerC << ", Value:" << meanOcc << endl;
+                    std::cout << "#O " << "k-mer:" << kmerC << ", Occ: ";
+                    for (int i: occurrences) {
+                        std::cout << i << ' ';
+                    }
+                    std::cout << endl;
                 } else {
-                    cout << "Mean for k-mer: " << amino2_it.key() << " Value: " << meanOcc << endl;
+                    std::cout << "#M Mean for k-mer:" << amino2_it.key() << ", Value:" << meanOcc << endl;
+                    std::cout << "#O " << "k-mer:" << amino2_it.key() << ", Occ: ";
+                    for (int i: occurrences) {
+                        std::cout << i << ' ';
+                    }
+                    std::cout << endl;
                 }
             }
 
             while (splitOccurrence > 0) {
                 weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
                 double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+                if (!isAmino) {
+                    cout << "#W k-mer:" << kmerC << ", Weight:" << splitOccurrence << endl;
+                } else {
+                    cout << "#W Mean for k-mer:" << amino2_it.key() << ", Weight:" << splitOccurrence << endl;
+                }
                 if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
                     split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
                     if (split_list.size() > t) {
@@ -834,7 +830,15 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 /*if (!isAmino) {
                     occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
                 } */
+                //erase zeros from occ-vector
+                if(occurrences.size() > 1) {
+                    occurrences.erase(
+                            std::remove(occurrences.begin(), occurrences.end(), 0),
+                            occurrences.end());
+
+                }
                 // update minValue from occurrences-vector
+                minOcc = std::min_element(std::begin(occurrences), std::end(occurrences));
                 position = std::distance(occurrences.begin(), minOcc);
                 splitOccurrence = occurrences[position];
                 pos = color::complement(newColor, true);
@@ -860,7 +864,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     }
     meanWholeGenomes /= allMean.size();
     cout << endl;
-    cout << "Mean for all: " << meanWholeGenomes << endl;
+    cout << "#M2 Mean for all:" << meanWholeGenomes << endl;
 
 
 }
