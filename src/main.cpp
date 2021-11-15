@@ -10,7 +10,14 @@
  */
 int main(int argc, char* argv[]) {
 
-    // print a help message describing the program arguments
+
+    /**
+    * [Info]
+    * --- Help page ---
+    * - Print the help page to console
+    * - Describes the program arguments
+    */
+
     if (argc <= 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
         cout << endl;
         cout << "SANS serif | version " << SANS_VERSION << endl;
@@ -83,6 +90,9 @@ int main(int argc, char* argv[]) {
         cout << "                 \t Use 11 for Bacterial, Archaeal, and Plant Plastid Code" << endl;
         cout << "                 \t (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)" << endl;
         cout << endl;
+        cout << "    -M, --maxN \t Compare number of input genomes to compile paramter DmaxN" << endl;
+        cout << "               \t Add path/to/makefile (default is makefile in current working directory)." << endl;
+        cout << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -h, --help    \t Display this help page and quit" << endl;
@@ -92,6 +102,13 @@ int main(int argc, char* argv[]) {
         cout << endl;
         return 0;
     }
+
+
+    /**
+    * [Meta]
+    * --- Defaults ---
+    * - Initialise meta variables and set defaults
+    */
 
     string input;    // name of input file
     string graph;    // name of graph file
@@ -115,9 +132,16 @@ int main(int argc, char* argv[]) {
     bool shouldTranslate = false;   // translate input files
     bool userKmer = false; // is k-mer default or custom
     bool counting = false; // count occurrences of k-mers
+    bool check_n = false; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
+    string path = "./makefile"; // path to makefile
     uint64_t code = 1;
 
-    // parse the command line arguments and update the variables above
+
+    /**
+     * --- Argument parser ---
+     * - Parse the command line arguments and update the meta variables accordingly
+     */
+
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
             input = argv[++i];    // Input file: list of sequence files, one per line
@@ -216,6 +240,12 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-a") == 0 || strcmp(argv[i], "--amino") == 0) {
             amino = true;   // Input provides amino acid sequences
         }
+        else if (strcmp(argv[i], "-M") == 0 || strcmp(argv[i], "--maxN") == 0) {
+            check_n = true; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
+            if (i+1 < argc && argv[i+1][0] != '-'){
+				path = argv[++i]; // path to makefile
+			}
+		}
         else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--code") == 0) {
             if (i+1 < argc) {
                 string param = argv[++i];
@@ -237,7 +267,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // check for a new version of SANS at program start.
+
+    /**
+     * --- Version check ---
+     * - Request the current SANS version from gitlab and check if this version is up to date (Requires wget)
+     */
+
     if (verbose){cout << "Checking for updates" << endl;}
     bool version_checked = false;
     if (!system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/master/src/main.h | grep -q SANS_VERSION")){
@@ -250,6 +285,10 @@ int main(int argc, char* argv[]) {
     if (!version_checked && verbose) {cout << "Could not fetch version information" << endl;}
 
 
+    /**
+     * --- Restriction check ---
+     * - Check if the given argument configuration does violate any run restrictions
+     */
     if (!userKmer) {
         if (!amino) {
             kmer = 31;
@@ -266,7 +305,7 @@ int main(int argc, char* argv[]) {
         cerr << "Error: too many input arguments: --input, --graph, and --splits" << endl;
         return 1;
     }
-    if (!graph.empty() && !splits.empty()) {
+    if (!graph.empty() && !splits.empty()) { // ---- Why not?
         cerr << "Error: too many input arguments: --graph and --splits" << endl;
         return 1;
     }
@@ -313,6 +352,13 @@ int main(int argc, char* argv[]) {
             cerr << "Error: No translation data found" << translate << endl;
         }
     }
+
+    /**
+     * [Indexing]
+     * --- Indexing inputs ---
+     * - Collect all target file names and locations
+     * - Check if the given files exist
+     */
 
     // determine the folder the list is contained in
     string folder="";
@@ -395,25 +441,30 @@ int main(int argc, char* argv[]) {
                 if (has_files) {num++;}
             }
 
-            if (num > maxN) {cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl; return 1;} // check if the number of genomes exceeded maxN
 
             // check files
-            for(string file_name: target_files){
-                ifstream file_stream = ifstream(folder+file_name);
-                if (!file_stream.good()) { // catch unreadable file
-                    cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << folder+file_name << ">" << "\u001b[0m" << endl;
-                    file_stream.close();
-                    return 1;
-                }
-                else{
-                    file_stream.close();
-                }
-            }
+	    if (!splits.empty()){
+            	for(string file_name: target_files){
+                    ifstream file_stream = ifstream(folder+file_name);
+                    if (!file_stream.good()) { // catch unreadable file
+                        cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << folder+file_name << ">" << "\u001b[0m" << endl;
+                    	file_stream.close();
+                    	return 1;
+                    }
+                    else{ file_stream.close();}
+            	}
+	    }
             gen_files.push_back(target_files); // add the files of the current genome to the genome collection
             if (!getline(file, line)) {break;}
         }
     }
     int denom_file_count = denom_names.size(); 
+
+
+    /**
+     * --- Indexing CDBG input ---
+     * - Collect all target sequence names from the Bifrost CDBG
+     */
 
 #ifdef useBF
     // load an existing Bifrost graph
@@ -449,57 +500,87 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        if (num > maxN) {
-            cerr << "Error: number of colors exceeds -DmaxN=" << maxN << endl;
-            return 1;
-        }
         if (verbose) {
             cout << endl;
 	}
     }
 
 #endif
+
+
+    /**
+     * --- Post indexing check ---
+     * - Update and check validity of input dependent meta variables
+     */
+
+    // check if the number of genomes is reasonably close the maximal storable color set
+    if (check_n) {
+       util::check_n(num,path);
+	}
+
+    // check if the number of gernomes exceeds the maximal storable color set
+    if (num > maxN) {
+        cerr << "Error: number of input genomes ("<<num<<") exceeds -DmaxN=" << maxN << endl;
+        return 1;
+    }
+
     // Set dynamic top by filenum
     if (dyn_top){
         top = top * num;
     }
 
+
+    /**
+     * [Input processing]
+     * - Transcribe each given input to the graph
+     */
+
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
     graph::init(top, amino, counting); // initialize the toplist size and the allowed characters
+
+
+    /**
+     *  --- Split processing ---
+     *  - Transcibe all splits from the input split file
+     */
+
+    // iterate splits and add them to the toplist
     if (!splits.empty()) {
-        ifstream file(splits);
-        if (!file.good()) {
-            cerr << "Error: could not read splits file: " << splits << endl;
-            return 1;
-        }
-        string line;
-        while (getline(file, line)) {
-            uint64_t curr = line.find('\t');
-            double weight = stod(line.substr(0, curr));
-            uint64_t next = curr + 1;
-
-            color_t color = 0;
-            do {
-                curr = line.find('\t', next);
-                string name = line.substr(next, curr-next);
-                if (name_table.find(name) == name_table.end()) {
-                    vector<string> file_vec;
-                    name_table[name] = num++;
-                    denom_names.push_back(name);
-                    if (num > maxN) {
-                        cerr << "Error: number of files exceeds -DmaxN=" << maxN << endl;
-                        return 1;
-                    }
-                }
-                color::set(color, name_table[name]);
-                next = curr + 1;
-            } while (curr != string::npos);
-
-            graph::add_split(weight, color);
-        }
-        file.close();
+    ifstream file(splits);
+    if (!file.good()) { // check if the target splits file exists
+        cerr << "Error: could not read splits file: " << splits << endl;
+        return 1;
     }
-    
+    string line;
+    while (getline(file, line)) { // Iterate each split
+        uint64_t curr = line.find('\t');
+        double weight = stod(line.substr(0, curr));
+        uint64_t next = curr + 1;
+
+        color_t color = 0;
+        do {
+            curr = line.find('\t', next);
+            string name = line.substr(next, curr-next);
+            if (name_table.find(name) == name_table.end()) { // check if the splits genome names are already indexed
+                vector<string> file_vec;
+                name_table[name] = num++;
+                denom_names.push_back(name);
+            }
+            color::set(color, name_table[name]);
+            next = curr + 1;
+        } while (curr != string::npos);
+
+        graph::add_split(weight, color); // add the split to the graph
+    }
+    file.close();
+    }
+
+    /**
+     * --- Sequence processing ---
+     * - Translate all given sequence k-mers
+     * - Transcribe all given sequence k-mers to the graph
+     */
+
     kmer::init(kmer);      // initialize the k-mer length
     kmerAmino::init(kmer); // initialize the k-mer length
     color::init(num);    // initialize the color number
@@ -584,6 +665,14 @@ int main(int argc, char* argv[]) {
         }
     }
 
+
+    /**
+     * --- Bifrost CDBG processing ---
+     * - Iterate all colored k-mers from a CDBG
+     * - Compute the splits created by the CDBG k-mers given the graphs colore k-mer collection
+     * (Has to be executed after sequence processing)
+     */
+
 double min_value = numeric_limits<double>::min(); // Current minimal weight represented in the top list
 #ifdef useBF
     if (!graph.empty()) {
@@ -620,12 +709,16 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
                 min_value = graph::add_cdbg_colored_kmer(mean, kmer_sequence, color, min_value);
 	   }
         }
-
-        if (verbose) {
-            cout << "\33[2K\r" << "Processed " << max << " unitigs (100%)" << endl;
-        }
     }
 #endif
+
+
+    /**
+     * [Output]
+     * - Compute the weighted splits of the k-mers that are left in the graph
+     * - Apply the target filter method
+     * - Write to output
+     */
 
     // function to map color position to file name
     std::function<string(const uint64_t&)> map=[=](uint64_t i) {
@@ -637,7 +730,7 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
     if (verbose) {
         cout << "Processing splits..." << flush;
     }
-    graph::add_weights(mean, min_value, verbose);    // accumulate split weights
+    graph::add_weights(mean, min_value, verbose);  // accumulate split weights
 
     if (verbose) {
         cout << "\33[2K\r" << "Filtering splits..." << flush;
@@ -674,6 +767,11 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
             }
         }
     }
+
+
+    /**
+     * --- Write to output ---
+     */
 
     if (verbose) {
         cout << "\33[2K\r" << "Please wait..." << flush << endl;

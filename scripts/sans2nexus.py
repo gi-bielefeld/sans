@@ -8,6 +8,10 @@ import pygtrie
 from math import log
 from math import sqrt
 
+fileext=[".fa",".fas",".fastq",".mfasta",".fasta",".fsa",".fna"]
+
+
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
@@ -40,6 +44,9 @@ def readfile(filename,taxa):
         #store tax names if necessary
         split=[] #storing ids
         for f in split_orig:
+            # remove file extensions
+            if os.path.splitext(f)[1] in fileext:
+                f=os.path.splitext(f)[0]
             if f not in taxa.keys():
                 eprint("WARNING: taxa from split not in taxa file and thus discarded: "+f)
 #                exit(1)
@@ -75,7 +82,10 @@ else:
 def readtaxa(filename):
     taxa=dict()
     i=1
-    for line in (s.strip() for s in open(filename)):
+    for line in (s.strip().split()[0] for s in open(filename)):
+        # remove file extensions
+        if os.path.splitext(line)[1] in fileext:
+            line=os.path.splitext(line)[0]
         taxa[line]=i
         i+=1
     return(taxa)

@@ -1,5 +1,58 @@
 #include "util.h"
 
+
+/**
+ * This function compares the number of input genomes (n) to the compile parameter DmaxN (maxN).
+ * Exits (code 3) if they disagree (too much) and a re-compilation is necessary (n>maxN) or recommended (n much smaller maxN).
+ *
+ * @param n number of input genomes
+ * @return nothing
+ */ 
+void util::check_n(uint64_t& n, string& path) {
+	bool recompile = false;
+	if (n>maxN) {
+		cout << "Recompilation with DmaxN>=" << n << " necessary! (See " << path << "_autoN.)" << endl;
+		recompile = true;
+	}
+	if (maxN-n>=100) {
+		cout << "Recompilation with DmaxN=" << n << " recommended. (See " << path << "_autoN.)" << endl;
+		recompile = true;
+	}
+	if (recompile) {
+		cout << "DmaxN\t" << maxN << endl;
+		cout << "num\t" << n << endl;
+		
+		// open new makefile
+		ofstream file(path+"_autoN");
+		ostream newfilebuf(file.rdbuf());
+
+		// open original make file
+        ifstream infile(path);
+        if (!infile.good()) {
+            cerr << "Error: could not read makefile: "<< path << endl;
+            exit(1);
+        }
+        
+        // copy while replacing value for DmaxN
+        regex re("-DmaxN=[0-9]+");
+		string line;
+        while (getline(infile, line)) {
+			
+			newfilebuf << regex_replace(line, re, "-DmaxN="+to_string(n)) << endl;
+		}
+		
+ 		infile.close();
+		file.close();
+		
+		// stop SANS
+		exit(3);
+	
+	}
+}
+
+
+
+
 /**
  * This function calculates the arithmetic mean of two values.
  *

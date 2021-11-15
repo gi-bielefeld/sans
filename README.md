@@ -53,6 +53,20 @@ You may want to make the binary (*SANS*) accessible via your *PATH* variable.
 
 Optional: If Bifrost should be used, change the SANS makefile accordingly (easy to see how). Please note the installation instructions regarding the default maximum *k*-mer size of Bifrost in its README. If during the compilation, the Bifrost library files are not found, make sure that the corresponding folder is found as include path by the C++ compiler. You may have to add `-I/usr/local/include` (with the corresponding folder) to the compiler flags in the makefile. We also recommend to have a look at the [FAQs of Bifrost](https://github.com/pmelsted/bifrost#faq).
 
+In the *makefile*, two parameters are specified:
+
+* *-DmaxK*: Maximum k-mer length that can be chosen when running SANS.  Default: 32
+* *-DmaxN*: Maximum number of input files for SANS. Default: 64
+
+These values can simply be increased if necessary. To keep memory requirements small, do not choose these values unnecessarily large.
+
+**New:** Compile parameter *DmaxN* can be set automatically by using the *SANS-autoN.sh* (Unix) or *SANS-autoN.BAT* (Windows) scripts. The scripts can be used exactly as the main binary *SANS*. They run *SANS* with all provided parameters and add option *-M* to compare *DmaxN* and the actual number of input files.
+If SANS has been compiled with a value for *DmaxN* that is neither too small nor much too large, SANS is executed as usual.
+If *DmaxN* has been chosen too small or much too large, the scripts generate a new makefile (*makefile_auton*), re-compile *SANS* and re-run *SANS*.
+The comparison of *DmaxN* and the actual number of input files comes without extra computational cost.
+
+
+
 ## Usage
 
 ```
@@ -121,6 +135,9 @@ Usage: SANS [PARAMETERS]
                   	 Default: 1 (The Standard Code)
                   	 Use 11 for Bacterial, Archaeal, and Plant Plastid Code
                   	 (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)
+
+    -M, --maxN    	 Compare number of input genomes to compile paramter DmaxN
+                  	 Add path/to/makefile (default is makefile in current working directory).
 
     -v, --verbose 	 Print information messages during execution
 
