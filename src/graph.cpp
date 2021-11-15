@@ -736,7 +736,7 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
     auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get minimum
     int position = std::distance(occurrences.begin(), minOcc);
     int splitOccurrence = occurrences[position];
-    std::cout << "#C1 Color:" << color << endl;
+    //std::cout << "#C1 Color:" << color << endl;
     // calculate mean for occurences for k-mer
     double meanOcc = 0, meanWholeGenome = 0;
     vector<double> allMean;
@@ -801,7 +801,7 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
             }
             occurrences[i] -= splitOccurrence;
         }
-        cout << "#C Color:" << color << endl;
+        //cout << "#C Color:" << color << endl;
         //erase zeros from occ-vector
         if (occurrences.size() > 1) {
             occurrences.erase(
