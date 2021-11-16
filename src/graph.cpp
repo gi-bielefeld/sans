@@ -737,34 +737,30 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
     int position = std::distance(occurrences.begin(), minOcc);
     int splitOccurrence = occurrences[position];
     //std::cout << "#C1 Color:" << color << endl;
+
     // calculate mean for occurences for k-mer
     double meanOcc = 0, meanWholeGenome = 0;
     vector<double> allMean;
         for (auto i : occurrences) {
-        meanOcc += i;
-    }
+        meanOcc += i; }
     if (meanOcc != 0 && !occurrences.empty()) {
-        meanOcc /= occurrences.size();
-    }
+        meanOcc /= occurrences.size(); }
     allMean.push_back(meanOcc);
     if (meanOcc >= 1) {
         if (!isAmino) {
-            std::cout << "#M Value:" << meanOcc << endl;
+            //std::cout << "#M Value:" << meanOcc << endl;
             std::cout << "#O Occ: ";
             for (int i: occurrences) {
-                std::cout << i << ' ';
-            }
+                std::cout << i << ' '; }
             std::cout << endl;
         } else {
-            std::cout << "#M Value:" << meanOcc << endl;
+            //std::cout << "#M Value:" << meanOcc << endl;
             std::cout << "#O Occ: ";
             for (int i: occurrences) {
-                std::cout << i << ' ';
-            }
+                std::cout << i << ' '; }
             std::cout << endl;
         }
     }
-
     while (splitOccurrence > 0) {
         array<uint32_t, 2> &weight = color_table[color];
         double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
