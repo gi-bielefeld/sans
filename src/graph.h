@@ -87,6 +87,8 @@ private:
 
     static hash_map<kmerAmino_t, vector<int>> copyNumberAmino;
 
+    static vector<int> weight_Occ;
+
     /**
      * This is a hash table mapping colors to weights [O(1)].
      */
@@ -176,6 +178,8 @@ public:
      * @param min_value the minimal weight currently represented in the top list
      */
     static void add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
+
+    static int get_greatesCommonWeight(vector<int>& occurrences);
 
     /**
      * This function iterates over the hash table of Copy Numbers and calculates the split weights.
