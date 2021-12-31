@@ -82,17 +82,22 @@ private:
      * This is a hash table mapping k-mers to colors [O(1)].
      */
     static hash_map<kmerAmino_t, color_t> kmer_tableAmino;
-
+    /**
+     * This is a hash table mapping k-mers to occurrences-vectors.
+     */
     static hash_map<kmer_t, vector<int>> copyNumber;
-
+    /**
+     * This is a hash table mapping k-mers to occurrences-vectors.
+     */
     static hash_map<kmerAmino_t, vector<int>> copyNumberAmino;
-
-    static vector<int> weight_Occ;
-
     /**
      * This is a hash table mapping colors to weights [O(1)].
      */
     static hash_map<color_t, array<uint32_t,2>> color_table;
+    /**
+     * This is an int vector saving the occurrence of weights.
+     */
+    static vector<int> weight_Occ;
 
 public:
 
@@ -179,13 +184,23 @@ public:
      */
     static void add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
 
-    static int get_greatesCommonWeight(vector<int>& occurrences);
+    /**
+     * This function calculates the greatest common occurrence in all genomes from the occurrences-vector
+     *
+     * @param occurrences occurrences-vector for current k-mere
+     * @return the weight that occurs in all genomes
+     */
+    static int get_greatestCommonWeight(vector<int>& occurrences);
 
     /**
      * This function iterates over the hash table of Copy Numbers and calculates the split weights.
      *
+     * @param color split color
      * @param mean weight function
      * @param verbose print progress
+     * @param min_value the minimal weight currently represented in the top list
+     * @param occurrences occurrences-vector for current k-mere
+     * @return the new minimal weight represented in the top list
      */
     static double add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint32_t&),
                                       double min_value, bool pos, vector<int> occurrences);

@@ -19,6 +19,10 @@ hash_map<kmerAmino_t, color_t> graph::kmer_tableAmino;
 
 hash_map<kmerAmino_t, vector<int>> graph::copyNumberAmino;
 
+/**
+ * This is a vector saving the Occurrences for each weight from 1-20 and all weights > 20.
+ */
+
 vector<int> graph::weight_Occ(21);
 
 /**
@@ -730,25 +734,38 @@ double graph::add_weight(color_t& color, double mean(uint32_t&, uint32_t&), doub
     return min_value;
 }
 
-int graph::get_greatesCommonWeight(vector<int>& occurrences) {
+/**
+ * This function calculates the greatest common occurrence in all genomes from the occurrences-vector
+ *
+ * @param occurrences
+ * @return the weight that occurs in all genomes
+ */
+int graph::get_greatestCommonWeight(vector<int> &occurrences) {
     int commonWeight = occurrences.at(0);
     for (auto i : occurrences) {
-        if (i < commonWeight) {
+        if (i < commonWeight) { // update commonWeight if one value is smaller than current commonWeight
             commonWeight = i;
         }
     }
     return commonWeight;
 }
 
+/**
+ * This function iterates over the hash table of Copy Numbers and calculates the split weights.
+ *
+ * @param color split color
+ * @param mean weight function
+ * @param verbose print progress
+ * @param min_value the minimal weight currently represented in the top list
+ * @param occurrences occurrences-vector for current k-mere
+ * @return the new minimal weight represented in the top list
+ */
 double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint32_t&), double min_value,
                                     bool pos, vector<int> occurrences) {
 
 
     // calculate occurrence of current split
-    //auto minOcc = std::min_element(std::begin(occurrences), std::end(occurrences)); // get minimum
-    //int position = std::distance(occurrences.begin(), minOcc);
-    int splitOccurrence = get_greatesCommonWeight(occurrences);
-    //std::cout << "#C1 Color:" << color << endl;
+    int splitOccurrence = get_greatestCommonWeight(occurrences);// get the max occurrences of the split in all genomes
 
     // calculate mean for occurences for k-mer
     double meanOcc = 0, meanWholeGenome = 0;
@@ -758,21 +775,8 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
     if (meanOcc != 0 && !occurrences.empty()) {
         meanOcc /= occurrences.size(); }
     allMean.push_back(meanOcc);
-    /*if (meanOcc >= 1) {
-        if (!isAmino) {
-            //std::cout << "#M Value:" << meanOcc << endl;
-            std::cout << "#O Occ: ";
-            for (int i: occurrences) {
-                std::cout << i << ' '; }
-            std::cout << endl;
-        } else {
-            //std::cout << "#M Value:" << meanOcc << endl;
-            std::cout << "#O Occ: ";
-            for (int i: occurrences) {
-                std::cout << i << ' '; }
-            std::cout << endl;
-        }
-    }*/
+
+    // iterate over all occurrences for the split
     while (splitOccurrence > 0) {
         array<uint32_t, 2> &weight = color_table[color];
         double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
@@ -785,19 +789,14 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
                 }
             }
         }
-
         weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
 
-        /*if (!isAmino) {
-            cout << "#W Weight:" << splitOccurrence << endl;
-        } else {
-            cout << "#W Weight:" << splitOccurrence << endl;
-        }*/
+        // update the weight_Occ-vector
         if (splitOccurrence <= 20) {
-            weight_Occ.at(splitOccurrence-1) = weight_Occ.at(splitOccurrence-1)+1;
+            weight_Occ.at(splitOccurrence-1) = weight_Occ.at(splitOccurrence-1)+1; // counting weights <= 20
         } else {
-            weight_Occ.at(20) = weight_Occ.at(20)+1;
+            weight_Occ.at(20) = weight_Occ.at(20)+1; // counting weights > 20
         }
 
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
@@ -814,25 +813,20 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
             }
             occurrences[i] -= splitOccurrence;
         }
-        //cout << "#C Color:" << color << endl;
         //erase zeros from occ-vector
-        if (occurrences.size() > 0) {
+        if (occurrences.size() > 1) {
             occurrences.erase(
                     std::remove(occurrences.begin(), occurrences.end(), 0),
                     occurrences.end());
         }
-        // update minValue from occurrences-vector
-        //minOcc = std::min_element(std::begin(occurrences), std::end(occurrences));
-        //position = std::distance(occurrences.begin(), minOcc);
-
-        bool pos = color::complement(color, true);    // invert the color set, if necessary
-        //cout << "C2: " << color << endl;
-        //if (color == 0) return min_value;    // ignore empty splits
+        // if occurrences-vector is empty return min_value
         if (!occurrences.empty()) {
-            splitOccurrence = get_greatesCommonWeight(occurrences);
+            splitOccurrence = get_greatestCommonWeight(occurrences);
         } else {
-            splitOccurrence = 0;
+            return min_value;
         }
+        bool pos = color::complement(color, true);    // invert the color set, if necessary
+        if (color == 0) return min_value;    // ignore empty splits
 
     }
     return min_value;
@@ -896,7 +890,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         // process
         color_t& color = *color_ref;
         color_t& newColor = *color_ref;
-        //vector<int>& occurrences = *occurrences_ref;
         bool pos = color::complement(color, true);    // invert the color set, if necessary
         if (color == 0) continue;    // ignore empty splits
         if (considerOccurrences) {
@@ -907,7 +900,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         } else {
             add_weight(color, mean, min_value, pos);
         }
-
     }
     for (int i = 0; i < weight_Occ.size(); i++) {
         cout << "Weight:" << i+1 << " Occ:" << weight_Occ.at(i) << endl;
