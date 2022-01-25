@@ -203,7 +203,7 @@ public:
      * @return the new minimal weight represented in the top list
      */
     static double add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint32_t&),
-                                      double min_value, bool pos, vector<int> occurrences);
+                                      double min_value, bool pos, vector<int>& occurrences);
 
     /**
      * This function adds a single split (weight and colors) to the output list.

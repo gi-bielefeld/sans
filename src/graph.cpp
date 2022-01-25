@@ -761,9 +761,9 @@ int graph::get_greatestCommonWeight(vector<int> &occurrences) {
  * @return the new minimal weight represented in the top list
  */
 double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint32_t&), double min_value,
-                                    bool pos, vector<int> occurrences) {
+                                    bool pos, vector<int>& occurrences) {
 
-
+    bool isFirstSplit = true;
     // calculate occurrence of current split
     int splitOccurrence = get_greatestCommonWeight(occurrences);// get the max occurrences of the split in all genomes
 
@@ -778,56 +778,81 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
 
     // iterate over all occurrences for the split
     while (splitOccurrence > 0) {
-        array<uint32_t, 2> &weight = color_table[color];
-        double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
-        if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
-            auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
-            for (auto it = range.first; it != range.second; ++it) {
-                if (it->second == color) {    // iterate over the color sets to find the correct one
-                    split_list.erase(it);    // erase the entry with the old weight
-                    break;
+        // ignore the first split
+        if (isFirstSplit) {
+            // update the occurrences-vector
+            for (std::size_t i = 0; i < occurrences.size(); ++i) {
+                if (occurrences[i] -= splitOccurrence == 0) {
+                    color::erase(color, i);
+                }
+                occurrences[i] -= splitOccurrence;
+            }
+            //erase zeros from occ-vector
+            if (occurrences.size() > 1) {
+                occurrences.erase(
+                        std::remove(occurrences.begin(), occurrences.end(), 0),
+                        occurrences.end());
+            }
+            // if occurrences-vector is empty return min_value
+            if (!occurrences.empty()) {
+                splitOccurrence = get_greatestCommonWeight(occurrences);
+            } else {
+                return min_value;
+            }
+            bool pos = color::complement(color, true);    // invert the color set, if necessary
+            if (color == 0) return min_value;    // ignore empty splits
+            isFirstSplit = false;
+        } else { //start iterating over the occurrence vector at the second split
+            array<uint32_t, 2> &weight = color_table[color];
+            double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
+            if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
+                auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
+                for (auto it = range.first; it != range.second; ++it) {
+                    if (it->second == color) {    // iterate over the color sets to find the correct one
+                        split_list.erase(it);    // erase the entry with the old weight
+                        break;
+                    }
                 }
             }
-        }
-        weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
-        double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+            weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
+            double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
 
-        // update the weight_Occ-vector
-        if (splitOccurrence <= 20) {
-            weight_Occ.at(splitOccurrence-1) = weight_Occ.at(splitOccurrence-1)+1; // counting weights <= 20
-        } else {
-            weight_Occ.at(20) = weight_Occ.at(20)+1; // counting weights > 20
-        }
-
-        if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
-            split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
-            if (split_list.size() > t) {
-                split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
-                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+            // update the weight_Occ-vector
+            if (splitOccurrence <= 20) {
+                weight_Occ.at(splitOccurrence - 1) = weight_Occ.at(splitOccurrence - 1) + 1; // counting weights <= 20
+            } else {
+                weight_Occ.at(20) = weight_Occ.at(20) + 1; // counting weights > 20
             }
-        }
-        // update the occurrences-vector
-        for (std::size_t i = 0; i < occurrences.size(); ++i) {
-            if (occurrences[i] -= splitOccurrence == 0) {
-                color::erase(color, i);
-            }
-            occurrences[i] -= splitOccurrence;
-        }
-        //erase zeros from occ-vector
-        if (occurrences.size() > 1) {
-            occurrences.erase(
-                    std::remove(occurrences.begin(), occurrences.end(), 0),
-                    occurrences.end());
-        }
-        // if occurrences-vector is empty return min_value
-        if (!occurrences.empty()) {
-            splitOccurrence = get_greatestCommonWeight(occurrences);
-        } else {
-            return min_value;
-        }
-        bool pos = color::complement(color, true);    // invert the color set, if necessary
-        if (color == 0) return min_value;    // ignore empty splits
 
+            if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+                split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
+                if (split_list.size() > t) {
+                    split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+                    min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+                }
+            }
+            // update the occurrences-vector
+            for (std::size_t i = 0; i < occurrences.size(); ++i) {
+                if (occurrences[i] -= splitOccurrence == 0) {
+                    color::erase(color, i);
+                }
+                occurrences[i] -= splitOccurrence;
+            }
+            //erase zeros from occ-vector
+            if (occurrences.size() > 1) {
+                occurrences.erase(
+                        std::remove(occurrences.begin(), occurrences.end(), 0),
+                        occurrences.end());
+            }
+            // if occurrences-vector is empty return min_value
+            if (!occurrences.empty()) {
+                splitOccurrence = get_greatestCommonWeight(occurrences);
+            } else {
+                return min_value;
+            }
+            bool pos = color::complement(color, true);    // invert the color set, if necessary
+            if (color == 0) return min_value;    // ignore empty splits
+        }
     }
     return min_value;
 }
@@ -874,7 +899,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 color_ref = &amino_it.value();
                 ++amino_it;
                 if (considerOccurrences) {
-                    occurrences = amino2_it.value();
+                    occurrences = amino2_it.value(); // get occurrence-vector when amino
                     ++amino2_it;
                 }
             } // iterate the amino table
@@ -894,7 +919,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         if (color == 0) continue;    // ignore empty splits
         if (considerOccurrences) {
             if (!isAmino) {
-                occurrences = copyNumber.at(kmerC); // get the occurrences of the current k-mer
+                occurrences = copyNumber.at(kmerC); // get the occurrences-vector of the current k-mer
             }
             add_weightsCopyNumber(color, mean, min_value, pos, occurrences);
         } else {
