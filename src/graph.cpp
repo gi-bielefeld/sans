@@ -20,12 +20,6 @@ hash_map<kmerAmino_t, color_t> graph::kmer_tableAmino;
 hash_map<kmerAmino_t, vector<int>> graph::copyNumberAmino;
 
 /**
- * This is a vector saving the Occurrences for each weight from 1-20 and all weights > 20.
- */
-
-vector<int> graph::weight_Occ(21);
-
-/**
  * This is a hash table mapping colors to weights [O(1)].
  */
 hash_map<color_t, array<uint32_t,2>> graph::color_table;
@@ -766,16 +760,6 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
 
     // calculate occurrence of current split
     int splitOccurrence = get_greatestCommonWeight(occurrences);// get the max occurrences of the split in all genomes
-
-    // calculate mean for occurences for k-mer
-    double meanOcc = 0, meanWholeGenome = 0;
-    vector<double> allMean;
-        for (auto i : occurrences) {
-        meanOcc += i; }
-    if (meanOcc != 0 && !occurrences.empty()) {
-        meanOcc /= occurrences.size(); }
-    allMean.push_back(meanOcc);
-
     // iterate over all occurrences for the split
     while (splitOccurrence > 0) {
         array<uint32_t, 2> &weight = color_table[color];
@@ -791,14 +775,6 @@ double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint3
         }
         weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
-
-        // update the weight_Occ-vector
-        if (splitOccurrence <= 20) {
-            weight_Occ.at(splitOccurrence-1) = weight_Occ.at(splitOccurrence-1)+1; // counting weights <= 20
-        } else {
-            weight_Occ.at(20) = weight_Occ.at(20)+1; // counting weights > 20
-        }
-
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
             split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
             if (split_list.size() > t) {
@@ -857,8 +833,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     auto base_it = kmer_table.begin(); // base table iterator
     kmer_t kmerC;
     vector<int> occurrences;
-    vector<double> allMean;
-    double meanOcc, meanWholeGenomes = 0;
 
     while (true) { // process splits
         // show progress
@@ -901,9 +875,6 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         } else {
             add_weight(color, mean, min_value, pos);
         }
-    }
-    for (int i = 0; i < weight_Occ.size(); i++) {
-        cout << "Weight:" << i+1 << " Occ:" << weight_Occ.at(i) << endl;
     }
 }
 

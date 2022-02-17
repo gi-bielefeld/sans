@@ -94,10 +94,6 @@ private:
      * This is a hash table mapping colors to weights [O(1)].
      */
     static hash_map<color_t, array<uint32_t,2>> color_table;
-    /**
-     * This is an int vector saving the occurrence of weights.
-     */
-    static vector<int> weight_Occ;
 
 public:
 
