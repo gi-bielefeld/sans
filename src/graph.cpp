@@ -757,90 +757,55 @@ int graph::get_greatestCommonWeight(vector<int> &occurrences) {
 double graph::add_weightsCopyNumber(color_t& color, double mean(uint32_t&, uint32_t&), double min_value,
                                     bool pos, vector<int>& occurrences) {
 
-    bool isFirstSplit = true;
+
     // calculate occurrence of current split
     int splitOccurrence = get_greatestCommonWeight(occurrences);// get the max occurrences of the split in all genomes
 
-    // calculate mean for occurences for k-mer
-    double meanOcc = 0, meanWholeGenome = 0;
-    vector<double> allMean;
-    for (auto i : occurrences) {
-        meanOcc += i; }
-    if (meanOcc != 0 && !occurrences.empty()) {
-        meanOcc /= occurrences.size(); }
-    allMean.push_back(meanOcc);
-
     // iterate over all occurrences for the split
     while (splitOccurrence > 0) {
-        // ignore the first split
-        if (isFirstSplit) {
-            // update the occurrences-vector
-            for (std::size_t i = 0; i < occurrences.size(); ++i) {
-                if (occurrences[i] -= splitOccurrence == 0) {
-                    color::erase(color, i);
-                }
-                occurrences[i] -= splitOccurrence;
-            }
-            //erase zeros from occ-vector
-            if (occurrences.size() > 1) {
-                occurrences.erase(
-                        std::remove(occurrences.begin(), occurrences.end(), 0),
-                        occurrences.end());
-            }
-            // if occurrences-vector is empty return min_value
-            if (!occurrences.empty()) {
-                splitOccurrence = get_greatestCommonWeight(occurrences);
-            } else {
-                return min_value;
-            }
-            bool pos = color::complement(color, true);    // invert the color set, if necessary
-            if (color == 0) return min_value;    // ignore empty splits
-            isFirstSplit = false;
-        } else { //start iterating over the occurrence vector at the second split
-            array<uint32_t, 2> &weight = color_table[color];
-            double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
-            if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
-                auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
-                for (auto it = range.first; it != range.second; ++it) {
-                    if (it->second == color) {    // iterate over the color sets to find the correct one
-                        split_list.erase(it);    // erase the entry with the old weight
-                        break;
-                    }
+        array<uint32_t, 2> &weight = color_table[color];
+        double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
+        if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
+            auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
+            for (auto it = range.first; it != range.second; ++it) {
+                if (it->second == color) {    // iterate over the color sets to find the correct one
+                    split_list.erase(it);    // erase the entry with the old weight
+                    break;
                 }
             }
-            weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
-            double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
-
-
-            if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
-                split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
-                if (split_list.size() > t) {
-                    split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
-                    min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
-                }
-            }
-            // update the occurrences-vector
-            for (std::size_t i = 0; i < occurrences.size(); ++i) {
-                if (occurrences[i] -= splitOccurrence == 0) {
-                    color::erase(color, i);
-                }
-                occurrences[i] -= splitOccurrence;
-            }
-            //erase zeros from occ-vector
-            if (occurrences.size() > 1) {
-                occurrences.erase(
-                        std::remove(occurrences.begin(), occurrences.end(), 0),
-                        occurrences.end());
-            }
-            // if occurrences-vector is empty return min_value
-            if (!occurrences.empty()) {
-                splitOccurrence = get_greatestCommonWeight(occurrences);
-            } else {
-                return min_value;
-            }
-            bool pos = color::complement(color, true);    // invert the color set, if necessary
-            if (color == 0) return min_value;    // ignore empty splits
         }
+        weight[pos] += splitOccurrence; // update the weight or the inverse weight of the current color set
+        double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+
+        if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
+            split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
+            if (split_list.size() > t) {
+                split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+            }
+        }
+        // update the occurrences-vector
+        for (std::size_t i = 0; i < occurrences.size(); ++i) {
+            if (occurrences[i] -= splitOccurrence == 0) {
+                color::erase(color, i);
+            }
+            occurrences[i] -= splitOccurrence;
+        }
+        //erase zeros from occ-vector
+        if (occurrences.size() > 1) {
+            occurrences.erase(
+                    std::remove(occurrences.begin(), occurrences.end(), 0),
+                    occurrences.end());
+        }
+        // if occurrences-vector is empty return min_value
+        if (!occurrences.empty()) {
+            splitOccurrence = get_greatestCommonWeight(occurrences);
+        } else {
+            return min_value;
+        }
+        bool pos = color::complement(color, true);    // invert the color set, if necessary
+        if (color == 0) return min_value;    // ignore empty splits
+
     }
     return min_value;
 }
