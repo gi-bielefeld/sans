@@ -4,7 +4,6 @@
 #include <cstring>
 #include "gz/gzstream.h"
 
-
 /**
  * This is the entry point of the program.
  *
@@ -46,7 +45,9 @@ int main(int argc, char* argv[]) {
         cout << "  Output arguments:" << endl;
         cout << endl;
         cout << "    -o, --output  \t Output TSV file: list of splits, sorted by weight desc." << endl;
-        cout << endl;
+	cout << endl;
+	cout << "    -X, --nexus   \t Output Nexus file." << endl;
+	cout << endl;
         cout << "    -N, --newick  \t Output Newick file" << endl;
         cout << "                  \t (only applicable in combination with -f strict or n-tree)" << endl;
         cout << endl;
@@ -117,6 +118,7 @@ int main(int argc, char* argv[]) {
     string splits;    // name of splits file
     string output;    // name of output file
     string newick;    // name of newick output file // Todo
+    string nexus;     // name of nexus output file
     string translate; // name of translate file
 
     uint64_t kmer = 31;    // length of k-mers
@@ -160,6 +162,9 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
             output = argv[++i];    // Output file: list of splits, sorted by weight desc.
         }
+	else if (strcmp(argv[i], "-X") == 0 || strcmp(argv[i], "--nexus") == 0) {
+	    nexus = argv[++i];
+	}
         else if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--newick") == 0) {
             newick = argv[++i];    // Output newick file
         }
@@ -322,8 +327,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name>" << endl;
+    if (output.empty() && newick.empty() && nexus.empty()) {
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file-name>" << endl;
         return 1;
     }
     if (kmer > maxK && splits.empty()) {
@@ -736,7 +741,11 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
     if (verbose) {
         cout << "\33[2K\r" << "Filtering splits..." << flush;
     }
+    
 
+    /*
+    *  --- This codeblock applies the target filter method and writes the newick file ---
+    */
     //cleanliness cleanliness;
     if (!filter.empty()) {    // apply filter
         for (auto& split : graph::split_list) {
@@ -771,34 +780,111 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
 
 
     /**
-     * --- Write to output ---
+     * --- This codeblock writes the tsv split file ---
      */ 
 
     if (verbose) {
         cout << "\33[2K\r" << "Please wait..." << flush << endl;
     }
-    ofstream file(output);    // output file stream
-    ostream stream(file.rdbuf());
+    if (!output.empty()){
+        ofstream file(output);    // output file stream
+        ostream stream(file.rdbuf());
 
-    uint64_t pos = 0;
-    //cleanliness.setFilteredCount(graph::split_list.size());
-    for (auto& split : graph::split_list) {
-        double weight = split.first;
-       // cleanliness.setSmallestWeight(weight, split.second);
-        stream << weight;    // weight of the split
-        for (uint64_t i = 0; i < num; ++i) {
-            if (color::test(split.second, pos)) {
-                if (i < denom_names.size())
+        uint64_t pos = 0;
+        //cleanliness.setFilteredCount(graph::split_list.size());
+        for (auto& split : graph::split_list) {
+            double weight = split.first;
+            // cleanliness.setSmallestWeight(weight, split.second);
+            stream << weight;    // weight of the split
+            for (uint64_t i = 0; i < num; ++i) {
+                if (color::test(split.second, pos)) {
+                    if (i < denom_names.size())
                     stream << '\t' << denom_names[i];    // name of the file
+                }
+                split.second >>= 01u;
             }
-            split.second >>= 01u;
+            stream << endl;
         }
-        stream << endl;
+        //cleanliness.calculateWeightBeforeCounter();
+        file.close();
     }
+    /*
+     * --- This codeblock writes the nexus file ---
+     */
+    if (!nexus.empty()){
+        cout << "Writing nexus file" << endl;
+        ofstream file(nexus);
+	ostream stream(file.rdbuf());
+	// Header
+	stream << "#nexus" << endl;
+	stream << endl;
+        
 
-    //cleanliness.calculateWeightBeforeCounter();
+	// Taxa	
+	// Clean up denom names
+	vector<string> extension_free_denom_names;
+	for (auto it=denom_names.begin(); it != denom_names.end(); it++){
+	    string extension_free_name = *it;
+	    bool cut = true;
+	    while (cut){
+		cut = false;
+		if (extension_free_name.find_last_of(".") == extension_free_name.npos){break;} // Catch no ext
+                string ext = extension_free_name.substr(extension_free_name.find_last_of("."), extension_free_name.npos);
+		if (ext.compare(".fa")||ext.compare(".fasta")||ext.compare(".fastq")||ext.compare("mfasta")
+		    ||ext.compare(".fas")||ext.compare(".fsa")||ext.compare(".fna")||ext.compare(".gz")){
+		    extension_free_name = extension_free_name.substr(0, extension_free_name.find_last_of("."));
+		    cut = true;
+		}
+	    }
+	    extension_free_denom_names.push_back(extension_free_name);
+	}
+	
+	stream << "BEGIN Taxa;" << endl;
+	stream << "DIMENSIONS ntax=" << denom_names.size() << ";" << endl;
+	stream << "TAXLABELS" << endl;
+	// Write Taxa labels
+	int i = 0;
+	for (auto it=extension_free_denom_names.begin(); it != extension_free_denom_names.end(); it++){ 
+	    stream << "["<< to_string(i + 1) <<"] " << "'" << *it << "'" << endl;
+	    i++;
+	}
+	stream << ";" << endl << "END; [Taxa]" << endl << endl;
 
-    file.close();
+	// Splits
+	stream << "BEGIN Splits;" << endl;
+        stream << "DIMENSIONS ntax=" << extension_free_denom_names.size();
+        stream << " nsplits=" << graph::split_list.size() << ";" << endl; 
+	stream << "MATRIX" << endl;
+
+	// Write split lines
+	uint64_t pos = 0;
+	uint64_t row = 0;  // The row of the split in the nexus matrix 
+	for (auto& split : graph::split_list) {
+	    row++;
+	    double weight = split.first; // The split weight
+            uint64_t size = 0;  // The split taxa count
+	    string taxa_string = "";  // Aggreator string for taxa
+	    for (uint64_t i = 0; i < num; ++i){  // Test all colors to find the taxa in the split
+	    	if (color::test(split.second, pos)) {
+		    size++;
+		    taxa_string += "\t" + to_string(i+1);
+		}
+		split.second >>=01u;
+	    }
+	    stream << "[" << row << ", size=" << size << "]\t" << weight << taxa_string << "," << endl;
+	}
+	stream << ";" << endl << "END; [Splits]" << endl << endl;
+	
+	// Write st_Assumptions
+	stream << "BEGIN st_Assumptions;" << endl;
+	stream << "uptodate;" << endl;
+	stream << "splitstransform=EqualAngle;" << endl;
+	stream << "SplitsPostProcess filter=none;" << endl;
+	stream << "exclude  no missing;" << endl;
+	stream << "autolayoutnodelabels;" << endl;
+	stream << "END; [st_Assumptions]" << endl;
+	file.close();	
+    }
 
     chrono::high_resolution_clock::time_point end = chrono::high_resolution_clock::now();    // time measurement
 

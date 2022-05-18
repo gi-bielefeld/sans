@@ -1,8 +1,8 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -std=c++14
+# CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -std=c++14
 
 ## IF DEBUG
-# CC = g++ -g -march=native -DmaxK=33 -DmaxN=64 -std=c++14
+CC = g++ -g -march=native -DmaxK=33 -DmaxN=64 -std=c++14
 
 ## IF BIFROST LIBRARY SHOULD BE USED
 # CC = g++ -O3 -march=native -DmaxK=64 -DmaxN=64 -DuseBF -std=c++14
@@ -29,6 +29,9 @@ ifeq ("$(wildcard $(TD))", "")
     RM = @echo ""
 endif
 
+ALL: SANS SANS-convert
+
+# Make pipeline for the SANS software
 SANS: main.o
 	$(CC) -o SANS main.o graph.o kmer32.o kmerXX.o kmerAminoXX.o kmerAmino12.o color64.o colorXX.o util.o translator.o cleanliness.o gzstream.o -lz $(BF)
 	$(RM)
@@ -71,6 +74,17 @@ cleanliness.o: src/cleanliness.cpp src/cleanliness.h
 gzstream.o: src/gz/gzstream.C src/gz/gzstream.h	
 	$(CFLAGS) -c src/gz/gzstream.C
 
+
+# Make pipeline for the SANS-toolkit
+SANS-convert: converter_main.o
+	$(CC) -o SANS-convert converter_main.o data.o
+	$(MV)
+
+converter_main.o: src/toolkit/converter_main.cpp src/toolkit/converter_main.h data.o
+	$(CC) -c src/toolkit/converter_main.cpp
+
+data.o: src/toolkit/data.cpp src/toolkit/data.h
+	$(CC) -c src/toolkit/data.cpp
 
 .PHONY: clean
 clean:
