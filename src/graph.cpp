@@ -1057,6 +1057,7 @@ void graph::entropy(int n){
         color_t col = it.value();
         int freq = color::size(col, false);
         double rel = (freq *1.0)/n;
+        cout << "p_i" << rel << endl;
         ent = ent - rel * log2(rel);
     }
 
