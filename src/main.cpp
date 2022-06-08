@@ -79,6 +79,10 @@ int main(int argc, char* argv[]) {
         cout << "                 \t Use 11 for Bacterial, Archaeal, and Plant Plastid Code" << endl;
         cout << "                 \t (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)" << endl;
         cout << endl;
+        cout << "    -e, --entropy \t Calculate either Shannon entropy or Shannon diversity" << endl;
+        cout << "                  \t Options: ent: Calculate the Shannon entropy" << endl;
+        cout << "                  \t          div: Calculate the Shannon diversity" << endl;
+        cout << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -h, --help    \t Display this help page and quit" << endl;
@@ -111,12 +115,23 @@ int main(int argc, char* argv[]) {
     bool shouldTranslate = false;   // translate input files
     bool userKmer = false; // is k-mer default or custom
     bool ent = false; // only calculating entropy
+    bool div = false; // only calculating diversity
     uint64_t code = 1;
 
     // parse the command line arguments and update the variables above
     for (int i = 1; i < argc; ++i) {
-        if(strcmp(argv[i], "-e") == 0){
-            ent = true;
+        if(strcmp(argv[i], "-e") == 0 || strcmp(argv[i], "--entropy") == 0){
+            string arg = argv[++i];
+            if (arg == "div") {
+                div = true;
+            }
+            else if (arg == "ent") {
+                ent = true;
+            }
+            else {
+                cerr << "Error: unknown argument: --entropy " << arg << endl;
+                return 1;
+            }
         }
         else if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
             input = argv[++i];    // Input file: list of sequence files, one per line
@@ -281,7 +296,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty()) {
+    if (output.empty() && newick.empty() && !div && !ent) {
         cerr << "Error: missing argument: --output <file_name> or --newick <file_name>" << endl;
         return 1;
     }
@@ -564,7 +579,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    if(ent){
+    if (ent) {
+        graph::entropy(denom_names.size());
+    }
+    if (div) {
         graph::diversity(denom_names.size());
     }
 
@@ -598,7 +616,7 @@ int main(int argc, char* argv[]) {
         }
     }
 #endif
-    if(!ent){
+    if(!ent && !div){
 
         // function to map color position to file name
         std::function<string(const uint64_t&)> map=[=](uint64_t i) {
