@@ -41,8 +41,8 @@ def readfile(filename,taxa):
         split=[] #storing ids
         for f in split_orig:
             if f not in taxa.keys():
-                eprint("taxa from split not in taxa: "+f)
-                exit(1)
+                eprint("WARNING: taxa from split not in taxa file and thus discarded: "+f)
+#                exit(1)
             else:
                 split.append(taxa[f])
         if len(split)==len(taxa) or len(split)==0:

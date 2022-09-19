@@ -90,20 +90,26 @@ def remove_leaves(splitlist,taxa):
             del splitlist[t]
 
 
-def split_comp(donor,reference):
+def split_comp(donor,reference,weighted):
     
     #sort by weights
     donor_sorted=sorted([(w,s) for (s,w) in donor.items()], reverse=True)
     
     ref_list=reference.keys()
     n=len(ref_list)
+    w_all_ref=sum([w for (_,w) in reference.items()])
     
     w_all=0.
     w_corr=0.
+    w_corr_ref=0.
     num_all=0
     num_corr=0
 
-    print("#precision\trecall")
+    if not weighted:
+        print("#precision\trecall\t(unweighted)")
+    else:
+        print("#precision\trecall\t(weighted)")
+
     for (w,s) in donor_sorted:
         w_all+=w
         num_all+=1
@@ -111,38 +117,51 @@ def split_comp(donor,reference):
             ref_list.remove(s)
             w_corr+=w
             num_corr+=1
-            #print("\t".join([str(num_all),str(w),"-1",str(len(s.split('/')))]))
-        #else:
-            #print("\t".join([str(num_all),"-1",str(w),str(len(s.split('/')))]))
-#            eprint(s.split('/'))
-        #if len(ref_list) == 0:
-            #break
-    #for r in ref_list:
-        #print("\t".join(["-1","-1","-1",str(len(r.split('/')))]))
-    #eprint(w_all,w_corr,num_all,num_corr,w)
-
+            w_corr_ref+=reference[s]
+ 
         precision=(1.0*num_corr)/(1.0*num_all)
         recall=(1.0*num_corr)/(1.0*n)
-        print("\t".join([str(precision),str(recall)]))
+        
+        w_precision=(1.0*w_corr)/(1.0*w_all)
+        w_recall=(1.0*w_corr_ref)/(1.0*w_all_ref)
+        
+        if not weighted:
+            print("\t".join([str(precision),str(recall)]))
+        else: # weighted
+            print("\t".join([str(w_precision),str(w_recall)]))
+
+    eprint("\t".join([str(precision),str(recall),"unweighted"]))
+    eprint("\t".join([str(w_precision),str(w_recall),"weighted"]))
                      
-    return w_corr
 
                         
 
+   
+weighted=False
+min_size=1
 
-    
 
 if len(sys.argv)>4:
-    min_size=int(sys.argv[4])
-else:
-    min_size=1
-
+	if sys.argv[4]=="-w":
+		weighted=True
+	else:
+		min_size=int(sys.argv[4])
+	if len(sys.argv)>5:
+		if sys.argv[5]=="-w":
+			weighted=True
+		else:
+			min_size=int(sys.argv[5])
 
 if len(sys.argv)<4:
-    eprint("Usage: sans2nexus.py <list of splits 1> <list of splits 2> <list of genomes (file names)>  [minimum split size]")
+    eprint("Usage: comp.py <list of splits 1> <list of splits 2> <list of genomes (file names)>  [minimum split size] -w")
     eprint("list of splits in SANS output format: Per split one line: weight genomeA genomeB ...")
+    eprint("Output on stdout: precision and recall of splits 1 w.r.t. splits 2 in terms of topological RF-distance for increasing number of splits considered, i.e., precision and recall for *all* splits are in last line.")
     eprint("Only splits of size at least <minimum split size> are considered (default = 1, i.e. all; choose 2 to ignore trivial splits, i.e. leaf edges).")
-    eprint("Output on stdout: precision and recall of splits1 w.r.t. splits2 in terms of topological RF-distance for increasing number of splits considered, i.e., precision and recall for *all* splits are in last line.")
+    eprint("Default:     Precision = (number of splits 1 that are also in splits 2) / (total number of splits 1)")
+    eprint("             Recall    = (number of splits 2 that are also in splits 1) / (total number of splits 2)")
+    eprint("-w Weighted: Precision = (total weight of splits 1 that are also in splits 2) / (total weight of all splits 1)")
+    eprint("             Recall    = (total weight of splits 2 that are also in splits 1) / (total weight of all splits 2)")
+    eprint("Both unweighed and weighted statistics are output on stderr in any case.")
     sys.exit(1)
 
 
@@ -189,7 +208,7 @@ eprint(l1,l2)
 #eprint("compute FM")
 #fm=comp_diff_sqr(splitlist1,splitlist2,get_pairwise_ds(splitlist1,splitlist2,taxa))
 eprint("compute precision and recall:")
-sc=split_comp(splitlist1,splitlist2)
+split_comp(splitlist1,splitlist2,weighted)
 
 
 # output
