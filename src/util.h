@@ -1,7 +1,5 @@
 #include <iostream>
 #include <chrono>
-#include <cmath>
-
 using namespace std;
 
 /**
@@ -9,36 +7,19 @@ using namespace std;
  */
 class util {
 
-private:
+ private:
 
-public:
-
-    /**
-     * This function calculates the arithmetic mean of two values.
-     *
-     * @param x first value
-     * @param y second value
-     * @return arithmetic mean
-     */
-    static double arithmetic_mean(uint32_t& x, uint32_t& y);
+ public:
 
     /**
-     * This function calculates the geometric mean of two values.
-     *
-     * @param x first value
-     * @param y second value
-     * @return geometric mean
+     * This function prints a minimal version of the help page.
      */
-    static double geometric_mean(uint32_t& x, uint32_t& y);
+    static void print_help();
 
     /**
-     * This function calculates the geometric mean with pseudo counts.
-     *
-     * @param x first value
-     * @param y second value
-     * @return geometric mean
+     * This function prints an extended version of the help page.
      */
-    static double geometric_mean2(uint32_t& x, uint32_t& y);
+    static void print_extended_help();
 
     /**
      * This function displays a duration in a human readable format.
@@ -46,8 +27,8 @@ public:
      * @param time duration
      * @return formatted string
      */
-    static string format_time(chrono::high_resolution_clock::duration time);
+    static string format_time(const chrono::high_resolution_clock::duration& time);
 
-protected:
+ protected:
 
 };

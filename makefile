@@ -1,32 +1,31 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64
+CC = g++ -O3 -flto=auto -march=native -DmaxK=32 -DmaxN=64
 XX = -lpthread
 
 ## IF BIFROST LIBRARY SHOULD BE USED
-# CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -DuseBF
+# CC = g++ -O3 -flto=auto -march=native -DmaxK=32 -DmaxN=64 -DuseBF
 # XX = -lbifrost -lpthread -lz
 
-SANS: main.o
-	$(CC) -o SANS main.o graph.o kmer32.o kmerXX.o color64.o colorXX.o util.o $(XX)
-	rm -rf obj/; mkdir obj/; mv *.o obj/
+SANS: obj/ obj/main.o
+	$(CC) obj/main.o obj/graph.o obj/tree.o obj/kmer.o obj/color.o obj/util.o -o SANS $(XX)
 
-main.o: src/main.cpp src/main.h graph.o util.o
-	$(CC) -c src/main.cpp
+obj/main.o: src/main.cpp src/main.h obj/graph.o obj/util.o
+	$(CC) -c src/main.cpp -o obj/main.o
 
-graph.o: src/graph.cpp src/graph.h kmer32.o kmerXX.o color64.o colorXX.o
-	$(CC) -c src/graph.cpp
+obj/graph.o: src/graph.cpp src/graph.h obj/tree.o obj/kmer.o
+	$(CC) -c src/graph.cpp -o obj/graph.o
 
-kmer32.o: src/kmer32.cpp src/kmer32.h
-	$(CC) -c src/kmer32.cpp
+obj/tree.o: src/tree.cpp src/tree.h obj/color.o
+	$(CC) -c src/tree.cpp -o obj/tree.o
 
-kmerXX.o: src/kmerXX.cpp src/kmerXX.h
-	$(CC) -c src/kmerXX.cpp
+obj/kmer.o: src/kmer.cpp src/kmer.h
+	$(CC) -c src/kmer.cpp -o obj/kmer.o
 
-color64.o: src/color64.cpp src/color64.h
-	$(CC) -c src/color64.cpp
+obj/color.o: src/color.cpp src/color.h
+	$(CC) -c src/color.cpp -o obj/color.o
 
-colorXX.o: src/colorXX.cpp src/colorXX.h
-	$(CC) -c src/colorXX.cpp
+obj/util.o: src/util.cpp src/util.h
+	$(CC) -c src/util.cpp -o obj/util.o
 
-util.o: src/util.cpp src/util.h
-	$(CC) -c src/util.cpp
+obj/: makefile
+	@rm -rf obj/ && mkdir obj/

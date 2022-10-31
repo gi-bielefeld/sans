@@ -1,61 +1,18 @@
 #include "graph.h"
 
-/**
- * This is the size of the top list.
+/*
+ * This class manages the k-mer/color hash tables and split list.
  */
-uint64_t graph::t;
-
-/**
- * This is a hash table mapping k-mers to colors [O(1)].
- */
-vector<hash_map<kmer_t, color_t>> graph::kmer_table;
-
-/**
- * This is a hash table mapping colors to weights [O(1)].
- */
-hash_map<color_t, array<uint32_t,2>> graph::color_table;
-
-/**
- * This is an ordered tree collecting the splits [O(log n)].
- */
-multimap<double, color_t, greater<>> graph::split_list;
-
-/**
- * This is a comparison function extending std::bitset.
- */
-#if maxK > 32 || maxN > 64
-namespace std {
-    template <uint64_t N>
-    bool operator<(const bitset<N>& x, const bitset<N>& y) {
-        for (uint64_t i = N-1; i != -1; --i) {
-            if (x[i] ^ y[i]) return y[i];
-        }
-        return false;
-    }
-}
-#endif
-
-/**
- * Initializes a new node struct.
- *
- * @param taxa color_t coding all taxa beneath this node
- * @param subsets list of subsets
- */
-struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
-    // declare and allocate new node
-    auto* node = new struct node();
-    node->taxa = std::move(taxa);
-    node->weight = std::move(weight);
-    node->subsets = std::move(subsets);
-    return(node);
-}
+uint64_t                             graph::t;             // size of the top list
+vector<hash_map<kmer_t, color_t>>    graph::kmer_table;    // hash table mapping k-mers to their colors/splits
+hash_map<color_t, array<uint32_t,2>> graph::color_table;   // hash table mapping colors/splits to their weights
 
 /**
  * This function initializes the top list size.
  *
- * @param t top list size
+ * @param top_size top list size
  */
-void graph::init(uint64_t T, uint64_t& top_size) {
+void graph::init(const uint64_t& T, const uint64_t& top_size) {
     t = top_size;
     kmer_table.resize(T);
 }
@@ -67,14 +24,14 @@ void graph::init(uint64_t T, uint64_t& top_size) {
  * @param color color flag
  * @param reverse merge complements
  */
-void graph::add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse) {
+void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse) {
     if (str.length() < kmer::k) return;    // not enough characters
 
-    uint64_t pos;    // current position in the string, from 0 to length
+    size_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    uint64_t begin = 0;
+    size_t begin = 0;
 next_kmer:
     pos = begin;
 
@@ -83,11 +40,11 @@ next_kmer:
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
             goto next_kmer;    // unknown base, start a new k-mer from the beginning
         }
-        kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
+        kmer::shift(kmer, str[pos]);    // shift each base into the bit sequence
 
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
-            if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+            if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
             color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
         }
     }
@@ -99,21 +56,22 @@ next_kmer:
  * @param str dna sequence
  * @param color color flag
  * @param reverse merge complements
- * @param m number of k-mers to minimize
+ * @param window number of k-mers to minimize
  */
-void graph::add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m) {
+void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& window) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
     multiset<kmer_t> value_order;    // k-mers ordered by their lexicographical value
 
-    uint64_t pos;    // current position in the string, from 0 to length
+    size_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    uint64_t begin = 0;
+    size_t begin = 0;
 next_kmer:
     pos = begin;
+
     sequence_order.clear();
     value_order.clear();
 
@@ -122,20 +80,20 @@ next_kmer:
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
             goto next_kmer;    // unknown base, start a new k-mer from the beginning
         }
-        kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
+        kmer::shift(kmer, str[pos]);    // shift each base into the bit sequence
 
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
-            if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+            if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
 
-            if (sequence_order.size() == m) {
+            if (sequence_order.size() == window) {
                 value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
                 sequence_order.erase(sequence_order.begin());
             }
             value_order.emplace(rcmer);    // insert k-mer ordered by its lexicographical value
             sequence_order.emplace_back(rcmer);
 
-            if (sequence_order.size() == m) {
+            if (sequence_order.size() == window) {
                 color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
             }
         }
@@ -150,7 +108,7 @@ next_kmer:
  * @param reverse merge complements
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac) {
+void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     hash_set<kmer_t> ping;    // create a new empty set for the k-mers
@@ -160,11 +118,11 @@ void graph::add_kmers(uint64_t T, string& str, uint64_t& color, bool& reverse, u
     vector<uint8_t> factors;    // stores the multiplicity of iupac bases
     long double product;    // stores the overall multiplicity of the k-mers
 
-    uint64_t pos;    // current position in the string, from 0 to length
+    size_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create an empty bit sequence for the initial k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    uint64_t begin = 0;
+    size_t begin = 0;
 next_kmer:
     pos = begin;
 
@@ -177,7 +135,7 @@ next_kmer:
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
             goto next_kmer;    // gap character, start a new k-mer from the beginning
         }
-        iupac_calc(product, factors, str[pos]);
+        iupac_multiply(product, factors, str[pos]);
 
         if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
             if (wait) {
@@ -191,7 +149,7 @@ next_kmer:
         if (pos+1 - begin >= kmer::k) {
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
-                if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
                 color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
             }
         }
@@ -204,10 +162,10 @@ next_kmer:
  * @param str dna sequence
  * @param color color flag
  * @param reverse merge complements
- * @param m number of k-mers to minimize
+ * @param window number of k-mers to minimize
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_minimizers(uint64_t T, string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
+void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& window, const uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -221,13 +179,14 @@ void graph::add_minimizers(uint64_t T, string& str, uint64_t& color, bool& rever
     vector<uint8_t> factors;    // stores the multiplicity of iupac bases
     long double product;    // stores the overall multiplicity of the k-mers
 
-    uint64_t pos;    // current position in the string, from 0 to length
+    size_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create an empty bit sequence for the initial k-mer
     kmer_t rcmer;    // create a bit sequence for the reverse complement
 
-    uint64_t begin = 0;
+    size_t begin = 0;
 next_kmer:
     pos = begin;
+
     sequence_order.clear();
     value_order.clear();
 
@@ -240,7 +199,7 @@ next_kmer:
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
             goto next_kmer;    // gap character, start a new k-mer from the beginning
         }
-        iupac_calc(product, factors, str[pos]);
+        iupac_multiply(product, factors, str[pos]);
 
         if (product <= max_iupac) {    // check if there are too many ambiguous k-mers
             if (wait) {
@@ -254,11 +213,11 @@ next_kmer:
         if (pos+1 - begin >= kmer::k) {
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
-                if (reverse) kmer::reverse_complement(rcmer, true);    // invert the k-mer, if necessary
+                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
                 inner_value_order.emplace(rcmer);
             }
 
-            if (sequence_order.size() == m) {
+            if (sequence_order.size() == window) {
                 value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
                 sequence_order.erase(sequence_order.begin());
             }
@@ -266,7 +225,7 @@ next_kmer:
             sequence_order.emplace_back(*inner_value_order.begin());
             inner_value_order.clear();
 
-            if (sequence_order.size() == m) {
+            if (sequence_order.size() == window) {
                 color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
             }
         }
@@ -278,28 +237,25 @@ next_kmer:
  *
  * @param product overall multiplicity
  * @param factors per base multiplicity
- * @param input iupac character
+ * @param chr iupac character
  */
-void graph::iupac_calc(long double& product, vector<uint8_t>& factors, char& input) {
-    switch (input) {
+void graph::iupac_multiply(long double& product, vector<uint8_t>& factors, const char& chr) {
+    switch (chr) {
         case 'A': case 'C': case 'G': case 'T':
-            product *= 1;
             factors.emplace_back(1);
-    }
-    switch (input) {
+            product *= 1; break;
         case 'R': case 'Y': case 'S': case 'W': case 'K': case 'M':
-            product *= 2;
             factors.emplace_back(2);
-    }
-    switch (input) {
+            product *= 2; break;
         case 'B': case 'D': case 'H': case 'V':
-            product *= 3;
             factors.emplace_back(3);
-    }
-    switch (input) {
+            product *= 3; break;
         case 'N':
-            product *= 4;
             factors.emplace_back(4);
+            product *= 4; break;
+        default:
+            cerr << "Error: invalid character: " << chr << endl;
+            exit(1);
     }
     if (factors.size() > kmer::k) {
         product /= *factors.begin();
@@ -312,37 +268,37 @@ void graph::iupac_calc(long double& product, vector<uint8_t>& factors, char& inp
  *
  * @param prev set of k-mers
  * @param next set of k-mers
- * @param input iupac character
+ * @param chr iupac character
  */
-void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, char& input) {
-    kmer_t temp; char base;
+void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, const char& chr) {
+    kmer_t temp;
     while (!prev.empty()) {    // extend each previous k-mer
-        switch (input) {
+        switch (chr) {
             case 'A': case 'R': case 'W': case 'M':
             case 'D': case 'H': case 'V': case 'N':
-                temp = *prev.begin(); base = 'A';
-                kmer::shift_right(temp, base);
+                temp = *prev.begin();
+                kmer::shift(temp, 'A');
                 next.emplace(temp);
         }
-        switch (input) {
+        switch (chr) {
             case 'C': case 'Y': case 'S': case 'M':
             case 'B': case 'H': case 'V': case 'N':
-                temp = *prev.begin(); base = 'C';
-                kmer::shift_right(temp, base);
+                temp = *prev.begin();
+                kmer::shift(temp, 'C');
                 next.emplace(temp);
         }
-        switch (input) {
+        switch (chr) {
             case 'G': case 'R': case 'S': case 'K':
             case 'B': case 'D': case 'V': case 'N':
-                temp = *prev.begin(); base = 'G';
-                kmer::shift_right(temp, base);
+                temp = *prev.begin();
+                kmer::shift(temp, 'G');
                 next.emplace(temp);
         }
-        switch (input) {
+        switch (chr) {
             case 'T': case 'Y': case 'W': case 'K':
             case 'B': case 'D': case 'H': case 'N':
-                temp = *prev.begin(); base = 'T';
-                kmer::shift_right(temp, base);
+                temp = *prev.begin();
+                kmer::shift(temp, 'T');
                 next.emplace(temp);
         }
         prev.erase(prev.begin());
@@ -355,28 +311,28 @@ void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, char& in
  * @param mean weight function
  * @param verbose print progress
  */
-void graph::add_weights(double mean(uint32_t&, uint32_t&), bool& verbose) {
+void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)>& mean, const bool& verbose) {
     double min_value = numeric_limits<double>::min();    // current min. weight in the top list (>0)
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = kmer_table[0].size();
-loop:
+
     for (auto it = kmer_table[0].begin(); it != kmer_table[0].end(); ++it) {    // iterate over k-mer hash table
         if (verbose) {
-            next = 100*cur/max;
+            next = 100 * cur / max;
              if (prog < next)  cout << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         color_t& color = it.value();    // get the color set for each k-mer
-        bool pos = color::complement(color, true);    // invert the color set, if necessary
-        if (color == 0) continue;    // ignore empty splits
+        bool pos = color::represent(color);    // invert the color set, if necessary
+        if (color == 0b0u) continue;    // ignore empty splits
         array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
 
         double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
         if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
-            auto range = split_list.equal_range(old_value);    // get all color sets with the given weight
+            auto range = tree::splits.equal_range(old_value);    // get all color sets with the given weight
             for (auto it = range.first; it != range.second; ++it) {
                 if (it->second == color) {    // iterate over the color sets to find the correct one
-                    split_list.erase(it);    // erase the entry with the old weight
+                    tree::splits.erase(it);    // erase the entry with the old weight
                     break;
                 }
             }
@@ -385,10 +341,10 @@ loop:
 
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
-            split_list.emplace(new_value, color);    // insert it at the correct position ordered by weight
-            if (split_list.size() > t) {
-                split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
-                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration
+            tree::splits.emplace(new_value, color);    // insert it at the correct position ordered by weight
+            if (tree::splits.size() > t) {
+                tree::splits.erase(--tree::splits.end());    // if the top list exceeds its limit, erase the last entry
+                min_value = tree::splits.rbegin()->first;    // update the min. value for the next iteration
             }
         }
     }
@@ -400,166 +356,20 @@ loop:
  * @param weight split weight
  * @param color split colors
  */
-void graph::add_split(double& weight, color_t& color) {
-    split_list.emplace(weight, color);    // insert it at the correct position ordered by weight
-    if (split_list.size() > t) {
-        split_list.erase(--split_list.end());    // if the top list exceeds its limit, erase the last entry
+void graph::insert_split(const double& weight, const color_t& color) {
+    tree::splits.emplace(weight, color);    // insert it at the correct position ordered by weight
+    if (tree::splits.size() > t) {
+        tree::splits.erase(--tree::splits.end());    // if the top list exceeds its limit, erase the last entry
     }
-}
-
-/**
- * This function filters a greedy maximum weight tree compatible subset.
- *
- * @param verbose print progress
- */
-void graph::filter_strict(bool& verbose) {
-    filter_strict(nullptr, verbose);
-}
-
-/**
- * This function filters a greedy maximum weight tree compatible subset and returns a newick string.
- *
- * @param map function that maps an integer to the original id, or null if no newick output wanted
- * @param verbose print progress
- */
-string graph::filter_strict(std::function<string(const uint64_t&)> map, bool& verbose) {
-    auto tree = vector<color_t>();    // create a set for compatible splits
-    auto it = split_list.begin();
-    uint64_t cur = 0, prog = 0, next;
-    uint64_t max = split_list.size();
-loop:
-    while (it != split_list.end()) {
-        if (verbose) {
-            next = 100*cur/max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
-            prog = next; cur++;
-        }
-        if (test_strict(it->second, tree)) {
-            tree.emplace_back(it->second);
-            ++it; goto loop;    // if compatible, add the new split to the set
-        }
-        it = split_list.erase(it);    // otherwise, remove split
-    }
-    if (map) {
-        node* root = build_tree(tree);
-        return print_tree(root, map) + ";\n";
-    } else {
-        return "";
-    }
-}
-
-/**
- * This function filters a greedy maximum weight weakly compatible subset.
- *
- * @param verbose print progress
- */
-void graph::filter_weakly(bool& verbose) {
-    auto network = vector<color_t>();    // create a set for compatible splits
-    auto it = split_list.begin();
-    uint64_t cur = 0, prog = 0, next;
-    uint64_t max = split_list.size();
-loop:
-    while (it != split_list.end()) {
-        if (verbose) {
-            next = 100*(cur*cur)/(max*max);
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
-            prog = next; cur++;
-        }
-        if (test_weakly(it->second, network)) {
-            network.emplace_back(it->second);
-            ++it; goto loop;    // if compatible, add the new split to the set
-        }
-        it = split_list.erase(it);    // otherwise, remove split
-    }
-}
-
-/**
- * This function filters a greedy maximum weight n-tree compatible subset.
- *
- * @param n number of trees
- * @param verbose print progress
- */
-void graph::filter_n_tree(uint64_t n, bool& verbose) {
-    filter_n_tree(n, nullptr, verbose);
-}
-
-/**
- * This function filters a greedy maximum weight n-tree compatible subset and returns a string with all trees in newick format.
- *
- * @param n number of trees
- * @param map function that maps an integer to the original id, or null
- * @param verbose print progress
- */
-string graph::filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, bool& verbose) {
-    auto forest = vector<vector<color_t>>(n);    // create a set for compatible splits
-    auto it = split_list.begin();
-    uint64_t cur = 0, prog = 0, next;
-    uint64_t max = split_list.size();
-loop:
-    while (it != split_list.end()) {
-        if (verbose) {
-            next = 100*cur/max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
-            prog = next; cur++;
-        }
-       for (auto& tree : forest)
-        if (test_strict(it->second, tree)) {
-            tree.emplace_back(it->second);
-            ++it; goto loop;    // if compatible, add the new split to the set
-        }
-        it = split_list.erase(it);    // otherwise, remove split
-    }
-    // output
-    string s;
-    if (map) {
-        for (auto& tree : forest) {
-            node* root = build_tree(tree);
-            s += print_tree(root, map) + ";\n";
-        }
-    }
-    return s;
-}
-
-/**
- * This function tests if a split is compatible with an existing set of splits.
- *
- * @param color new split
- * @param color_set set of splits
- * @return true, if compatible
- */
-bool graph::test_strict(color_t& color, vector<color_t>& color_set) {
-    for (auto& elem : color_set) {
-        if (!color::is_compatible(elem, color)) {
-            return false;    // compare to each split in the set
-        }
-    }
-    return true;
-}
-
-/**
- * This function tests if a split is weakly compatible with an existing set of splits.
- *
- * @param color new split
- * @param color_set set of splits
- * @return true, if weakly compatible
- */
-bool graph::test_weakly(color_t& color, vector<color_t>& color_set) {
-    for (auto& elem1 : color_set) {
-        for (auto& elem2 : color_set) {
-            if (elem1 != elem2) {
-                if (!color::is_weakly_compatible(elem1, elem2, color)) {
-                    return false;    // compare to each split in the set
-                }
-            }
-        }
-    }
-    return true;
 }
 
 /**
  * This function merges two thread-separate hash tables.
+ *
+ * @param T1 first thread
+ * @param T2 second thread
  */
-void graph::reduce(uint64_t T1, uint64_t T2) {
+void graph::merge_threads(const uint64_t& T1, const uint64_t& T2) {
     for (auto it = kmer_table[T2].begin(); it != kmer_table[T2].end();) {
         if (kmer_table[T1].find(it->first) != kmer_table[T1].end()) {
             kmer_table[T1][it->first] |= it->second;
@@ -572,157 +382,10 @@ void graph::reduce(uint64_t T1, uint64_t T2) {
 
 /**
  * This function destructs a thread-separate hash table.
+ *
+ * @param T thread index
  */
-void graph::erase(uint64_t T) {
+void graph::erase_thread(const uint64_t& T) {
     kmer_table[T].clear();
     kmer_table.erase(kmer_table.begin()+T);
-}
-
-/**
- * This function recursively refines a given set/tree structure by a given split.
- *
- * @param current_set node of currently considered (sub-)set/tree structure
- * @param split color set to refine by
- * @return whether or not the given split is compatible with the set/tree structure
- */
-bool graph::refine_tree(node* current_set, color_t& split, color_t& allTaxa) {
-    // possible cases:
-    // splitsize <2: nothing has to be done
-    // split equals one subset -> warning: split twice
-    // split is fully contained in one subset -> recurse
-    // inverse split ... (i.e. split covers one subset partially) -> recurse with inverse
-    // split covers several subsets completely -> introduce new split
-    if (color::size(split, false) < 2 || color::size(allTaxa, false) - color::size(split, false) < 2) { return true; }
-
-    vector<node*> *subsets = &current_set->subsets;
-    vector<node*> fullycoveredsubsets = {};
-    node* partiallycoveredsubset = nullptr;
-
-    for (node* subset : *subsets) {
-        color_t subtaxa = subset->taxa;
-        if (split == subtaxa) {
-            return true;
-        }
-        // split.issubset(subtaxa)?
-        if ((split & subtaxa) == split) { return refine_tree(subset, split, allTaxa); }
-        // subtaxa.issubset(split):
-        if ((subtaxa & split) == subtaxa) { fullycoveredsubsets.push_back(subset); }
-        // elif not subtaxa.isdisjoint(split): # does intersect
-        else if ((subtaxa & split) != 0b0u) {
-            // if partiallycoveredsubset:
-            if (partiallycoveredsubset != nullptr) { return false; } //there cannot be more than one
-            else { partiallycoveredsubset = subset; }
-        }
-    }
-
-    if (partiallycoveredsubset != nullptr) {
-        if (fullycoveredsubsets.size() == subsets->size()-1) {
-            // recurse into this subset with inverse split
-            color_t inversesplit = color::complement(split, false);
-            // if inversesplit.issubset(partiallycoveredsubset[1]):
-            if ((inversesplit & partiallycoveredsubset->taxa) == inversesplit) {
-                return refine_tree(partiallycoveredsubset, inversesplit, allTaxa);
-            } else { return false; }
-        } else { return false; }
-    } else if (fullycoveredsubsets.size() > 1) {
-        // introduce new split
-        color_t newsubtaxa = 0b0u;
-        for(node* subset : fullycoveredsubsets) { newsubtaxa |= subset->taxa; }
-        // get weight of split
-        double weight = 0;
-        auto it = split_list.begin();
-        while (it != split_list.end()) {
-            if (it->second == split){
-                weight = it->first;
-                break;
-            }
-            it++;
-        }
-        node* newset = newSet(newsubtaxa, weight, fullycoveredsubsets);
-        // remove old sets
-        for(node* subset : fullycoveredsubsets) {
-            // subsets.remove(subset)
-            subsets->erase(std::remove(subsets->begin(), subsets->end(), subset), subsets->end());
-        }
-        // add new set
-        subsets->push_back(newset);
-        return true;
-    } else {
-        std::cerr << "ERROR: this cannot be: just one fully covered subset and nothing else!?" << endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
-/**
- * This function returns a tree structure (struct node) generated from the given list of color sets.
- *
- * @param color_set list of color sets
- * @return tree structure (struct node)
- */
-node* graph::build_tree(vector<color_t>& color_set) {
-    //initialize set of trivial splits
-    vector<node*> subsets = {};
-    color_t allTaxa = 0b0u;
-
-    for (uint64_t i = 0; i < color::n; i++) {
-        color_t leaf = 0b0u;
-        color::set(leaf, i);
-        color::set(allTaxa, i);
-        vector<node*> emptyset = {};
-        // get weight
-        double weight = 0;
-        auto it = split_list.begin();
-        while (it != split_list.end()) {
-            if (it->second == leaf){
-                weight = it->first;
-                break;
-            }
-            it++;
-        }
-        node* newset = newSet(leaf, weight, emptyset);
-        subsets.push_back(newset);
-    }
-    node* sets = newSet(allTaxa, 0, subsets);
-
-    for (color_t split : color_set) {
-        // split if possible
-        if (!refine_tree(sets, split, allTaxa)) {
-            std::cerr << "ERROR: splits are incompatible" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    return sets;
-}
-
-/**
- * This function returns a newick string generated from the given tree structure (set).
- *
- * @param root root of the tree/set structure
- * @return newick string
- */
-string graph::print_tree(node* root, std::function<string(const uint64_t&)> map) {
-    vector<node*> subsets = root->subsets;
-    color_t taxa = root->taxa;
-
-    if (subsets.empty()){    // leaf set
-        if (color::size(taxa, false) == 0) {
-            std::cerr << "ERROR: child with no taxon!?" << endl;
-            exit(EXIT_FAILURE);
-        } else if (color::size(taxa, false) == 1) {
-            return map(color::pos(taxa)) + ":" + to_string(root->weight);
-        } else {
-            std::cerr << "ERROR: child with more than one taxon!?" << endl;
-            exit(EXIT_FAILURE);
-        }
-    }
-    else {
-        string s = "(";
-        for (node* subset : subsets) {
-            s += print_tree(subset, map);
-            if (subset != subsets.back()) { s += ","; }
-        }
-        s += "):";
-        s += to_string(root->weight);
-        return s;
-    }
 }
