@@ -1,6 +1,6 @@
 # SANS-KC: Phylogenomic Splits + *K*-mer Counting
 
-This branch extends the main version of **SANS serif** with some basic pangenome *k*-mer counting capabilities.
+This branch extends the main version of **SANS serif** with some basic pangenome *k*-mer counting capabilities.  
 **Please note**: currently not all features of the master branch are supported and some parameters have different names.
 Most notably, the `--norev` flag is now enabled by default and can be disabled using the new `--reverse` flag.
 Please make sure to verify the correctness of the parameters when re-running your previous pipelines with this version.
@@ -13,13 +13,13 @@ Please make sure to verify the correctness of the parameters when re-running you
 
 ### Publications
 
-Rempel, A. and Wittler, R.: [SANS serif: alignment-free, whole-genome-based phylogenetic reconstruction](https://academic.oup.com/bioinformatics/article-pdf/37/24/4868/41726858/btab444.pdf).
+Rempel, A. and Wittler, R.: [SANS serif: alignment-free, whole-genome-based phylogenetic reconstruction](https://academic.oup.com/bioinformatics/article-pdf/37/24/4868/41726858/btab444.pdf).  
 Bioinformatics, 37(24), 4868-4870 (2021).
 
-Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](https://link.springer.com/content/pdf/10.1186/s13015-020-00164-3.pdf).
+Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](https://link.springer.com/content/pdf/10.1186/s13015-020-00164-3.pdf).  
 Algorithms for Molecular Biology, 15(1), 1-12 (2020).
 
-Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](http://drops.dagstuhl.de/opus/volltexte/2019/11032/pdf/LIPIcs-WABI-2019-2.pdf).
+Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](http://drops.dagstuhl.de/opus/volltexte/2019/11032/pdf/LIPIcs-WABI-2019-2.pdf).  
 19th International Workshop on Algorithms in Bioinformatics (WABI). Schloss Dagstuhl-Leibniz-Zentrum fuer Informatik (2019).
 
 ## Table of Contents
@@ -172,5 +172,4 @@ SANS is provided as a service of the [German Network for Bioinformatics Infrastr
 * The sparse-map library is licensed under the [MIT license](https://github.com/Tessil/sparse-map/blob/master/LICENSE).
 * The Bifrost library is licensed under the [BSD-2 license](https://github.com/pmelsted/bifrost/blob/master/LICENSE).
 * SANS is licensed under the [GNU general public license](https://gitlab.ub.uni-bielefeld.de/gi/sans/blob/master/LICENSE).
-
 <img src="https://piwik.cebitec.uni-bielefeld.de/matomo.php?idsite=12&rec=1&action_name=VisitGitLab&url=https://gitlab.ub.uni-bielefeld.de/gi/sans" style="border:0;" alt="" />

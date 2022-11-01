@@ -1,4 +1,5 @@
 #include "tree.h"
+#include <cmath>
 
 /*
  * This class manages the split/tree filters and Newick output.
@@ -213,7 +214,7 @@ void tree::filter_weakly(const bool& verbose) {
 loop:
     while (it != splits.end()) {
         if (verbose) {
-            next = 100 * (cur*cur) / (max*max);
+            next = 100 * (cur * sqrt(cur)) / (max * sqrt(max));
              if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
@@ -278,10 +279,10 @@ bool tree::test_strict(const color_t& color, const vector<color_t>& color_set) {
  */
 bool tree::test_weakly(const color_t& color, const vector<color_t>& color_set) {
     for (auto& elem1 : color_set) {
-        for (auto& elem2 : color_set) {
-            if (elem1 != elem2) {
+        if (!color::is_compatible(elem1, color)) {
+            for (auto& elem2 : color_set) {
                 if (!color::is_weakly_compatible(elem1, elem2, color)) {
-                    return false;    // compare to each split in the set
+                    return false;    // compare to each pair of splits in the set
                 }
             }
         }
