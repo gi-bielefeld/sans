@@ -188,7 +188,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         if (test_strict(it->second, tree)) {
@@ -215,7 +215,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * (cur * sqrt(cur)) / (max * sqrt(max));
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         if (test_weakly(it->second, network)) {
@@ -242,7 +242,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cout << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         for (auto& tree : forest)

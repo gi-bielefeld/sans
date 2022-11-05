@@ -306,6 +306,106 @@ void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, const ch
 }
 
 /**
+ * This function iterates over the hash table and outputs all the k-mer/color pairs.
+ *
+ * @param kmer string to store the k-mer
+ * @param color string to store the color
+ * @return iterator function
+ */
+function<bool(string&, string&)> graph::lookup_kmer() {
+    auto it = kmer_table[0].begin();    // create iterator and a function to advance
+    return [&, it] (string& kmer, string& color) mutable {
+        if (it == kmer_table[0].begin()) {    // initialize placeholder strings
+            kmer = string(kmer::k, 'N');    // reserve enough space for characters
+            color = string(color::n, '0');    // reserve enough space for colors
+        }
+        if (it != kmer_table[0].end()) {
+            kmer_t kmer_bits = it->first;    // shift the characters into the string
+            for (size2K_t i = 0; i != kmer::k; ++i)
+                kmer::unshift(kmer_bits, kmer[kmer::k-i-1]);
+            color_t color_bits = it->second;    // shift the colors into the string
+            for (size1N_t i = 0; i != color::n; ++i)
+                color::unshift(color_bits, color[i]);
+            ++it; return true;    // suspend and return the results to the caller
+        }
+        kmer.clear(); color.clear(); return false;    // clean up and finish
+    };
+}
+
+/**
+ * This function iterates over the hash table and outputs matching k-mer/color pairs.
+ *
+ * @param query query sequence
+ * @param reverse merge complements
+ * @param kmer string to store the k-mer
+ * @param color string to store the color
+ * @return iterator function
+ */
+function<bool(string&, string&)> graph::lookup_kmer(const string& query, const bool& reverse) {
+    string str;    // fill shorter queries with N up to the k-mer length
+    if (query.length() < kmer::k)
+        for (size2K_t i = 0; i < kmer::k-query.size(); ++i)
+            str += 'N';
+    str += query;    // allows to search shorter strings within a k-mer
+    if (query.length() < kmer::k)
+        for (size2K_t i = 0; i < kmer::k-query.size(); ++i)
+            str += 'N';
+
+    kmer_table.resize(2);    // add a new table to store the results
+    hash_set<kmer_t> ping, pong;    // create two sets for the k-mers
+    bool ball;    // indicates which of the two sets should be used
+
+    size_t pos;    // current position in the string, from 0 to length
+    kmer_t kmer;    // create an empty bit sequence for the initial k-mer
+    kmer_t rcmer;    // create a bit sequence for the reverse complement
+
+    size_t begin = 0;
+next_kmer:
+    pos = begin;
+
+    ping.clear(); pong.clear(); ball = true;
+    (ball ? ping : pong).emplace(kmer);
+
+    for (; pos < str.length(); ++pos) {    // collect the bases from the string
+        iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
+        ball = !ball;    // shift each base in, resolve iupac character
+        if ((ball ? ping : pong).empty()) {
+            begin = pos+1;    // str = str.substr(pos+1, string::npos);
+            goto next_kmer;    // invalid character, start a new k-mer from next position
+        }
+
+        if (pos+1 - begin >= kmer::k) {
+            for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
+                rcmer = kmer;
+                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
+                if (kmer_table[0].find(rcmer) != kmer_table[0].end()) {    // lookup the k-mer/color
+                    kmer_table[1][rcmer] = kmer_table[0][rcmer];    // transfer to the results table
+                }
+            }
+        }
+    }
+
+    auto it = kmer_table[1].begin();    // create iterator and a function to advance
+    return [&, it] (string& kmer, string& color) mutable {
+        if (it == kmer_table[1].begin()) {    // initialize placeholder strings
+            kmer = string(kmer::k, 'N');    // reserve enough space for characters
+            color = string(color::n, '0');    // reserve enough space for colors
+        }
+        if (it != kmer_table[1].end()) {
+            kmer_t kmer_bits = it->first;    // shift the characters into the string
+            for (size2K_t i = 0; i != kmer::k; ++i)
+                kmer::unshift(kmer_bits, kmer[kmer::k-i-1]);
+            color_t color_bits = it->second;    // shift the colors into the string
+            for (size1N_t i = 0; i != color::n; ++i)
+                color::unshift(color_bits, color[i]);
+            ++it; return true;    // suspend and return the results to the caller
+        }
+        kmer_table[1].clear(); kmer_table.resize(1);    // remove results table
+        kmer.clear(); color.clear(); return false;    // clean up and finish
+    };
+}
+
+/**
  * This function iterates over the hash table and calculates the split weights.
  *
  * @param mean weight function
@@ -319,7 +419,7 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
     for (auto it = kmer_table[0].begin(); it != kmer_table[0].end(); ++it) {    // iterate over k-mer hash table
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cout << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
+             if (prog < next)  cerr << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
             prog = next; cur++;
         }
         color_t& color = it.value();    // get the color set for each k-mer

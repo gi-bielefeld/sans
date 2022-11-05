@@ -84,6 +84,26 @@ class graph {
     static void add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& window, const uint64_t& max_iupac);
 
     /**
+     * This function iterates over the hash table and outputs all the k-mer/color pairs.
+     *
+     * @param kmer string to store the k-mer
+     * @param color string to store the color
+     * @return iterator function
+     */
+    static function<bool(string&, string&)> lookup_kmer();
+
+    /**
+     * This function iterates over the hash table and outputs matching k-mer/color pairs.
+     *
+     * @param query query sequence
+     * @param reverse merge complements
+     * @param kmer string to store the k-mer
+     * @param color string to store the color
+     * @return iterator function
+     */
+    static function<bool(string&, string&)> lookup_kmer(const string& query, const bool& reverse);
+
+    /**
      * This function iterates over the hash table and calculates the split weights.
      *
      * @param mean weight function

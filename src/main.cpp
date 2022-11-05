@@ -13,7 +13,7 @@ int main(int argc, char* argv[]) {
     // check for a new version of SANS-KC at program start
     if (!system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/kc/src/main.h | grep -q SANS_VERSION")
       && system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/kc/src/main.h | grep -q " SANS_VERSION)) {
-        cout << "NEW VERSION AVAILABLE: https://gitlab.ub.uni-bielefeld.de/gi/sans/tree/kc" << endl;
+        cerr << "NEW VERSION AVAILABLE: https://gitlab.ub.uni-bielefeld.de/gi/sans/tree/kc" << endl;
     }
     // print a help message describing the program arguments
     if (argc <= 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {
     string output;    // name of output file
     string newick;    // name of newick file
     string counts;    // name of counts file
+    bool interactive = false;    // lookup k-mer
 
     uint64_t kmer = 0;    // length of k-mers
     string pattern;    // pattern of gapped k-mers
@@ -76,6 +77,9 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--counts") == 0) {
             counts = argv[++i];    // Output K-mer file: list k-mer occurrence per input file
+        }
+        else if (strcmp(argv[i], "-C") == 0) {    /* hidden option */
+            interactive = true;    // Interactive mode: list k-mer occurrence per input file
         }
 
         else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0) {
@@ -163,11 +167,11 @@ int main(int argc, char* argv[]) {
         else cerr << "Error: too many input arguments: --graph and --splits <file_name>" << endl;
         return 1;
     }
-    if (output.empty() && newick.empty() && counts.empty()) {
+    if (output.empty() && newick.empty() && (counts.empty() && !interactive)) {
         cerr << "Error: missing argument: --output, --newick, or --counts <file_name>" << endl;
         return 1;
     }
-    if (!splits.empty() && !counts.empty()) {
+    if (!splits.empty() && !(counts.empty() && !interactive)) {
         cerr << "Error: k-mer counts cannot be calculated if the input is a list of splits" << endl;
         return 1;
     }
@@ -230,7 +234,7 @@ int main(int argc, char* argv[]) {
     if (!graph.empty()) {
         if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) {
             num += cdbg.getNbColors();
-            if (verbose) cout << endl;
+            if (verbose) cerr << endl;
         } else {
             cerr << "Error: could not load Bifrost graph: " << graph << endl;
             return 1;
@@ -291,15 +295,15 @@ int main(int argc, char* argv[]) {
 
     if (!input.empty() && splits.empty()) {
         if (verbose)
-            cout << "Reading input files..." << flush;
+            cerr << "\33[2K\r" << "Reading input files..." << flush;
 
        auto lambda = [&] (const uint64_t& T, const size1N_t& lower_bound, const size1N_t& upper_bound) {
         for (size1N_t i = lower_bound; i < upper_bound; ++i) {
             ifstream file(files[i]);    // input file stream
             if (!file.good())
-                cout << "\33[2K\r" << "\u001b[31m" << files[i] << " (ERR)" << "\u001b[0m" << endl;    // could not read file
+                cerr << "\33[2K\r" << "\u001b[31m" << files[i] << " (ERR)" << "\u001b[0m" << endl;    // could not read file
             else if (verbose)
-                cout << "\33[2K\r" << files[i] << " (" << i+1 << "/" << files.size() << ")" << endl;    // print progress
+                cerr << "\33[2K\r" << files[i] << " (" << i+1 << "/" << files.size() << ")" << endl;    // print progress
 
             string line;    // read the file line by line
             string sequence;    // read in the sequence files and extract the k-mers
@@ -316,7 +320,7 @@ int main(int argc, char* argv[]) {
                         sequence.clear();
 
                         if (verbose)
-                            cout << "\33[2K\r" << line << flush;    // print progress
+                            cerr << "\33[2K\r" << line << flush;    // print progress
                     }
                     else if (line[0] == '+') {    // FASTQ quality values -> ignore
                         getline(file, line);
@@ -336,7 +340,7 @@ int main(int argc, char* argv[]) {
             sequence.clear();
 
             if (verbose)
-                cout << "\33[2K\r" << flush;
+                cerr << "\33[2K\r" << flush;
             file.close();
         }};
 
@@ -381,14 +385,14 @@ int main(int argc, char* argv[]) {
 #ifdef useBF
     if (!graph.empty()) {
         if (verbose)
-            cout << "Processing unitigs..." << flush;
+            cerr << "\33[2K\r" << "Processing unitigs..." << flush;
         uint64_t cur = 0, prog = 0, next;
         uint64_t max = cdbg.size();
 
         for (auto& unitig : cdbg) {
             if (verbose) {
                 next = 100 * cur / max;
-                 if (prog < next)  cout << "\33[2K\r" << "Processed " << cur << " unitigs (" << next << "%) " << flush;
+                 if (prog < next)  cerr << "\33[2K\r" << "Processed " << cur << " unitigs (" << next << "%) " << flush;
                 prog = next; cur++;
             }
             auto sequence = unitig.mappedSequenceToString();
@@ -401,13 +405,13 @@ int main(int argc, char* argv[]) {
             }
         }
         if (verbose)
-            cout << "\33[2K\r" << "Processed " << max << " unitigs (100%)" << endl;
+            cerr << "\33[2K\r" << "Processed " << max << " unitigs (100%)" << endl;
     }
 #endif
 
     if (!splits.empty()) {
         if (verbose)
-            cout << "Reading splits file..." << flush;
+            cerr << "\33[2K\r" << "Reading splits file..." << flush;
         ifstream file(splits);
 
         string line;
@@ -425,6 +429,8 @@ int main(int argc, char* argv[]) {
 
             graph::insert_split(weight, color);
         }
+        if (verbose)
+            cerr << "\33[2K\r" << flush;
         file.close();
     }
 
@@ -438,14 +444,59 @@ int main(int argc, char* argv[]) {
         exit(1);
     };
 
+    if (interactive) {    // lookup k-mer, interactive mode
+        string query;
+        cerr << ">>> " << flush;    // display a command line prompt
+        while (getline(cin, query)) {    // wait for user to enter a k-mer
+            cerr << "\33[2K\r" << flush;
+                                            // remove leading whitespaces
+            auto l1 = find_if(query.begin(), query.end(), ::isspace);
+            auto l2 = find_if_not(query.begin(), query.end(), ::isspace);
+             if (l1 < l2) query.erase(l1, l2);    // remove trailing whitespaces
+            auto r1 = find_if_not(query.rbegin(), query.rend(), ::isspace);
+            auto r2 = find_if(query.rbegin(), query.rend(), ::isspace);
+             if (r1.base() < r2.base()) query.erase(r1.base(), r2.base());
+
+            if (query.empty()) { cerr << ">>> " << flush; continue; }
+            transform(query.begin(), query.end(), query.begin(), ::toupper);
+            replace(query.begin(), query.end(), '.', 'N');    // allow . gaps
+            replace(query.begin(), query.end(), '-', 'N');    // allow - gaps
+            replace(query.begin(), query.end(), '*', 'N');    // allow * gaps
+
+            cerr << "Searching..." << flush;
+            auto iterator = graph::lookup_kmer(query, reverse);
+            cerr << "\33[2K\r" << flush;
+            string kmer, color;    // iterate over the hash table
+            while (iterator(kmer, color)) {
+                cerr << "... " << flush;
+                cout << kmer << ": " << color << endl;
+                cerr << "\33[2K\r" << flush;
+            }
+            cerr << ">>> " << flush;
+        }
+        cerr << "\33[2K\r" << flush;
+    }
+    if (!counts.empty()) {    // lookup k-mer, output to file
+        if (verbose)
+            cerr << "\33[2K\r" << "Please wait... " << flush;
+        ofstream file(counts);    // output file stream
+        ostream stream(file.rdbuf());
+        auto iterator = graph::lookup_kmer();
+        string kmer, color;    // iterate over the hash table
+        while (iterator(kmer, color)) {
+            stream << kmer << ": " << color << endl;
+        }
+        file.close();
+    }
+
     if (!output.empty() || !newick.empty()) {
         if (verbose)
-            cout << "Processing splits..." << flush;
+            cerr << "\33[2K\r" << "Processing splits..." << flush;
         graph::calc_weights(default_mean, verbose);    // accumulate split weights
 
         if (!filter.empty()) {    // apply filter
             if (verbose)
-                cout << "\33[2K\r" << "Filtering splits..." << flush;
+                cerr << "\33[2K\r" << "Filtering splits..." << flush;
             if (filter == "strict" || filter == "tree")
                 tree::filter_strict(verbose);
             else if (filter == "weakly")
@@ -455,7 +506,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (verbose)
-            cout << "\33[2K\r" << "Please wait..." << flush;
+            cerr << "\33[2K\r" << "Please wait... " << flush;
         if (!output.empty()) {
             ofstream file(output);    // output file stream
             ostream stream(file.rdbuf());
@@ -480,6 +531,6 @@ int main(int argc, char* argv[]) {
 
     auto end = chrono::high_resolution_clock::now();    // time measurement
     if (verbose)    // print progress and time
-        cout << " Done! (" << util::format_time(end - begin) << ")" << endl;
+        cerr << "Done! (" << util::format_time(end - begin) << ")" << endl;
     return 0;
 }

@@ -63,6 +63,30 @@ bool color::test(const color_t& color, const size1N_t& pos) {
 }
 
 /**
+ * This function shifts a color appending a new bit char to the right.
+ *
+ * @param color bit sequence
+ * @param chr right color bit
+ */
+void color::shift(color_t& color, const char& chr) {
+    color <<= 01u;    // shift all current bits to the left by one position
+    color |= chr-48;    // encode the new rightmost color bit char
+    color &= mask;    // set all bits to zero that exceed the color number
+}
+
+/**
+ * This function unshifts a color returning the bit char on the right.
+ *
+ * @param color bit sequence
+ * @param chr right color bit
+ */
+void color::unshift(color_t& color, char& chr) {
+    chr = x_0b1u_(color)+48;    // return the rightmost color bit char
+    color >>= 01u;    // shift all current bits to the right by one position
+//  color &= mask;    // set all bits to zero that exceed the color number
+}
+
+/**
  * This function returns the index of the first bit set to one.
  *
  * @param color bit sequence

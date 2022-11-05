@@ -86,6 +86,22 @@ class color {
     static bool test(const color_t& color, const size1N_t& pos);
 
     /**
+     * This function shifts a color appending a new bit char to the right.
+     *
+     * @param color bit sequence
+     * @param chr right color bit
+     */
+    static void shift(color_t& color, const char& chr);
+
+    /**
+     * This function unshifts a color returning the bit char on the right.
+     *
+     * @param color bit sequence
+     * @param chr right color bit
+     */
+    static void unshift(color_t& color, char& chr);
+
+    /**
      * This function returns the index of the first bit set to one.
      *
      * @param color bit sequence
