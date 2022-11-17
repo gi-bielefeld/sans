@@ -4,6 +4,7 @@
 /*
  * This class manages the split/tree filters and Newick output.
  */
+uint64_t                             tree::t;        // max. size of the splits list
 multimap<double, color_t, greater<>> tree::splits;   // list collecting all the splits ordered by weight
 vector<vector<color_t>>              tree::forest;   // collection of (weakly) compatible splits trees
 
@@ -15,6 +16,28 @@ struct tree::node {
     double weight;    // weight of the edge going to this node
     vector<node*> subsets;    // list of subsets
 };
+
+/**
+ * This function initializes the max. size of the splits list.
+ *
+ * @param top_size list size
+ */
+void tree::init(const uint64_t& top_size) {
+    t = top_size;
+}
+
+/**
+ * This function adds a single split (weight and colors) to the output list.
+ *
+ * @param weight split weight
+ * @param color split colors
+ */
+void tree::insert_split(const double& weight, const color_t& color) {
+    splits.emplace(weight, color);    // insert it at the correct position ordered by weight
+    if (splits.size() > t) {      // if the splits list exceeds its limit, erase the last entry
+        splits.erase(--splits.end());
+    }
+}
 
 /**
  * This function builds/refines/prints trees and generates a Newick string.

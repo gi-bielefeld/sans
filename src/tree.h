@@ -27,6 +27,26 @@ class tree {
     static multimap<double, color_t, greater<>> splits;
 
     /**
+     * This is the max. size of the splits list.
+     */
+    static uint64_t t;
+
+    /**
+     * This function initializes the max. size of the splits list.
+     *
+     * @param top_size list size
+     */
+    static void init(const uint64_t& top_size);
+
+    /**
+     * This function adds a single split (weight and colors) to the output list.
+     *
+     * @param weight split weight
+     * @param color split colors
+     */
+    static void insert_split(const double& weight, const color_t& color);
+
+    /**
      * This function builds/refines/prints trees and generates a Newick string.
      *
      * @param color_name function to map a color bit to a file name

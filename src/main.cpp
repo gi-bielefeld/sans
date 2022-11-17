@@ -183,8 +183,10 @@ int main(int argc, char* argv[]) {
     if (!pattern.empty()) {
         uint64_t lmer = 0;    // length without gaps
         for (size_t i = 0; i < pattern.length(); ++i) {
-            if (pattern[i] == '1') ++lmer;
-            else if (pattern[i] != '0') {
+            if (pattern[i] == '1') {
+                ++lmer; continue;
+            }
+            if (pattern[i] != '0') {
                 cerr << "Error: pattern must be a sequence of 0s and 1s, where 0 means a gap" << endl;
                 return 1;
             }
@@ -198,8 +200,26 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         kmer = pattern.length();
+
+        if (lmer == 0) {
+            cerr << "Error: pattern must be a sequence of 0s and 1s, with at least one 1" << endl;
+            return 1;
+        }
+        if (lmer == pattern.length()) {
+            pattern.clear();
+        }
     }
 
+    if (!graph.empty()) {
+        if (quality > 1) {
+            cerr << "Warning: input from graph with --qualify can produce unexpected results" << endl;
+        }
+        else if (window > 1) {
+            cerr << "Warning: input from graph with --window can produce unexpected results" << endl;
+        }
+    } else if (quality > 1 && window > 1) {
+        cerr << "Warning: using --qualify with --window could produce unexpected results" << endl;
+    }
     if (!splits.empty()) {
         if (!input.empty()) {
             cerr << "Note: two input arguments --input and --splits were provided" << endl;
@@ -289,7 +309,8 @@ int main(int argc, char* argv[]) {
     }
 
     auto begin = chrono::high_resolution_clock::now();    // time measurement
-    graph::init(T, top);    // initialize the toplist size
+    graph::init(T, pattern, quality, reverse);    // initialize the graph
+    tree::init(top);    // initialize the splits list size
     kmer::init(kmer);    // initialize the k-mer length
     color::init(num);    // initialize the color number
 
@@ -310,13 +331,11 @@ int main(int argc, char* argv[]) {
             while (getline(file, line)) {
                 if (line.length() > 0) {
                     if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
-                        if (window > 1) {
-                            iupac > 1 ? graph::add_minimizers(T, sequence, i, reverse, window, iupac)
-                                      : graph::add_minimizers(T, sequence, i, reverse, window);
-                        } else {
-                            iupac > 1 ? graph::add_kmers(T, sequence, i, reverse, iupac)
-                                      : graph::add_kmers(T, sequence, i, reverse);
-                        }
+                        if (window <= 1)
+                             iupac <= 1 ? graph::add_kmers(T, sequence, i)
+                                        : graph::add_kmers(T, sequence, i, iupac);
+                        else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
+                                        : graph::add_minimizers(T, sequence, i, window, iupac);
                         sequence.clear();
 
                         if (verbose)
@@ -330,17 +349,16 @@ int main(int argc, char* argv[]) {
                     }
                 }
             }
-            if (window > 1) {
-                iupac > 1 ? graph::add_minimizers(T, sequence, i, reverse, window, iupac)
-                          : graph::add_minimizers(T, sequence, i, reverse, window);
-            } else {
-                iupac > 1 ? graph::add_kmers(T, sequence, i, reverse, iupac)
-                          : graph::add_kmers(T, sequence, i, reverse);
-            }
+            if (window <= 1)
+                 iupac <= 1 ? graph::add_kmers(T, sequence, i)
+                            : graph::add_kmers(T, sequence, i, iupac);
+            else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
+                            : graph::add_minimizers(T, sequence, i, window, iupac);
             sequence.clear();
 
             if (verbose)
                 cerr << "\33[2K\r" << flush;
+            graph::clear_thread(T);
             file.close();
         }};
 
@@ -370,15 +388,20 @@ int main(int argc, char* argv[]) {
         while (thr.size() > 1) {
             for (uint64_t x = 0; x < thr.size()-1; x+=2) {
                 thr[x] = thread(graph::merge_threads, x, x+1);
-            }
+                if (verbose) cerr << ":" << flush;
+            }   if (verbose) cerr << "\r" << flush;
+
             for (uint64_t x = 0; x < thr.size()-1; x+=2) {
                 thr[x].join();
-            }
+                if (verbose) cerr << "." << flush;
+            }   if (verbose) cerr << "\r" << flush;
+
             uint64_t next_size = thr.size() / 2;
             for (uint64_t x = 1; x <= next_size; ++x) {
                 thr.erase(thr.begin()+x);
                 graph::erase_thread(x);
-            }
+                if (verbose) cerr << "." << flush;
+            }   if (verbose) cerr << "\33[2K\r" << flush;
         }
     }
 
@@ -399,13 +422,14 @@ int main(int argc, char* argv[]) {
             auto* colors = unitig.getData()->getUnitigColors(unitig);
 
             for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
-                auto seq = sequence.substr(it.getKmerPosition(), kmer);
-                auto col = files.size() + it.getColorID();
-                graph::add_kmers(0, seq, col, reverse);
+                auto substr = sequence.substr(it.getKmerPosition(), kmer);
+                auto color = files.size() + it.getColorID();
+                graph::add_kmers(0, substr, color);
             }
         }
         if (verbose)
             cerr << "\33[2K\r" << "Processed " << max << " unitigs (100%)" << endl;
+        graph::clear_thread(0);
     }
 #endif
 
@@ -427,7 +451,7 @@ int main(int argc, char* argv[]) {
                 next = curr + 1;
             } while (curr != string::npos);
 
-            graph::insert_split(weight, color);
+            tree::insert_split(weight, color);
         }
         if (verbose)
             cerr << "\33[2K\r" << flush;
@@ -464,10 +488,12 @@ int main(int argc, char* argv[]) {
             replace(query.begin(), query.end(), '*', 'N');    // allow * gaps
 
             cerr << "Searching..." << flush;
-            auto iterator = graph::lookup_kmer(query, reverse);
+            auto iterator = graph::lookup_kmer(query);
             cerr << "\33[2K\r" << flush;
             string kmer, color;    // iterate over the hash table
             while (iterator(kmer, color)) {
+                for (size_t i = 0; i < pattern.length(); ++i)
+                    if (pattern[i] == '0') kmer[i] = '-';
                 cerr << "... " << flush;
                 cout << kmer << ": " << color << endl;
                 cerr << "\33[2K\r" << flush;
@@ -484,6 +510,8 @@ int main(int argc, char* argv[]) {
         auto iterator = graph::lookup_kmer();
         string kmer, color;    // iterate over the hash table
         while (iterator(kmer, color)) {
+            for (size_t i = 0; i < pattern.length(); ++i)
+                if (pattern[i] == '0') kmer[i] = '-';
             stream << kmer << ": " << color << endl;
         }
         file.close();

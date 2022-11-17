@@ -1,20 +1,78 @@
 #include "graph.h"
 
 /*
- * This class manages the k-mer/color hash tables and split list.
+ * This class manages the k-mer/color hash tables and splits calculation.
  */
-uint64_t                             graph::t;             // size of the top list
+kmer_t   graph::pattern;   // pattern of gapped k-mers
+uint64_t graph::quality;   // min. coverage threshold for k-mers
+
 vector<hash_map<kmer_t, color_t>>    graph::kmer_table;    // hash table mapping k-mers to their colors/splits
 hash_map<color_t, array<uint32_t,2>> graph::color_table;   // hash table mapping colors/splits to their weights
+vector<hash_set<kmer_t>>             graph::quality_set;   // hash set used to filter k-mers for coverage (q > 1)
+vector<hash_map<kmer_t, uint64_t>>   graph::quality_map;   // hash map used to filter k-mers for coverage (q > 2)
+
+function<void(kmer_t&)>                                         graph::process_kmer;   // reverse complement a k-mer and apply a gap pattern
+function<void(const uint64_t&, const kmer_t&, const size1N_t&)> graph::emplace_kmer;   // qualify a k-mer and place it into the hash table
 
 /**
- * This function initializes the top list size.
+ * This function initializes the k-mer pattern and coverage threshold.
  *
- * @param top_size top list size
+ * @param pattern gapped k-mer pattern
+ * @param quality coverage threshold
+ * @param reverse merge complements
  */
-void graph::init(const uint64_t& T, const uint64_t& top_size) {
-    t = top_size;
+void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quality, const bool& reverse) {
     kmer_table.resize(T);
+
+    graph::pattern = 0b0u; {
+        for (auto& pos : pattern) {
+            graph::pattern <<= 02u;
+            if (pos == '1')
+                graph::pattern |= 0b11u;
+        }
+        if (!reverse && graph::pattern == 0b0u)
+            process_kmer = [&] (kmer_t& kmer) {
+        };
+        if (!reverse && graph::pattern != 0b0u)
+            process_kmer = [&] (kmer_t& kmer) {
+                kmer &= graph::pattern;
+        };
+        if (reverse && graph::pattern == 0b0u)
+            process_kmer = [&] (kmer_t& kmer) {
+                kmer::reverse_represent(kmer);
+        };
+        if (reverse && graph::pattern != 0b0u)
+            process_kmer = [&] (kmer_t& kmer) {
+                kmer_t rcmp = kmer;
+                kmer &= graph::pattern;
+                kmer::reverse_complement(rcmp);
+                rcmp &= graph::pattern;
+                if (rcmp < kmer) kmer = rcmp;
+        };
+    }
+
+    graph::quality = quality;
+    switch (quality) {
+        case 1:
+            case 0: /* no quality check */
+            emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
+                color::set(kmer_table[T][kmer], color);
+        };  break;
+        case 2:
+            quality_set.resize(T);
+            emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
+                if  (quality_set[T].find(kmer) == quality_set[T].end())
+                     quality_set[T].emplace(kmer);
+                else color::set(kmer_table[T][kmer], color);
+        };  break;
+        default:
+            quality_map.resize(T);
+            emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
+                if  (quality_map[T][kmer] < quality-1)
+                     quality_map[T][kmer]++;
+                else color::set(kmer_table[T][kmer], color);
+        };  break;
+    }
 }
 
 /**
@@ -22,9 +80,8 @@ void graph::init(const uint64_t& T, const uint64_t& top_size) {
  *
  * @param str dna sequence
  * @param color color flag
- * @param reverse merge complements
  */
-void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse) {
+void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     size_t pos;    // current position in the string, from 0 to length
@@ -44,8 +101,8 @@ next_kmer:
 
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
-            if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
-            color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
+            process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
+            emplace_kmer(T, rcmer, color);    // update the k-mer with the current color
         }
     }
 }
@@ -55,10 +112,9 @@ next_kmer:
  *
  * @param str dna sequence
  * @param color color flag
- * @param reverse merge complements
  * @param window number of k-mers to minimize
  */
-void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& window) {
+void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const uint64_t& window) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -84,7 +140,7 @@ next_kmer:
 
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
-            if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
+            process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
 
             if (sequence_order.size() == window) {
                 value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
@@ -94,7 +150,7 @@ next_kmer:
             sequence_order.emplace_back(rcmer);
 
             if (sequence_order.size() == window) {
-                color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
+                emplace_kmer(T, *value_order.begin(), color);    // update the k-mer with the current color
             }
         }
     }
@@ -105,17 +161,16 @@ next_kmer:
  *
  * @param str dna sequence
  * @param color color flag
- * @param reverse merge complements
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& max_iupac) {
+void graph::add_kmers(const uint64_t& T, const string& str, const size1N_t& color, const uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     hash_set<kmer_t> ping;    // create a new empty set for the k-mers
     hash_set<kmer_t> pong;    // create another new set for the k-mers
     bool ball; bool wait;    // indicates which of the two sets should be used
 
-    vector<uint8_t> factors;    // stores the multiplicity of iupac bases
+    vector<uint8_t> factors;    // stores the multiplicity of IUPAC bases
     long double product;    // stores the overall multiplicity of the k-mers
 
     size_t pos;    // current position in the string, from 0 to length
@@ -143,14 +198,14 @@ next_kmer:
                 goto next_kmer;    // start a new k-mer from the beginning
             }
             iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
-            ball = !ball;    // shift each base in, resolve iupac character
+            ball = !ball;    // shift each base in, resolve IUPAC character
         } else { wait = true; continue; }
 
         if (pos+1 - begin >= kmer::k) {
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
-                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
-                color::set(kmer_table[T][rcmer], color);    // update the k-mer with the current color
+                process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
+                emplace_kmer(T, rcmer, color);    // update the k-mer with the current color
             }
         }
     }
@@ -161,11 +216,10 @@ next_kmer:
  *
  * @param str dna sequence
  * @param color color flag
- * @param reverse merge complements
  * @param window number of k-mers to minimize
  * @param max_iupac allowed number of ambiguous k-mers per position
  */
-void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const bool& reverse, const uint64_t& window, const uint64_t& max_iupac) {
+void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const uint64_t& window, const uint64_t& max_iupac) {
     if (str.length() < kmer::k) return;    // not enough characters
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -176,7 +230,7 @@ void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t&
     hash_set<kmer_t> pong;    // create another new set for the k-mers
     bool ball; bool wait;    // indicates which of the two sets should be used
 
-    vector<uint8_t> factors;    // stores the multiplicity of iupac bases
+    vector<uint8_t> factors;    // stores the multiplicity of IUPAC bases
     long double product;    // stores the overall multiplicity of the k-mers
 
     size_t pos;    // current position in the string, from 0 to length
@@ -207,13 +261,13 @@ next_kmer:
                 goto next_kmer;    // start a new k-mer from the beginning
             }
             iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
-            ball = !ball;    // shift each base in, resolve iupac character
+            ball = !ball;    // shift each base in, resolve IUPAC character
         } else { wait = true; continue; }
 
         if (pos+1 - begin >= kmer::k) {
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
-                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
+                process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
                 inner_value_order.emplace(rcmer);
             }
 
@@ -226,18 +280,18 @@ next_kmer:
             inner_value_order.clear();
 
             if (sequence_order.size() == window) {
-                color::set(kmer_table[T][*value_order.begin()], color);    // update the k-mer with the current color
+                emplace_kmer(T, *value_order.begin(), color);    // update the k-mer with the current color
             }
         }
     }
 }
 
 /**
- * This function calculates the multiplicity of iupac k-mers.
+ * This function calculates the multiplicity of IUPAC k-mers.
  *
  * @param product overall multiplicity
  * @param factors per base multiplicity
- * @param chr iupac character
+ * @param chr IUPAC character
  */
 void graph::iupac_multiply(long double& product, vector<uint8_t>& factors, const char& chr) {
     switch (chr) {
@@ -264,11 +318,11 @@ void graph::iupac_multiply(long double& product, vector<uint8_t>& factors, const
 }
 
 /**
- * This function shifts a base into a set of ambiguous iupac k-mers.
+ * This function shifts a base into a set of ambiguous IUPAC k-mers.
  *
  * @param prev set of k-mers
  * @param next set of k-mers
- * @param chr iupac character
+ * @param chr IUPAC character
  */
 void graph::iupac_shift(hash_set<kmer_t>& prev, hash_set<kmer_t>& next, const char& chr) {
     kmer_t temp;
@@ -336,12 +390,11 @@ function<bool(string&, string&)> graph::lookup_kmer() {
  * This function iterates over the hash table and outputs matching k-mer/color pairs.
  *
  * @param query query sequence
- * @param reverse merge complements
  * @param kmer string to store the k-mer
  * @param color string to store the color
  * @return iterator function
  */
-function<bool(string&, string&)> graph::lookup_kmer(const string& query, const bool& reverse) {
+function<bool(string&, string&)> graph::lookup_kmer(const string& query) {
     string str;    // fill shorter queries with N up to the k-mer length
     if (query.length() < kmer::k)
         for (size2K_t i = 0; i < kmer::k-query.size(); ++i)
@@ -368,7 +421,7 @@ next_kmer:
 
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         iupac_shift(ball ? ping : pong, !ball ? ping : pong, str[pos]);
-        ball = !ball;    // shift each base in, resolve iupac character
+        ball = !ball;    // shift each base in, resolve IUPAC character
         if ((ball ? ping : pong).empty()) {
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
             goto next_kmer;    // invalid character, start a new k-mer from next position
@@ -377,7 +430,7 @@ next_kmer:
         if (pos+1 - begin >= kmer::k) {
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
-                if (reverse) kmer::reverse_represent(rcmer);    // invert the k-mer, if necessary
+                process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
                 if (kmer_table[0].find(rcmer) != kmer_table[0].end()) {    // lookup the k-mer/color
                     kmer_table[1][rcmer] = kmer_table[0][rcmer];    // transfer to the results table
                 }
@@ -442,24 +495,11 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
             tree::splits.emplace(new_value, color);    // insert it at the correct position ordered by weight
-            if (tree::splits.size() > t) {
-                tree::splits.erase(--tree::splits.end());    // if the top list exceeds its limit, erase the last entry
+            if (tree::splits.size() > tree::t) {      // if the splits list exceeds its limit, erase the last entry
+                tree::splits.erase(--tree::splits.end());
                 min_value = tree::splits.rbegin()->first;    // update the min. value for the next iteration
             }
         }
-    }
-}
-
-/**
- * This function adds a single split (weight and colors) to the output list.
- *
- * @param weight split weight
- * @param color split colors
- */
-void graph::insert_split(const double& weight, const color_t& color) {
-    tree::splits.emplace(weight, color);    // insert it at the correct position ordered by weight
-    if (tree::splits.size() > t) {
-        tree::splits.erase(--tree::splits.end());    // if the top list exceeds its limit, erase the last entry
     }
 }
 
@@ -471,12 +511,23 @@ void graph::insert_split(const double& weight, const color_t& color) {
  */
 void graph::merge_threads(const uint64_t& T1, const uint64_t& T2) {
     for (auto it = kmer_table[T2].begin(); it != kmer_table[T2].end();) {
-        if (kmer_table[T1].find(it->first) != kmer_table[T1].end()) {
-            kmer_table[T1][it->first] |= it->second;
-        } else {
-            kmer_table[T1][it->first] = it->second;
-        }
+    //  if  (kmer_table[T1].find(it->first) != kmer_table[T1].end())
+             kmer_table[T1][it->first] |= it->second;
+    //  else kmer_table[T1][it->first]  = it->second;
         it = kmer_table[T2].erase(it);
+    }
+}
+
+/**
+ * This function clears thread-separate temporary files.
+ *
+ * @param T thread index
+ */
+void graph::clear_thread(const uint64_t& T) {
+    switch (quality) {
+        case 1:  case 0: break;
+        case 2:  quality_set[T].clear(); break;
+        default: quality_map[T].clear(); break;
     }
 }
 
@@ -488,4 +539,9 @@ void graph::merge_threads(const uint64_t& T1, const uint64_t& T2) {
 void graph::erase_thread(const uint64_t& T) {
     kmer_table[T].clear();
     kmer_table.erase(kmer_table.begin()+T);
+    switch (quality) {
+        case 1:  case 0: break;
+        case 2:  quality_set.erase(quality_set.begin()+T); break;
+        default: quality_map.erase(quality_map.begin()+T); break;
+    }
 }
