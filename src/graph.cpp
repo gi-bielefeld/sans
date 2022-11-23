@@ -12,6 +12,7 @@ vector<hash_set<kmer_t>>             graph::quality_set;   // hash set used to f
 vector<hash_map<kmer_t, uint64_t>>   graph::quality_map;   // hash map used to filter k-mers for coverage (q > 2)
 
 function<void(kmer_t&)>                                         graph::process_kmer;   // reverse complement a k-mer and apply a gap pattern
+function<void(kmer_t&)>                                         graph::restore_kmer;   // restore a gap pattern for a right-compressed k-mer
 function<void(const uint64_t&, const kmer_t&, const size1N_t&)> graph::emplace_kmer;   // qualify a k-mer and place it into the hash table
 
 /**
@@ -30,25 +31,31 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
             if (pos == '1')
                 graph::pattern |= 0b11u;
         }
-        if (!reverse && graph::pattern == 0b0u)
-            process_kmer = [&] (kmer_t& kmer) {
-        };
-        if (!reverse && graph::pattern != 0b0u)
-            process_kmer = [&] (kmer_t& kmer) {
-                kmer &= graph::pattern;
-        };
-        if (reverse && graph::pattern == 0b0u)
-            process_kmer = [&] (kmer_t& kmer) {
-                kmer::reverse_represent(kmer);
-        };
-        if (reverse && graph::pattern != 0b0u)
-            process_kmer = [&] (kmer_t& kmer) {
-                kmer_t rcmp = kmer;
-                kmer &= graph::pattern;
+        if (!reverse && graph::pattern == 0b0u) {
+            process_kmer = [&] (kmer_t& kmer) {};
+            restore_kmer = [&] (kmer_t& kmer) {};
+        }
+        if (reverse && graph::pattern == 0b0u) {
+            process_kmer = [&] (kmer_t& kmer)
+              { kmer::reverse_represent(kmer); };
+            restore_kmer = [&] (kmer_t& kmer) {};
+        }
+        if (!reverse && graph::pattern != 0b0u) {
+            process_kmer = [&] (kmer_t& kmer)
+              { bmi2_pext(kmer, graph::pattern); };
+            restore_kmer = [&] (kmer_t& kmer)
+              { bmi2_pdep(kmer, graph::pattern); };
+        }
+        if (reverse && graph::pattern != 0b0u) {
+            process_kmer = [&] (kmer_t& kmer)
+              { kmer_t rcmp = kmer;
                 kmer::reverse_complement(rcmp);
-                rcmp &= graph::pattern;
-                if (rcmp < kmer) kmer = rcmp;
-        };
+                bmi2_pext(kmer, graph::pattern);
+                bmi2_pext(rcmp, graph::pattern);
+                if (rcmp < kmer) kmer = rcmp;    };
+            restore_kmer = [&] (kmer_t& kmer)
+              { bmi2_pdep(kmer, graph::pattern); };
+        }
     }
 
     graph::quality = quality;
@@ -375,6 +382,7 @@ function<bool(string&, string&)> graph::lookup_kmer() {
         }
         if (it != kmer_table[0].end()) {
             kmer_t kmer_bits = it->first;    // shift the characters into the string
+            restore_kmer(kmer_bits);    // restore the gap pattern, if necessary
             for (size2K_t i = 0; i != kmer::k; ++i)
                 kmer::unshift(kmer_bits, kmer[kmer::k-i-1]);
             color_t color_bits = it->second;    // shift the colors into the string
@@ -446,6 +454,7 @@ next_kmer:
         }
         if (it != kmer_table[1].end()) {
             kmer_t kmer_bits = it->first;    // shift the characters into the string
+            restore_kmer(kmer_bits);    // restore the gap pattern, if necessary
             for (size2K_t i = 0; i != kmer::k; ++i)
                 kmer::unshift(kmer_bits, kmer[kmer::k-i-1]);
             color_t color_bits = it->second;    // shift the colors into the string
@@ -511,9 +520,7 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
  */
 void graph::merge_threads(const uint64_t& T1, const uint64_t& T2) {
     for (auto it = kmer_table[T2].begin(); it != kmer_table[T2].end();) {
-    //  if  (kmer_table[T1].find(it->first) != kmer_table[T1].end())
-             kmer_table[T1][it->first] |= it->second;
-    //  else kmer_table[T1][it->first]  = it->second;
+        kmer_table[T1][it->first] |= it->second;
         it = kmer_table[T2].erase(it);
     }
 }

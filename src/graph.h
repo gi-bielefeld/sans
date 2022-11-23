@@ -5,6 +5,36 @@
 #include "tree.h"
 #include "kmer.h"
 
+#if 2*maxK > 64
+    #define bmi2_pext(x,y) (x &= y)
+    #define bmi2_pdep(x,y)
+
+#elif defined(__BMI2__)
+    #include <immintrin.h>
+    #if 2*maxK > 32
+        #define bmi2_pext(x,y) (x = _pext_u64(x,y))
+        #define bmi2_pdep(x,y) (x = _pdep_u64(x,y))
+    #else
+        #define bmi2_pext(x,y) (x = _pext_u32(x,y))
+        #define bmi2_pdep(x,y) (x = _pdep_u32(x,y))
+    #endif
+#else
+    #define bmi2_pext(kmer, pattern) {\
+        uint2K_t lmer = 0, mask = pattern;\
+        for (uint2K_t pos = 1; mask; pos <<= 1) {\
+            if (kmer & mask & -mask) lmer |= pos;\
+            mask &= mask-1;\
+        }   kmer = lmer;\
+    }
+    #define bmi2_pdep(kmer, pattern) {\
+        uint2K_t lmer = 0, mask = pattern;\
+        for (uint2K_t pos = 1; mask; pos <<= 1) {\
+            if (kmer & pos) lmer |= mask & -mask;\
+            mask &= mask-1;\
+        }   kmer = lmer;\
+    }
+#endif
+
 using namespace std;
 
 template <typename K, typename V>
@@ -153,6 +183,13 @@ class graph {
      * @param kmer bit sequence
      */
     static function<void(kmer_t&)> process_kmer;
+
+    /**
+     * This function restores a gap pattern for a right-compressed k-mer.
+     *
+     * @param kmer bit sequence
+     */
+    static function<void(kmer_t&)> restore_kmer;
 
     /**
      * This function qualifies a k-mer and places it into the hash table.
