@@ -2,6 +2,7 @@
 #include <functional>
 #include <vector>
 #include <map>
+#include <cmath>
 
 #include "color.h"
 

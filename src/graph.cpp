@@ -1,4 +1,5 @@
 #include "graph.h"
+#include "ansi.h"
 
 /*
  * This class manages the k-mer/color hash tables and splits calculation.
@@ -64,21 +65,27 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
             case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
                 color::set(kmer_table[T][kmer], color);
-        };  break;
+            };  break;
         case 2:
             quality_set.resize(T);
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-                if  (quality_set[T].find(kmer) == quality_set[T].end())
-                     quality_set[T].emplace(kmer);
-                else color::set(kmer_table[T][kmer], color);
-        };  break;
+                if (quality_set[T].find(kmer) == quality_set[T].end()) {
+                    quality_set[T].emplace(kmer);
+                } else {
+                 // quality_set[T].erase(kmer);
+                    color::set(kmer_table[T][kmer], color);
+                }
+            };  break;
         default:
             quality_map.resize(T);
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-                if  (quality_map[T][kmer] < quality-1)
-                     quality_map[T][kmer]++;
-                else color::set(kmer_table[T][kmer], color);
-        };  break;
+                if (quality_map[T][kmer] < quality-1) {
+                    quality_map[T][kmer]++;
+                } else {
+                 // quality_map[T].erase(kmer);
+                    color::set(kmer_table[T][kmer], color);
+                }
+            };  break;
     }
 }
 
@@ -126,6 +133,7 @@ void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t&
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
     multiset<kmer_t> value_order;    // k-mers ordered by their lexicographical value
+    multiset<kmer_t>::iterator temp;    // temporary pointer to erased/inserted k-mer
 
     size_t pos;    // current position in the string, from 0 to length
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
@@ -148,15 +156,19 @@ next_kmer:
         if (pos+1 - begin >= kmer::k) {
             rcmer = kmer;
             process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
+            bool changed = false;    // indicates if the last min. value k-mer has changed
 
             if (sequence_order.size() == window) {
-                value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
-                sequence_order.erase(sequence_order.begin());
-            }
-            value_order.emplace(rcmer);    // insert k-mer ordered by its lexicographical value
-            sequence_order.emplace_back(rcmer);
+                temp = value_order.erase(value_order.find(*sequence_order.begin()));
+                changed |= temp == value_order.begin();    // check if old min. value k-mer was removed
+                sequence_order.erase(sequence_order.begin());    // remove left k-mer from the window
+            } else changed = true;
 
-            if (sequence_order.size() == window) {
+            temp = value_order.emplace(rcmer);    // insert k-mer ordered by its lexicographical value
+            changed |= temp == value_order.begin();    // check if inserted value is new min. value k-mer
+            sequence_order.emplace_back(rcmer);    // add right k-mer to the window
+
+            if (sequence_order.size() == window && changed) {    // check if the min. value k-mer has changed
                 emplace_kmer(T, *value_order.begin(), color);    // update the k-mer with the current color
             }
         }
@@ -231,7 +243,8 @@ void graph::add_minimizers(const uint64_t& T, const string& str, const size1N_t&
 
     vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
     multiset<kmer_t> value_order;    // k-mers ordered by their lexicographical value
-    multiset<kmer_t> inner_value_order;
+    multiset<kmer_t> inner_value_order;    // current IUPAC k-mers ordered by value
+    multiset<kmer_t>::iterator temp;    // temporary pointer to erased/inserted k-mer
 
     hash_set<kmer_t> ping;    // create a new empty set for the k-mers
     hash_set<kmer_t> pong;    // create another new set for the k-mers
@@ -275,18 +288,22 @@ next_kmer:
             for (auto& kmer : (ball ? ping : pong)) {    // iterate over the current set of ambiguous k-mers
                 rcmer = kmer;
                 process_kmer(rcmer);    // invert the k-mer & apply gap pattern, if necessary
-                inner_value_order.emplace(rcmer);
+                inner_value_order.emplace(rcmer);    // find smallest at the current position
             }
+            bool changed = false;    // indicates if the last min. value k-mer has changed
 
             if (sequence_order.size() == window) {
-                value_order.erase(*sequence_order.begin());    // remove k-mer outside the window
-                sequence_order.erase(sequence_order.begin());
-            }
-            value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by its lexicographical value
-            sequence_order.emplace_back(*inner_value_order.begin());
+                temp = value_order.erase(value_order.find(*sequence_order.begin()));
+                changed |= temp == value_order.begin();    // check if old min. value k-mer was removed
+                sequence_order.erase(sequence_order.begin());    // remove left k-mer from the window
+            } else changed = true;
+
+            temp = value_order.emplace(*inner_value_order.begin());    // insert k-mer ordered by value
+            changed |= temp == value_order.begin();    // check if inserted value is new min. value k-mer
+            sequence_order.emplace_back(*inner_value_order.begin());    // add right k-mer to the window
             inner_value_order.clear();
 
-            if (sequence_order.size() == window) {
+            if (sequence_order.size() == window && changed) {    // check if the min. value k-mer has changed
                 emplace_kmer(T, *value_order.begin(), color);    // update the k-mer with the current color
             }
         }
@@ -315,7 +332,7 @@ void graph::iupac_multiply(long double& product, vector<uint8_t>& factors, const
             factors.emplace_back(4);
             product *= 4; break;
         default:
-            cerr << "Error: invalid character: " << chr << endl;
+            $err << "Error: invalid character: " << chr << _end$;
             exit(1);
     }
     if (factors.size() > kmer::k) {
@@ -481,7 +498,7 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
     for (auto it = kmer_table[0].begin(); it != kmer_table[0].end(); ++it) {    // iterate over k-mer hash table
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cerr << "\33[2K\r" << "Processing splits... " << next << "%" << flush;
+             if (prog < next)  $log $_ << "Processing splits... " << next << "%" << $;
             prog = next; cur++;
         }
         color_t& color = it.value();    // get the color set for each k-mer

@@ -253,36 +253,59 @@ namespace tsl {
         void clear() noexcept { m_iprime = 0; }
 
      private:
-        static const std::array<std::size_t, 51> &primes() {
-            static const std::array<std::size_t, 51> PRIMES = {{
-                1ul, 5ul, 17ul, 29ul, 37ul, 53ul, 67ul, 79ul, 97ul, 131ul, 193ul, 257ul, 389ul, 521ul, 769ul, 1031ul, 1543ul,
-                2053ul, 3079ul, 6151ul, 12289ul, 24593ul, 49157ul, 98317ul, 196613ul, 393241ul, 786433ul, 1572869ul, 3145739ul,
-                6291469ul, 12582917ul, 25165843ul, 50331653ul, 100663319ul, 201326611ul, 402653189ul, 805306457ul, 1610612741ul,
-                3221225473ul, 4294967291ul, 6442450939ull, 12884901893ull, 25769803751ull, 51539607551ull, 103079215111ull,
-                206158430209ull, 412316860441ull, 824633720831ull, 1649267441651ull, 3298534883309ull, 6597069766657ull
+      #if SIZE_MAX <= UINT32_MAX
+         static const std::array<std::size_t, 40> &primes() {
+            static const std::array<std::size_t, 40> PRIMES = {{
+               1ul, 5ul, 17ul, 29ul, 37ul, 53ul, 67ul, 79ul, 97ul, 131ul, 193ul, 257ul, 389ul, 521ul,
+               769ul, 1031ul, 1543ul, 2053ul, 3079ul, 6151ul, 12289ul, 24593ul, 49157ul, 98317ul, 196613ul,
+               393241ul, 786433ul, 1572869ul, 3145739ul, 6291469ul, 12582917ul, 25165843ul, 50331653ul,
+               100663319ul, 201326611ul, 402653189ul, 805306457ul, 1610612741ul, 3221225473ul, 4294967291ul
             }};
-
-            static_assert(
-                    std::numeric_limits<decltype(m_iprime)>::max() >= PRIMES.size(),
-                    "The type of m_iprime is not big enough.");
-
             return PRIMES;
-        }
-
-        static const std::array<std::size_t (*)(std::size_t), 51> &mod_prime() {
-            // MOD_PRIME[iprime](hash) returns hash % PRIMES[iprime]. This table allows
-            // for faster modulo as the compiler can optimize the modulo code better
-            // with a constant known at the compilation.
-            static const std::array<std::size_t (*)(std::size_t), 51> MOD_PRIME = {{
-                &mod<0>, &mod<1>, &mod<2>, &mod<3>, &mod<4>, &mod<5>, &mod<6>, &mod<7>, &mod<8>, &mod<9>, &mod<10>,
-                &mod<11>, &mod<12>, &mod<13>, &mod<14>, &mod<15>, &mod<16>, &mod<17>, &mod<18>, &mod<19>, &mod<20>,
-                &mod<21>, &mod<22>, &mod<23>, &mod<24>, &mod<25>, &mod<26>, &mod<27>, &mod<28>, &mod<29>, &mod<30>,
-                &mod<31>, &mod<32>, &mod<33>, &mod<34>, &mod<35>, &mod<36>, &mod<37>, &mod<38>, &mod<39>, &mod<40>,
-                &mod<41>, &mod<42>, &mod<43>, &mod<44>, &mod<45>, &mod<46>, &mod<47>, &mod<48>, &mod<49>, &mod<50>
+         }
+      #else /* SIZE_MAX <= UINT64_MAX */
+         static const std::array<std::size_t, 71> &primes() {
+            static const std::array<std::size_t, 71> PRIMES = {{
+               1ull, 5ull, 17ull, 29ull, 41ull, 53ull, 73ull, 97ull, 131ull, 193ull, 257ull, 389ull, 521ull, 769ull, 1031ull, 1543ull, 2053ull, 3079ull,
+               6151ull, 12289ull, 24593ull, 49157ull, 98317ull, 196613ull, 393241ull, 786433ull, 1572869ull, 3145739ull, 6291469ull, 12582917ull,
+               25165843ull, 50331653ull, 100663319ull, 201326611ull, 402653189ull, 805306457ull, 1610612741ull, 3221225473ull, 6442450939ull,
+               12884901877ull, 25769803751ull, 51539607503ull, 103079215007ull, 206158430017ull, 412316860027ull, 824633720047ull, 1649267440087ull,
+               3298534880167ull, 6597069760331ull, 13194139520663ull, 26388279041353ull, 52776558082697ull, 105553116165401ull, 211106232330821ull,
+               422212464661667ull, 844424929323337ull, 1688849858646677ull, 3377699717293357ull, 6755399434586687ull, 13510798869173377ull,
+               27021597738346709ull, 54043195476693431ull, 108086390953386863ull, 216172781906773733ull, 432345563813547511ull, 864691127627095019ull,
+               1729382255254190023ull, 3458764510508380061ull, 6917529021016760191ull, 13835058042033520309ull, 18446744073709551557ull
             }};
+            return PRIMES;
+         }
+      #endif
 
+     // MOD_PRIME[iprime](hash) returns hash % PRIMES[iprime]. This table allows
+     // for faster modulo as the compiler can optimize the modulo code better
+     // with a constant known at the compilation.
+      #if SIZE_MAX <= UINT32_MAX
+         static const std::array<std::size_t (*)(std::size_t), 40> &mod_prime() {
+            static const std::array<std::size_t (*)(std::size_t), 40> MOD_PRIME = {{
+               &mod<0>,  &mod<1>,  &mod<2>,  &mod<3>,  &mod<4>,  &mod<5>,  &mod<6>,  &mod<7>,  &mod<8>,  &mod<9>,
+               &mod<10>, &mod<11>, &mod<12>, &mod<13>, &mod<14>, &mod<15>, &mod<16>, &mod<17>, &mod<18>, &mod<19>,
+               &mod<20>, &mod<21>, &mod<22>, &mod<23>, &mod<24>, &mod<25>, &mod<26>, &mod<27>, &mod<28>, &mod<29>,
+               &mod<30>, &mod<31>, &mod<32>, &mod<33>, &mod<34>, &mod<35>, &mod<36>, &mod<37>, &mod<38>, &mod<39>
+            }};
             return MOD_PRIME;
-        }
+         }
+      #else /* SIZE_MAX <= UINT64_MAX */
+         static const std::array<std::size_t (*)(std::size_t), 71> &mod_prime() {
+            static const std::array<std::size_t (*)(std::size_t), 71> MOD_PRIME = {{
+               &mod<0>, &mod<1>, &mod<2>, &mod<3>, &mod<4>, &mod<5>, &mod<6>, &mod<7>, &mod<8>, &mod<9>, &mod<10>,
+               &mod<11>, &mod<12>, &mod<13>, &mod<14>, &mod<15>, &mod<16>, &mod<17>, &mod<18>, &mod<19>, &mod<20>,
+               &mod<21>, &mod<22>, &mod<23>, &mod<24>, &mod<25>, &mod<26>, &mod<27>, &mod<28>, &mod<29>, &mod<30>,
+               &mod<31>, &mod<32>, &mod<33>, &mod<34>, &mod<35>, &mod<36>, &mod<37>, &mod<38>, &mod<39>, &mod<40>,
+               &mod<41>, &mod<42>, &mod<43>, &mod<44>, &mod<45>, &mod<46>, &mod<47>, &mod<48>, &mod<49>, &mod<50>,
+               &mod<51>, &mod<52>, &mod<53>, &mod<54>, &mod<55>, &mod<56>, &mod<57>, &mod<58>, &mod<59>, &mod<60>,
+               &mod<61>, &mod<62>, &mod<63>, &mod<64>, &mod<65>, &mod<66>, &mod<67>, &mod<68>, &mod<69>, &mod<70>
+            }};
+            return MOD_PRIME;
+         }
+      #endif
 
         template <unsigned int IPrime>
         static std::size_t mod(std::size_t hash) {

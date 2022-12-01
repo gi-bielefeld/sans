@@ -1,4 +1,5 @@
 #include "kmer.h"
+#include "ansi.h"
 
 /*
  * This class contains functions for working with k-mer types.
@@ -93,7 +94,7 @@ uint2K_t kmer::char_to_bits(const char& chr) {
         case 'G': return 0b10u;
         case 'T': return 0b11u;
         default:
-            cerr << "Error: invalid character: " << chr << endl;
+            $err << "Error: invalid character: " << chr << _end$;
             exit(1);
     }
 }
@@ -111,7 +112,7 @@ void kmer::bits_to_char(const uint2K_t& b, char& chr) {
         case 0b10u: chr = 'G'; break;
         case 0b11u: chr = 'T'; break;
         default:
-            cerr << "Error: invalid bit sequence: " << b << endl;
+            $err << "Error: invalid bit sequence: " << b << _end$;
             exit(1);
     }
 }

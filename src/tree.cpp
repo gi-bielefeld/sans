@@ -1,5 +1,5 @@
 #include "tree.h"
-#include <cmath>
+#include "ansi.h"
 
 /*
  * This class manages the split/tree filters and Newick output.
@@ -84,7 +84,7 @@ tree::node* tree::build_tree(vector<color_t>& color_sets) {
 
     for (color_t& split : color_sets) { // split if possible
         if (!refine_tree(root, split, root_taxa)) {
-            cerr << "Error: splits are incompatible" << endl;
+            $err << "Error: splits are incompatible" << _end$;
             exit(1);
         }
     }
@@ -160,7 +160,7 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
         return true;
     }
     else {
-        cerr << "Error: one fully covered subset and nothing else!?" << endl;
+        $err << "Error: one fully covered subset and nothing else!?" << _end$;
         exit(1);
     }
 }
@@ -175,12 +175,12 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
 string tree::print_tree(const node* root, const function<string(const size1N_t&)>& color_name) {
     if (root->subsets.empty()) {    // leaf set
         if (color::count(root->taxa) == 0) {
-            cerr << "Error: child with no taxon!?" << endl;
+            $err << "Error: child with no taxon!?" << _end$;
             exit(1);
         } else if (color::count(root->taxa) == 1) {
             return color_name(color::index(root->taxa)) + ":" + to_string(root->weight);
         } else {
-            cerr << "Error: child with more than one taxon!?" << endl;
+            $err << "Error: child with more than one taxon!?" << _end$;
             exit(1);
         }
     } else {
@@ -211,7 +211,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  $log $_ << "Filtering splits... " << next << "%" << $;
             prog = next; cur++;
         }
         if (test_strict(it->second, tree)) {
@@ -238,7 +238,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * (cur * sqrt(cur)) / (max * sqrt(max));
-             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  $log $_ << "Filtering splits... " << next << "%" << $;
             prog = next; cur++;
         }
         if (test_weakly(it->second, network)) {
@@ -265,7 +265,7 @@ loop:
     while (it != splits.end()) {
         if (verbose) {
             next = 100 * cur / max;
-             if (prog < next)  cerr << "\33[2K\r" << "Filtering splits... " << next << "%" << flush;
+             if (prog < next)  $log $_ << "Filtering splits... " << next << "%" << $;
             prog = next; cur++;
         }
         for (auto& tree : forest)

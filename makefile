@@ -27,5 +27,5 @@ obj/color.o: src/color.cpp src/color.h
 obj/util.o: src/util.cpp src/util.h
 	$(CC) -c src/util.cpp -o obj/util.o
 
-obj/: makefile
+obj/: makefile src/ansi.h src/tsl/*.h
 	@rm -rf obj/ && mkdir obj/
