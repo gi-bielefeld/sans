@@ -2,6 +2,7 @@
 #include <fstream>
 #include <thread>
 
+#include "index.h"
 #include "graph.h"
 #include "util.h"
 
@@ -17,7 +18,7 @@ using namespace std;
 
 // Symmetric Alignment-free phylogeNomic Splits
 // simple efficient re-implementation + filters
-#define SANS_VERSION "2.0_10E-KC-2.2_11D"    // SANS-KC
+#define SANS_VERSION "2.0_10E-KC-2.2_12A"    // SANS-KC
 
 /**
  * This is the entry point of the program.

@@ -1,6 +1,6 @@
-#include "tsl/sparse_map.h"
+#include "mcl/concurrent_queue.h"
 #include "tsl/sparse_set.h"
-#include <set>
+#include "tsl/sparse_map.h"
 
 #include "tree.h"
 #include "kmer.h"
@@ -38,9 +38,11 @@
 using namespace std;
 
 template <typename K, typename V>
-  using hash_map = tsl::sparse_pg_map<K,V>;
+  using queue = mcl::concurrent_queue<pair<K,V>>;
 template <typename T>
   using hash_set = tsl::sparse_pg_set<T>;
+template <typename K, typename V>
+  using hash_map = tsl::sparse_pg_map<K,V>;
 
 /**
  * This class manages the k-mer/color hash tables and splits calculation.
@@ -62,7 +64,7 @@ class graph {
     /**
      * This is a hash table mapping k-mers to their colors/splits.
      */
-    static vector<hash_map<kmer_t, color_t>> kmer_table;
+    static hash_map<kmer_t, color_t> kmer_table;
 
     /**
      * This is a hash table mapping colors/splits to their weights.
@@ -78,6 +80,21 @@ class graph {
      * This is a hash map used to filter k-mers for coverage (q > 2).
      */
     static vector<hash_map<kmer_t, uint64_t>> quality_map;
+
+    /**
+     * This is a hash table storing temporary results of k-mer queries.
+     */
+    static hash_map<kmer_t, color_t> query_table;
+
+    /**
+     * This is a queue used to synchronize k-mers from multiple threads.
+     */
+    static queue<kmer_t, size1N_t> main_queue;
+
+    /**
+     * This is the number of k-mers to retrieve from the queue.
+     */
+    static uint64_t buffer;
 
  public:
 
@@ -154,26 +171,19 @@ class graph {
     static void calc_weights(const function<double(const uint32_t&, const uint32_t&)>& mean, const bool& verbose);
 
     /**
-     * This function merges two thread-separate hash tables.
-     *
-     * @param T1 first thread
-     * @param T2 second thread
+     * This function transfers k-mers & colors from the queue to the k-mer table.
      */
-    static void merge_threads(const uint64_t& T1, const uint64_t& T2);
+    static void merge_threads();
 
     /**
-     * This function clears thread-separate temporary files.
-     *
-     * @param T thread index
+     * This function clears the quality filters after full procession of a color.
      */
     static void clear_thread(const uint64_t& T);
 
     /**
-     * This function destructs a thread-separate hash table.
-     *
-     * @param T thread index
+     * This function erases the quality filters and switches to sequential mode.
      */
-    static void erase_thread(const uint64_t& T);
+    static void erase_threads();
 
  protected:
 

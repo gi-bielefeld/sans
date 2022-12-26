@@ -25,202 +25,170 @@ int main(int argc, char* argv[]) {
         else           util::print_extended_help();
         $out << "  Contact: sans-service@cebitec.uni-bielefeld.de" << end$;
         $out << "  Evaluation: https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans" << end$;
-        $out << end$;
-        return 0;
+        $out << end$$;
     }
 
-    string input;    // name of input file
-    string graph;    // name of graph file
-    string splits;    // name of splits file
-    string output;    // name of output file
-    string newick;    // name of newick file
-    string counts;    // name of counts file
-    bool interactive = false;    // lookup k-mer
+    file input;    // Input FASTA files: list of sequence files, one per line
+    file index;    // Input Index file: load a k-mer index, e.g. counts table
+    file graph;    // Input Graph file: load a Bifrost graph, filename prefix
+    file splits;   // Input Splits file: load an existing list of splits file
 
-    uint64_t kmer = 0;    // length of k-mers
-    string pattern;    // pattern of gapped k-mers
-    uint64_t window = 1;    // number of k-mers per window
-    uint64_t iupac = 1;    // allow extended IUPAC characters
-    uint64_t quality = 1;    // min. coverage threshold for k-mers
-    bool reverse = false;    // consider reverse complement k-mers
+    file output;   // Output TSV file: list of splits, sorted by weight desc.
+    file newick;   // Output Newick file: convert splits to a tree topology
+    file counts;   // Output K-mer file: list k-mer occurrence per input file
+    file diff;     // Print the difference between two index or splits files
 
-    uint64_t num = 0;    // number of input files
-    uint64_t top = -1;    // number of top splits
-    string filter;    // filter function of splits
-    uint64_t T = 1;    // number of parallel threads
-    bool verbose = false;    // print messages during execution
+    uint64_t kmer = 0;     // Length of k-mers (default: 31)
+    string   pattern;      // Pattern of gapped k-mers (default: no gaps)
+    uint64_t window = 1;   // Number of k-mers per minimizer window (default: 1)
+    uint64_t iupac = 1;    // Extended IUPAC alphabet, resolve ambiguous bases
+    uint64_t quality = 1;  // Discard k-mers with lower coverage than a threshold
+    bool     reverse = 0;  // Keep one repr. for reverse complement k-mers
+
+    uint64_t num = 0;      // Number of colors, determined from input files
+    bool     query = 0;    // Interactive: list k-mer occurrence per input file
+    uint64_t top = -1;     // Number of splits in the output list (default: all)
+    string   filter;       // Output a greedy maximum weight subset of splits
+    uint64_t T = -1;       // Number of parallel threads (default: auto)
+    bool     verbose = 0;  // Print information messages during execution
 
     auto arithmetic_mean = [] (const uint32_t& x, const uint32_t& y) { return x / 2.0 + y / 2.0; };
     auto geometric_mean  = [] (const uint32_t& x, const uint32_t& y) { return sqrt(x) * sqrt(y); };
     auto geometric_mean2 = [] (const uint32_t& x, const uint32_t& y) { return sqrt(x+1) * sqrt(y+1) - 1; };
-    function<double(const uint32_t&, const uint32_t&)> default_mean  = geometric_mean;   // weight function
+    function<double(const uint32_t&, const uint32_t&)> default_mean  = geometric_mean;
 
     // parse the command line arguments and update the variables above
     for (int i = 1; i < argc; ++i) {
-        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
-            input = argv[++i];    // Input FASTA files: list of sequence files, one per line
-        }
-        else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graph") == 0) {
-            graph = argv[++i];    // Input Graph file: load a Bifrost graph, filename prefix
-            #ifndef useBF
-                $err << "Error: requires compiler flag -DuseBF, please see makefile" << _end$;
-                return 1;
-            #endif
-        }
-        else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--splits") == 0) {
-            splits = argv[++i];    // Input Splits file: load an existing list of splits file
-        }
-        else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
-            output = argv[++i];    // Output TSV file: list of splits, sorted by weight desc.
-        }
-        else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--newick") == 0) {
-            newick = argv[++i];    // Output Newick file: convert splits to a tree topology
-        }
-        else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--counts") == 0) {
-            counts = argv[++i];    // Output K-mer file: list k-mer occurrence per input file
-        }
-        else if (strcmp(argv[i], "-C") == 0) {    /* hidden option */
-            interactive = true;    // Interactive mode: list k-mer occurrence per input file
-        }
+        if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0)
+            input = file(util::atos(argc, argv, ++i), type::INPUT_FILE, mode::READ);
+        else if (strcmp(argv[i], "-j") == 0 || strcmp(argv[i], "--index") == 0)
+            index = file(util::atos(argc, argv, ++i), type::INDEX_FILE, mode::READ);
+        else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graph") == 0)
+            graph = file(util::atos(argc, argv, ++i), type::GRAPH_FILE, mode::READ);
+        else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--splits") == 0)
+            splits = file(util::atos(argc, argv, ++i), type::SPLITS_FILE, mode::READ);
 
-        else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0) {
-            kmer = stoi(argv[++i]);    // Length of k-mers (default: 31)
-        }
-        else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--gapped") == 0) {
-            pattern = argv[++i];    // Pattern of gapped k-mers (default: no gaps)
-        }
-        else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--window") == 0) {
-            window = stoi(argv[++i]);    // Number of k-mers per window (default: 1)
-        }
-        else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--iupac") == 0) {
-            iupac = stoi(argv[++i]);    // Extended IUPAC alphabet, resolve ambiguous bases
-        }
-        else if (strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--qualify") == 0) {
-            quality = stoi(argv[++i]);    // Discard k-mers below a min. coverage threshold
-        }
-        else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--reverse") == 0) {
+        else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0)
+            output = file(util::atos(argc, argv, ++i), type::SPLITS_FILE, mode::WRITE);
+        else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--newick") == 0)
+            newick = file(util::atos(argc, argv, ++i), type::NEWICK_FILE, mode::WRITE);
+        else if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--counts") == 0)
+            counts = file(util::atos(argc, argv, ++i), type::INDEX_FILE, mode::WRITE);
+        else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--diff") == 0)
+            diff = file(util::atos(argc, argv, ++i), type::INDEX_OR_SPLITS_FILE, mode::READ);
+
+        else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0)
+            kmer = util::aton(argc, argv, ++i);    // Length of k-mers (default: 31)
+        else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--gapped") == 0)
+            pattern = util::atos(argc, argv, ++i);    // Pattern of gapped k-mers (default: no gaps)
+        else if (strcmp(argv[i], "-w") == 0 || strcmp(argv[i], "--window") == 0)
+            window = util::aton(argc, argv, ++i);    // Number of k-mers per window (default: 1)
+        else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--iupac") == 0)
+            iupac = util::aton(argc, argv, ++i);    // Extended IUPAC alphabet, resolve ambiguous bases
+        else if (strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--qualify") == 0)
+            quality = util::aton(argc, argv, ++i);    // Discard k-mers below a min. coverage threshold
+        else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--reverse") == 0)
             reverse = true;    // Keep one repr. for reverse complement k-mers
-        }
 
-        else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0) {
-            top = stoi(argv[++i]);    // Number of top splits to output (default: all)
-        }
+        else if (strcmp(argv[i], "-C") == 0)    /* hidden option */
+            query = true;    // Interactive: list k-mer occurrence per input file
+        else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0)
+            top = util::aton(argc, argv, ++i);    // Number of top splits to output (default: all)
         else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mean") == 0) {
-            string arg = argv[++i];    // Mean weight function to handle asymmetric splits
-            if      (arg == "arith") default_mean = arithmetic_mean;
-            else if (arg == "geom")  default_mean = geometric_mean;
-            else if (arg == "geom2") default_mean = geometric_mean2;
+            string mean = util::atos(argc, argv, ++i);    // Mean weight function to handle asymmetric splits
+            if      (mean == "arith") default_mean = arithmetic_mean;
+            else if (mean == "geom")  default_mean = geometric_mean;
+            else if (mean == "geom2") default_mean = geometric_mean2;
             else {
-                $err << "Error: unknown argument: --mean " << arg << _end$;
-                $err << "       type --help to see a list of supported options" << _end$;
-                return 1;
-            }
-        }
+                $err << "Error: unknown argument: " << argv[i-1] << ' ' << mean << _end$;
+                $err << "       type --help to see a list of supported options" << _end$$;
+           }}
         else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--filter") == 0) {
-            filter = argv[++i];    // Output a greedy maximum weight subset of splits
+            filter = util::atos(argc, argv, ++i);    // Output a greedy maximum weight subset of splits
             if      (filter == "strict" || filter == "tree"); // compatible to a tree
             else if (filter == "weakly");                     // weakly compatible network
             else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree")
-                stoi(filter.substr(0, filter.find("tree")));
+                util::ston(argv[i-1], filter);
             else {
-                $err << "Error: unknown argument: --filter " << filter << _end$;
-                $err << "       type --help to see a list of supported options" << _end$;
-                return 1;
-            }
-        }
+                $err << "Error: unknown argument: " << argv[i-1] << ' ' << filter << _end$;
+                $err << "       type --help to see a list of supported options" << _end$$;
+           }}
 
-        else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--threads") == 0) {
-            string newT = argv[++i];
-            if (newT == "max" || newT == "MAX") {
-                uint64_t maxT = thread::hardware_concurrency();
-                if (maxT == 0) {
-                    $err << "Error: could not determine number of threads" << _end$;
-                    return 1;
-                } else {
-                    T = maxT;
-                    $note << "Note: running SANS-KC using " << T << " threads" << _end$;
-                }
-            } else {
-                T = stoi(newT);    // Number of parallel threads (default: 1)
-            }
-        }
-        else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0) {
+        else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--threads") == 0)
+            T = util::aton(argc, argv, ++i);    // Number of parallel threads (default: auto)
+        else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0)
             verbose = true;    // Print information messages during execution
-        }
         else if (strcmp(argv[i], "-rv") == 0 || strcmp(argv[i], "-vr") == 0) {
             reverse = true;    // Keep one repr. for reverse complement k-mers
             verbose = true;    // Print information messages during execution
         }
         else if (! (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) ) {
             $err << "Error: unknown argument: " << argv[i] << _end$;
-            $err << "       type --help to see the full list of parameters" << _end$;
-            return 1;
+            $err << "       type --help to see the full list of parameters" << _end$$;
         }
     }
 
-    if (input.empty() && graph.empty() && splits.empty()) {
-        $err << "Error: missing argument: --input, --graph, or --splits <file_name>" << _end$;
-        return 1;
-    }
-    if (!graph.empty() && !splits.empty()) {
-        if (!input.empty())
-             $err << "Error: too many arguments: --input, --graph, and --splits <file_name>" << _end$;
-        else $err << "Error: too many input arguments: --graph and --splits <file_name>" << _end$;
-        return 1;
-    }
-    if (output.empty() && newick.empty() && (counts.empty() && !interactive)) {
-        $err << "Error: missing argument: --output, --newick, or --counts <file_name>" << _end$;
-        return 1;
-    }
-    if (!splits.empty() && !(counts.empty() && !interactive)) {
-        $err << "Error: k-mer counts cannot be calculated if the input is a list of splits" << _end$;
-        return 1;
-    }
-    if (!newick.empty() && filter != "strict" && filter.find("tree") == -1) {
-        $err << "Error: Newick output only applicable in combination with -f strict/n-tree" << _end$;
-        return 1;
-    }
+    if (input.empty() && index.empty() && graph.empty() && splits.empty())
+        $err << "Error: missing argument: --input, --index, --graph, or --splits <file_name>" << _end$$;
+    if (!index.empty() && !graph.empty() && !splits.empty())
+        $err << "Error: too many input arguments: --index, --graph, and --splits <file_name>" << _end$$;
+    if (!index.empty() && !splits.empty())
+        $err << "Error: too many input arguments: --index and --splits <file_name>" << _end$$;
+    if (!graph.empty() && !splits.empty())
+        $err << "Error: too many input arguments: --graph and --splits <file_name>" << _end$$;
+
+    if (output.empty() && newick.empty() && (counts.empty() && !query) && diff.empty())
+        $err << "Error: missing argument: --output, --newick, --counts, or --diff <file_name>" << _end$$;
+    if (!output.empty() && !newick.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
+        $err << "Error: too many output arguments: --output, --newick, and --diff <file_name>" << _end$$;
+    if (!output.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
+        $err << "Error: too many output arguments: --output and --diff <file_name>" << _end$$;
+    if (!newick.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
+        $err << "Error: too many output arguments: --newick and --diff <file_name>" << _end$$;
+
+    if (!splits.empty() && !(counts.empty() && !query))
+        $err << "Error: k-mer counts cannot be calculated if the input is a list of splits" << _end$$;
+    if (!splits.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
+        $err << "Error: k-mer counts cannot be calculated if the input is a list of splits" << _end$$;
+    if (!newick.empty() && filter != "strict" && filter.find("tree") == -1)
+        $err << "Error: Newick output only applicable in combination with -f strict/n-tree" << _end$$;
 
     if (!pattern.empty()) {
         uint64_t lmer = 0;    // length without gaps
         for (size_t i = 0; i < pattern.length(); ++i) {
-            if (pattern[i] == '1') {
-                ++lmer; continue;
-            }
-            if (pattern[i] != '0') {
-                $err << "Error: pattern must be a sequence of 0s and 1s, where 0 means a gap" << _end$;
-                return 1;
-            }
-            if (reverse && pattern[i] != pattern[pattern.length()-1-i]) {
-                $err << "Error: pattern should be symmetric to work with reverse complements" << _end$;
-                return 1;
-            }
+            if (pattern[i] == '1')
+               { ++lmer; continue; }
+            if (pattern[i] != '0')
+                $err << "Error: pattern must be a sequence of 0s and 1s, where 0 means a gap" << _end$$;
+            if (reverse && pattern[i] != pattern[pattern.length()-1-i])
+                $err << "Error: pattern should be symmetric to work with reverse complements" << _end$$;
         }
-        if (kmer != 0 && kmer != lmer && kmer != pattern.length()) {
-            $err << "Error: pattern length does not match the given k-mer length" << _end$;
-            return 1;
-        }
+        if (kmer != 0 && kmer != lmer && kmer != pattern.length())
+            $err << "Error: pattern length does not match the given k-mer length" << _end$$;
         kmer = pattern.length();
 
-        if (lmer == 0) {
-            $err << "Error: pattern must be a sequence of 0s and 1s, with at least one 1" << _end$;
-            return 1;
-        }
-        if (lmer == pattern.length()) {
+        if (lmer == 0)
+            $err << "Error: pattern must be a sequence of 0s and 1s, with at least one 1" << _end$$;
+        if (lmer == pattern.length())
             pattern.clear();
-        }
     }
 
-    if (!graph.empty()) {
-        if (quality > 1) {
-            $warn << "Warning: input from graph with --qualify can produce unexpected results" << _end$;
-        }
-        else if (window > 1) {
-            $warn << "Warning: input from graph with --window can produce unexpected results" << _end$;
-        }
-    } else if (quality > 1 && window > 1) {
-        $warn << "Warning: using --qualify with --window could produce unexpected results" << _end$;
+    if (!index.empty()) {
+        if (quality > 1)
+            $note << "Note: input from index with --qualify can produce unexpected results" << _end$;
+        else if (window > 1)
+            $note << "Note: input from index with --window can produce unexpected results" << _end$;
     }
+    else if (!graph.empty()) {
+        if (quality > 1)
+            $note << "Note: input from graph with --qualify can produce unexpected results" << _end$;
+        else if (window > 1)
+            $note << "Note: input from graph with --window can produce unexpected results" << _end$;
+    }
+    else if (quality > 1 && window > 1) {
+        $note << "Note: using --qualify with --window could produce unexpected results" << _end$;
+    }
+
     if (!splits.empty()) {
         if (!input.empty()) {
             $note << "Note: two input arguments --input and --splits were provided" << _end$;
@@ -238,8 +206,7 @@ int main(int argc, char* argv[]) {
     if (!input.empty()) {
         ifstream file(input);
         if (!file.good()) {
-            $err << "Error: could not read input file: " << input << _end$;
-            return 1;
+            $err << "Error: could not read input file: " << input << _end$$;
         }
         string line;
         while (getline(file, line)) {
@@ -257,15 +224,13 @@ int main(int argc, char* argv[]) {
             num += cdbg.getNbColors();
             if (verbose) $log << end$;
         } else {
-            $err << "Error: could not load Bifrost graph: " << graph << _end$;
-            return 1;
+            $err << "Error: could not load Bifrost graph: " << graph << _end$$;
         }
         if (kmer != 0 && kmer != cdbg.getK()) {
             if (pattern.empty()) {
                 $warn << "Warning: graph file does not match the given k-mer length" << _end$;
             } else {
-                $err << "Error: graph file does not match the given pattern length" << _end$;
-                return 1;
+                $err << "Error: graph file does not match the given pattern length" << _end$$;
             }
         }
         kmer = cdbg.getK();
@@ -276,8 +241,7 @@ int main(int argc, char* argv[]) {
     if (!splits.empty()) {
         ifstream file(splits);
         if (!file.good()) {
-            $err << "Error: could not read splits file: " << splits << _end$;
-            return 1;
+            $err << "Error: could not read splits file: " << splits << _end$$;
         }
         string line;
         while (getline(file, line)) {
@@ -296,17 +260,19 @@ int main(int argc, char* argv[]) {
         file.close();
     }
 
-    if (kmer == 0 && splits.empty()) {
-        kmer = min(maxK, 31);    // k-mer length not specified & not estimated by graph/pattern
-        //->default
-    }
-    if (kmer > maxK) {
-        $err << "Error: k-mer length exceeds -DmaxK=" << maxK << ", please see makefile" << _end$;
-        return 1;
-    }
-    if (num > maxN) {
-        $err << "Error: number of files exceeds -DmaxN=" << maxN << ", please see makefile" << _end$;
-        return 1;
+    if (kmer == 0)
+        kmer = min<uint64_t>(31, maxK);    // k-mer length not specified & not estimated by pattern
+    if (kmer > maxK)
+        $err << "Error: k-mer length exceeds -DmaxK=" << maxK << ", please see makefile" << _end$$;
+    if (num > maxN)
+        $err << "Error: number of files exceeds -DmaxN=" << maxN << ", please see makefile" << _end$$;
+
+    uint64_t maxT = thread::hardware_concurrency()-1; T = min<uint64_t>({T, num, maxT});
+    if (T <= 0) $note << "Note: running SANS-KC using 1(+0) threads" << _end$;
+    else        $note << "Note: running SANS-KC using " << T << "(+1) threads" << _end$;
+    if (T >= 2 && quality > 1) {
+        $warn << "Warning: using --qualify on multiple threads could increase memory usage" << _end$;
+        $warn << "         In case of problems, please specify a smaller number of threads" << _end$;
     }
 
     auto begin = chrono::high_resolution_clock::now();    // time measurement
@@ -319,75 +285,66 @@ int main(int argc, char* argv[]) {
         if (verbose)
             $log $_ << "Reading input files..." << $;
 
-       auto lambda = [&] (const uint64_t& T, const uint64_t& maxT) {
-        for (size1N_t i = T; i < files.size(); i += maxT) {
-            ifstream file(files[i]);    // input file stream
-            if (!file.good())
-                $err $_ << files[i] << " (ERR)" << _end$;    // could not read file
-            else if (verbose)
-                $log $_ << files[i] << " (" << i+1 << "/" << files.size() << ")" << end$;    // print progress
+        vector<thread> list_thread(T); atomic<uint64_t> active(T);
+        auto lambda = [&] (const uint64_t& T, const uint64_t& maxT) {
+            for (size1N_t i = T; i < files.size(); i += maxT) {
+                ifstream file(files[i]);    // input file stream
+                if (!file.good())
+                    $err $_ << files[i] << " (ERR)" << _end$;    // could not read file
+                else if (verbose)
+                    $log $_ << files[i] << " (" << i+1 << "/" << files.size() << ")" << end$;    // print progress
 
-            string line;    // read the file line by line
-            string sequence;    // read in the sequence files and extract the k-mers
-            while (getline(file, line)) {
-                if (line.length() > 0) {
-                    if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
-                        if (window <= 1)
-                             iupac <= 1 ? graph::add_kmers(T, sequence, i)
-                                        : graph::add_kmers(T, sequence, i, iupac);
-                        else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
-                                        : graph::add_minimizers(T, sequence, i, window, iupac);
-                        sequence.clear();
+                string line;    // read the file line by line
+                string sequence;    // read in the sequence files and extract the k-mers
+                while (getline(file, line)) {
+                    if (line.length() > 0) {
+                        if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
+                            if (window <= 1)
+                                 iupac <= 1 ? graph::add_kmers(T, sequence, i)
+                                            : graph::add_kmers(T, sequence, i, iupac);
+                            else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
+                                            : graph::add_minimizers(T, sequence, i, window, iupac);
+                            sequence.clear();
 
-                        if (verbose)
-                            $lite $_ << line << _$;    // print progress
-                    }
-                    else if (line[0] == '+') {    // FASTQ quality values -> ignore
-                        getline(file, line);
-                    } else {
-                        transform(line.begin(), line.end(), line.begin(), ::toupper);
-                        sequence += line;    // FASTA & FASTQ sequence -> read
+                            if (verbose)
+                                $lite $_ << line << _$;    // print progress
+                        }
+                        else if (line[0] == '+') {    // FASTQ quality values -> ignore
+                            getline(file, line);
+                        } else {
+                            transform(line.begin(), line.end(), line.begin(), ::toupper);
+                            sequence += line;    // FASTA & FASTQ sequence -> read
+                        }
                     }
                 }
-            }
-            if (window <= 1)
-                 iupac <= 1 ? graph::add_kmers(T, sequence, i)
-                            : graph::add_kmers(T, sequence, i, iupac);
-            else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
-                            : graph::add_minimizers(T, sequence, i, window, iupac);
-            sequence.clear();
+                if (window <= 1)
+                     iupac <= 1 ? graph::add_kmers(T, sequence, i)
+                                : graph::add_kmers(T, sequence, i, iupac);
+                else iupac <= 1 ? graph::add_minimizers(T, sequence, i, window)
+                                : graph::add_minimizers(T, sequence, i, window, iupac);
+                sequence.clear();
 
-            if (verbose)
-                $log $_ << $;
-            graph::clear_thread(T);
-            file.close();
-        }};
+                if (verbose)
+                    $log $_ << $;
+                file.close();
 
-        vector<thread> thr(T);
-        for (uint64_t x = 0; x < T; ++x)
-            thr[x] = thread(lambda, x, T);
-        for (uint64_t x = 0; x < T; ++x)
-            thr[x].join();
+                graph::clear_thread(T);
+            } --active;
+        };
 
-        while (thr.size() > 1) {
-            for (uint64_t x = 0; x < thr.size()-1; x+=2) {
-                thr[x] = thread(graph::merge_threads, x, x+1);
-                if (verbose) $log << ":" << $;
-            }   if (verbose) $log << "\r" << $;
-
-            for (uint64_t x = 0; x < thr.size()-1; x+=2) {
-                thr[x].join();
-                if (verbose) $log << "." << $;
-            }   if (verbose) $log << "\r" << $;
-
-            uint64_t next_size = thr.size() / 2;
-            for (uint64_t x = 1; x <= next_size; ++x) {
-                graph::erase_thread(x);
-                thr.erase(thr.begin()+x);
-                if (verbose) $lite << "." << _$;
-            }   if (verbose) $lite $_ << _$;
+        if (T <= 0) lambda(0, 1);
+        else {
+            for (uint64_t x = 0; x < T; ++x)
+                list_thread[x] = thread(lambda, x, T);
+            while (active) {   // wait for threads
+                graph::merge_threads();
+                this_thread::sleep_for(1ns);
+            }   graph::merge_threads();
+            for (uint64_t x = 0; x < T; ++x)
+                list_thread[x].join();
         }
     }
+    graph::erase_threads();
 
 #ifdef useBF
     if (!graph.empty()) {
@@ -413,7 +370,6 @@ int main(int argc, char* argv[]) {
         }
         if (verbose)
             $log $_ << "Processed " << max << " unitigs (100%)" << end$;
-        graph::clear_thread(0);
     }
 #endif
 
@@ -448,11 +404,10 @@ int main(int argc, char* argv[]) {
        #ifdef useBF
          else return cdbg.getColorName(i-files.size());
        #endif
-        $err << "Error: color bit does not correspond to a color name" << _end$;
-        exit(1);
+        $err << "Error: color bit does not correspond to a color name" << _end$$;
     };
 
-    if (interactive) {    // lookup k-mer, interactive mode
+    if (query) {    // lookup k-mer, interactive query mode
         string query;
         $link << ">>> " << _$;    // display a command line prompt
         while (getline(cin, query)) {    // wait for user to enter a k-mer
@@ -514,7 +469,7 @@ int main(int argc, char* argv[]) {
             else if (filter == "weakly")
                 tree::filter_weakly(verbose);
             else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree")
-                tree::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), verbose);
+                tree::filter_n_tree(stol(filter), verbose);
         }
 
         if (verbose)
@@ -544,5 +499,4 @@ int main(int argc, char* argv[]) {
     auto end = chrono::high_resolution_clock::now();    // time measurement
     if (verbose)    // print progress and time
         $log << "Done! (" << util::format_time(end - begin) << ")" << end$;
-    return 0;
 }

@@ -1,11 +1,12 @@
 #include <algorithm>
 #include <functional>
-#include <vector>
-#include <map>
 #include <cmath>
 
-#include "color.h"
+#include <vector>
+#include <set>
+#include <map>
 
+#include "color.h"
 using namespace std;
 
 /**

@@ -48,6 +48,7 @@ void tree::insert_split(const double& weight, const color_t& color) {
 string tree::build_string(const function<string(const size1N_t&)>& color_name) {
     string str;
     for (auto& tree : forest) {
+        if (tree.empty()) break;
         node* root = build_tree(tree);
         str += print_tree(root, color_name);
         str += ";\n";
@@ -84,8 +85,7 @@ tree::node* tree::build_tree(vector<color_t>& color_sets) {
 
     for (color_t& split : color_sets) { // split if possible
         if (!refine_tree(root, split, root_taxa)) {
-            $err << "Error: splits are incompatible" << _end$;
-            exit(1);
+            $err << "Error: splits are incompatible" << _end$$;
         }
     }
     return root;
@@ -158,10 +158,8 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
             current_subsets->erase(remove(current_subsets->begin(), current_subsets->end(), subset), current_subsets->end());
         current_subsets->emplace_back(combined_set); // add new set
         return true;
-    }
-    else {
-        $err << "Error: one fully covered subset and nothing else!?" << _end$;
-        exit(1);
+    } else {
+        $err << "Error: one fully covered subset and nothing else!?" << _end$$;
     }
 }
 
@@ -175,13 +173,11 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
 string tree::print_tree(const node* root, const function<string(const size1N_t&)>& color_name) {
     if (root->subsets.empty()) {    // leaf set
         if (color::count(root->taxa) == 0) {
-            $err << "Error: child with no taxon!?" << _end$;
-            exit(1);
+            $err << "Error: child with no taxon!?" << _end$$;
         } else if (color::count(root->taxa) == 1) {
             return color_name(color::index(root->taxa)) + ":" + to_string(root->weight);
         } else {
-            $err << "Error: child with more than one taxon!?" << _end$;
-            exit(1);
+            $err << "Error: child with more than one taxon!?" << _end$$;
         }
     } else {
         string str = "(";

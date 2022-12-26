@@ -9,7 +9,10 @@
 #define $lite std::cerr << "\33[38;5;244m"
 #define $_              << "\33[2K\r"
 
-#define     $              std::flush
-#define    _$  "\33[0m" << std::flush
+#define  $                 std::flush
 #define  end$              std::endl
+#define  end$$             std::endl, exit(0)
+
+#define _$     "\33[0m" << std::flush
 #define _end$  "\33[0m" << std::endl
+#define _end$$ "\33[0m" << std::endl, exit(1)

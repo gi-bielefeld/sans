@@ -9,6 +9,7 @@ void util::print_help() {
     $out << "  Input arguments:" << end$;
     $out << end$;
     $out << "    -i, --input   \t Input FASTA files: list of sequence files, one per line" << end$;
+    $out << "    -j, --index   \t Input Index file: load a k-mer index, e.g. counts table" << end$;
     $out << "    -g, --graph   \t Input Graph file: load a Bifrost graph, filename prefix" << end$;
     $out << "    -s, --splits  \t Input Splits file: load an existing list of splits file" << end$;
     $out << end$;
@@ -17,6 +18,7 @@ void util::print_help() {
     $out << "    -o, --output  \t Output TSV file: list of splits, sorted by weight desc." << end$;
     $out << "    -n, --newick  \t Output Newick file: convert splits to a tree topology" << end$;
     $out << "    -c, --counts  \t Output K-mer file: list k-mer occurrence per input file" << end$;
+    $out << "    -d, --diff    \t Print the difference between two index or splits files" << end$;
     $out << end$;
     $out << "  K-mer options:" << end$;
     $out << end$;
@@ -35,7 +37,7 @@ void util::print_help() {
     $out << end$;
     $out << "  Other settings:" << end$;
     $out << end$;
-    $out << "    -p, --threads \t Number of parallel threads (default: 1)" << end$;
+    $out << "    -p, --threads \t Number of parallel threads (default: auto)" << end$;
     $out << "    -v, --verbose \t Print information messages during execution" << end$;
     $out << "    -h, --help    \t Display an extended help page and quit" << end$;
     $out << end$;
@@ -51,13 +53,16 @@ void util::print_extended_help() {
     $out << end$;
     $out << "    -i, --input   \t Input FASTA files: list of sequence files, one per line" << end$;
     $out << end$;
+    $out << "    -j, --index   \t Input Index file: load a k-mer index, e.g. counts table" << end$;
+    $out << "                  \t (provide list -i to lookup names or extend the index)" << end$;
+    $out << end$;
     $out << "    -g, --graph   \t Input Graph file: load a Bifrost graph, filename prefix" << end$;
     $out << "                  \t (requires compiler flag -DuseBF, please see makefile)" << end$;
     $out << end$;
     $out << "    -s, --splits  \t Input Splits file: load an existing list of splits file" << end$;
     $out << "                  \t (allows to filter -t/-f, other arguments are ignored)" << end$;
     $out << end$;
-    $out << "    (either --input and/or --graph, or --splits must be provided)" << end$;
+    $out << "    (either --input, --index, --graph, or --splits must be provided)" << end$;
     $out << " ___________________________________________________________________________" << end$;
     $out << end$;
     $out << "  Output arguments:" << end$;
@@ -70,7 +75,10 @@ void util::print_extended_help() {
     $out << "    -c, --counts  \t Output K-mer file: list k-mer occurrence per input file" << end$;
     $out << "                  \t (cannot be calculated if the input is a list of splits)" << end$;
     $out << end$;
-    $out << "    (either --output and/or --newick, or --counts must be provided)" << end$;
+    $out << "    -d, --diff    \t Print the difference between two index or splits files" << end$;
+    $out << "                  \t (input a file with matching format, output to stdout)" << end$;
+    $out << end$;
+    $out << "    (either --output, --newick, --counts, or --diff must be provided)" << end$;
     $out << " ___________________________________________________________________________" << end$;
     $out << end$;
     $out << "  K-mer options:" << end$;
@@ -113,14 +121,66 @@ void util::print_extended_help() {
     $out << end$;
     $out << "  Other settings:" << end$;
     $out << end$;
-    $out << "    -p, --threads \t Number of parallel threads (default: 1)" << end$;
-    $out << "                  \t Reduces runtime, but increases memory usage" << end$;
+    $out << "    -p, --threads \t Number of parallel threads (default: auto)" << end$;
+    $out << "                  \t Reduces runtime, but could increase memory usage" << end$;
+    $out << "                  \t In case of problems, please try a smaller number" << end$;
     $out << end$;
     $out << "    -v, --verbose \t Print information messages during execution" << end$;
     $out << end$;
     $out << "    -h, --help    \t Display an extended help page and quit" << end$;
     $out << " ___________________________________________________________________________" << end$;
     $out << end$;
+}
+
+/**
+ * This function converts a command line argument to a string.
+ *
+ * @param argc argument count
+ * @param argv argument vector
+ * @param i argument index
+ * @return string
+ */
+string util::atos(int& argc, char* argv[], int& i) {
+    if (i < argc) {
+        return argv[i];
+    } else {
+        $err << "Error: incomplete argument: " << argv[i-1] << " (expecting a string)" << _end$$;
+    }
+}
+
+/**
+ * This function converts a command line argument to a number.
+ *
+ * @param argc argument count
+ * @param argv argument vector
+ * @param i argument index
+ * @return number
+ */
+uint64_t util::aton(int& argc, char* argv[], int& i) {
+    if (i < argc) {
+        try {
+            return stoull(argv[i]);
+        } catch (...) {
+            $err << "Error: malformed argument: " << argv[i-1] << ' ' << argv[i] << " (expected a number)" << _end$$;
+        }
+    } else {
+        $err << "Error: incomplete argument: " << argv[i-1] << " (expecting a number)" << _end$$;
+    }
+}
+
+/**
+ * This function converts a string argument to a number.
+ *
+ * @param param parameter
+ * @param args argument
+ * @return number
+ */
+uint64_t util::ston(const string& param, const string& args) {
+    try {
+        return stoull(args);
+    } catch (...) {
+        $err << "Error: malformed argument: " << param << ' ' << args << " (expected a number)" << _end$$;
+    }
 }
 
 /**

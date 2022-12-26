@@ -85,7 +85,7 @@ bool kmer::reverse_represent(kmer_t& kmer) {
  * This function encodes a single character to two bits.
  *
  * @param chr character
- * @return bit sequence
+ * @return bit encoding
  */
 uint2K_t kmer::char_to_bits(const char& chr) {
     switch (chr) {
@@ -94,15 +94,14 @@ uint2K_t kmer::char_to_bits(const char& chr) {
         case 'G': return 0b10u;
         case 'T': return 0b11u;
         default:
-            $err << "Error: invalid character: " << chr << _end$;
-            exit(1);
+            $err << "Error: invalid character: " << chr << _end$$;
     }
 }
 
 /**
  * This function decodes two bits to a single character.
  *
- * @param b bit sequence
+ * @param b bit encoding
  * @param chr character
  */
 void kmer::bits_to_char(const uint2K_t& b, char& chr) {
@@ -112,7 +111,6 @@ void kmer::bits_to_char(const uint2K_t& b, char& chr) {
         case 0b10u: chr = 'G'; break;
         case 0b11u: chr = 'T'; break;
         default:
-            $err << "Error: invalid bit sequence: " << b << _end$;
-            exit(1);
+            $err << "Error: invalid bit encoding: " << b << _end$$;
     }
 }
