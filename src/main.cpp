@@ -173,22 +173,6 @@ int main(int argc, char* argv[]) {
             pattern.clear();
     }
 
-    if (!index.empty()) {
-        if (quality > 1)
-            $note << "Note: input from index with --qualify can produce unexpected results" << _end$;
-        else if (window > 1)
-            $note << "Note: input from index with --window can produce unexpected results" << _end$;
-    }
-    else if (!graph.empty()) {
-        if (quality > 1)
-            $note << "Note: input from graph with --qualify can produce unexpected results" << _end$;
-        else if (window > 1)
-            $note << "Note: input from graph with --window can produce unexpected results" << _end$;
-    }
-    else if (quality > 1 && window > 1) {
-        $note << "Note: using --qualify with --window could produce unexpected results" << _end$;
-    }
-
     if (!splits.empty()) {
         if (!input.empty()) {
             $note << "Note: two input arguments --input and --splits were provided" << _end$;

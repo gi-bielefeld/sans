@@ -100,8 +100,8 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
         case 1:
             case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-                auto&& item = pair<const kmer_t&, const size1N_t&>(kmer, color);
-                while (!main_queue.try_push(item));  // wait until enough space
+                pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                while (!main_queue.try_push(item));  // wait for enough space
             };  break;
         case 2:
             quality_set.resize(T);
@@ -110,8 +110,8 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_set[T].emplace(kmer);
                 } else {
                     quality_set[T].erase(kmer);
-                    auto&& item = pair<const kmer_t&, const size1N_t&>(kmer, color);
-                    while (!main_queue.try_push(item));  // wait until enough space
+                    pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                    while (!main_queue.try_push(item));  // wait for enough space
                 }
             };  break;
         default:
@@ -121,8 +121,8 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_map[T][kmer]++;
                 } else {
                     quality_map[T].erase(kmer);
-                    auto&& item = pair<const kmer_t&, const size1N_t&>(kmer, color);
-                    while (!main_queue.try_push(item));  // wait until enough space
+                    pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                    while (!main_queue.try_push(item));  // wait for enough space
                 }
             };  break;
     }}
@@ -527,11 +527,11 @@ next_kmer:
  * @param verbose print progress
  */
 void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)>& mean, const bool& verbose) {
-    double min_value = numeric_limits<double>::min();    // current min. weight in the top list (>0)
+    double min_value = numeric_limits<double>::min();    // current min. weight in the splits list
     uint64_t cur = 0, prog = 0, next;
     uint64_t max = kmer_table.size();
 
-    for (auto it = kmer_table.begin(); it != kmer_table.end(); ++it) {    // iterate over k-mer hash table
+    for (auto it = kmer_table.begin(); it != kmer_table.end(); ++it) {    // iterate over the k-mer table
         if (verbose) {
             next = 100 * cur / max;
              if (prog < next)  $log $_ << "Processing splits... " << next << "%" << $;
@@ -539,22 +539,14 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
         }
         color_t& color = it.value();    // get the color set for each k-mer
         bool pos = color::represent(color);    // invert the color set, if necessary
-        if (color == 0b0u) continue;    // ignore empty splits
-        array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+        if (color != 0b0u) color_table[color][pos]++;    // update the weight or inverse weight
+    }
 
-        double old_value = mean(weight[0], weight[1]);    // calculate the old mean value
-        if (old_value >= min_value) {    // if it is greater than the min. value, find it in the top list
-            auto range = tree::splits.equal_range(old_value);    // get all color sets with the given weight
-            for (auto it = range.first; it != range.second; ++it) {
-                if (it->second == color) {    // iterate over the color sets to find the correct one
-                    tree::splits.erase(it);    // erase the entry with the old weight
-                    break;
-                }
-            }
-        }
-        weight[pos]++;    // update the weight or the inverse weight of the current color set
-
+    for (auto it = color_table.begin(); it != color_table.end(); ++it) {    // iterate over the color table
+        color_t& color = (color_t&) it.key();    // get the color set of the split
+        array<uint32_t,2>& weight = it.value();    // get the weights for each split
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
+
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
             tree::splits.emplace(new_value, color);    // insert it at the correct position ordered by weight
             if (tree::splits.size() > tree::t) {      // if the splits list exceeds its limit, erase the last entry
