@@ -26,11 +26,7 @@ void color::init(const size1N_t& color_number) {
  * @param pos position
  */
 void color::set(color_t& color, const size1N_t& pos) {
-   #if maxN <= 64
-     color |= ((uint1N_t) 0b1u << pos);
-   #else
-     color.set(pos);
-   #endif
+    color.set(pos);
 }
 
 /**
@@ -40,11 +36,7 @@ void color::set(color_t& color, const size1N_t& pos) {
  * @param pos position
  */
 void color::unset(color_t& color, const size1N_t& pos) {
-   #if maxN <= 64
-     color &= ~((uint1N_t) 0b1u << pos);
-   #else
-     color.reset(pos);
-   #endif
+    color.reset(pos);
 }
 
 /**
@@ -55,11 +47,7 @@ void color::unset(color_t& color, const size1N_t& pos) {
  * @return 1 if bit is set, 0 otherwise
  */
 bool color::test(const color_t& color, const size1N_t& pos) {
-   #if maxN <= 64
-     return ((color >> pos) & 0b1u);
-   #else
-     return color.test(pos);
-   #endif
+    return color.test(pos);
 }
 
 /**
@@ -81,7 +69,7 @@ void color::shift(color_t& color, const char& chr) {
  * @param chr right color bit
  */
 void color::unshift(color_t& color, char& chr) {
-    chr = x_0b1u_(color)+48;    // return the rightmost color bit char
+    chr = (color & 0b1u)+48;    // return the rightmost color bit char
     color >>= 01u;    // shift all current bits to the right by one position
 //  color &= mask;    // set all bits to zero that exceed the color number
 }
@@ -93,18 +81,7 @@ void color::unshift(color_t& color, char& chr) {
  * @return position (or -1 if all zero)
  */
 size1N_t color::index(const color_t& color) {
-    if (color == 0b0u) return -1;
-   #if maxN <= 64
-     size1N_t index;    // counter for the position
-     color_t _color_ = color^(color-1);
-     for (index = -1; _color_; ++index)
-         _color_ >>= 1;    // count last position and shift to next bit
-     return index;
-   #else
-     for (size1N_t i = 0; i < n; ++i)
-         if (color.test(i)) return i;    // iterate over each position
-     return -1;
-   #endif
+    return color.lzcnt();
 }
 
 /**
@@ -114,15 +91,7 @@ size1N_t color::index(const color_t& color) {
  * @return number of ones
  */
 size1N_t color::count(const color_t& color) {
-   #if maxN <= 64
-     size1N_t count;    // counter for the number of ones
-     color_t _color_ = color;
-     for (count = 0; _color_; ++count)
-         _color_ &= _color_-1;    // count last bit and shift to next pos
-     return count;
-   #else
-     return color.count();    // count the number of ones directly
-   #endif
+    return color.popcnt();
 }
 
 /**
@@ -141,16 +110,9 @@ void color::complement(color_t& color) {
  * @return 1 if inverted, 0 otherwise
  */
 bool color::represent(color_t& color) {
-   #if maxN <= 64
-     size1N_t count;    // counter for the number of ones
-     color_t _color_ = color;
-     for (count = 0; _color_; ++count)
-         _color_ &= _color_-1;    // count last bit and shift to next pos
-   #else
-     size1N_t count = color.count();    // count the number directly
-   #endif
+    size1N_t count = color.popcnt();
     // return the color set with fewer ones to represent the split
-    if (2*count < n || 2*count == n && x_0b1u_(color))
+    if (2*count < n || 2*count == n && (color & 0b1u))
         return false;    // not inverted
     else color = ~color & mask;    // flip the bits
         return true;    // inverted

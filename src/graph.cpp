@@ -45,19 +45,19 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
     }
     if (!reverse && graph::pattern != 0b0u) {
         process_kmer = [&] (kmer_t& kmer)
-          { bmi2_pext(kmer, graph::pattern); };
+          { kmer::bmi2_pext(kmer, graph::pattern); };
         restore_kmer = [&] (kmer_t& kmer)
-          { bmi2_pdep(kmer, graph::pattern); };
+          { kmer::bmi2_pdep(kmer, graph::pattern); };
     }
     if (reverse && graph::pattern != 0b0u) {
         process_kmer = [&] (kmer_t& kmer)
           { kmer_t rcmp = kmer;
             kmer::reverse_complement(rcmp);
-            bmi2_pext(kmer, graph::pattern);
-            bmi2_pext(rcmp, graph::pattern);
-            if (rcmp < kmer) kmer = rcmp;    };
+            kmer::bmi2_pext(kmer, graph::pattern);
+            kmer::bmi2_pext(rcmp, graph::pattern);
+            if (rcmp < kmer) kmer = rcmp;          };
         restore_kmer = [&] (kmer_t& kmer)
-          { bmi2_pdep(kmer, graph::pattern); };
+          { kmer::bmi2_pdep(kmer, graph::pattern); };
     }
     graph::quality = quality;
 

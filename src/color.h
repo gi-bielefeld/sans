@@ -1,38 +1,15 @@
 #include <iostream>
-#include <bitset>
 using namespace std;
 
-#ifndef maxN   // max. color number defined as a preprocessor directive
-    #define maxN 64
+#ifndef maxN     // max. color number defined
+#define maxN 64  // as preprocessor directive
 #endif
 
-#if   1*maxN <= 8
-    typedef uint_least8_t  uint1N_t;
-#elif 1*maxN <= 16
-    typedef uint_least16_t uint1N_t;
-#elif 1*maxN <= 32
-    typedef uint_least32_t uint1N_t;
-#else
-    typedef uint_least64_t uint1N_t;
-#endif
-
-#if   1*maxN <= 255
-    typedef uint_fast8_t  size1N_t;
-#elif 1*maxN <= 65535
-    typedef uint_fast16_t size1N_t;
-#elif 1*maxN <= 4294967295
-    typedef uint_fast32_t size1N_t;
-#else
-    typedef uint_fast64_t size1N_t;
-#endif
-
-#if   1*maxN <= 64   // store colors as integers, optimizes performance
-    typedef uint1N_t color_t;
-    #define x_0b1u_(x) (x & 0b1u)
-#else   // store colors in a bitset, allows arbitrarily many colors
-    typedef bitset<maxN> color_t;
-    #define x_0b1u_(x) (x[0])
-#endif
+#define CLASS_NAME   color_t
+#define STORAGE_TYPE uint1N_t
+#define INDEX_TYPE   size1N_t
+#define BIT_LENGTH   (1*maxN)
+#include "byte.h"
 
 /**
  * This class contains functions for working with color types.

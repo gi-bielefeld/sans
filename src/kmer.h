@@ -1,47 +1,15 @@
 #include <iostream>
-#include <bitset>
 using namespace std;
 
-#ifndef maxK   // max. k-mer length defined as a preprocessor directive
-    #define maxK 32
+#ifndef maxK     // max. k-mer length defined
+#define maxK 32  // as preprocessor directive
 #endif
 
-#if   2*maxK <= 8
-    typedef uint_least8_t  uint2K_t;
-#elif 2*maxK <= 16
-    typedef uint_least16_t uint2K_t;
-#elif 2*maxK <= 32
-    typedef uint_least32_t uint2K_t;
-#else
-    typedef uint_least64_t uint2K_t;
-#endif
-
-#if   2*maxK <= 255
-    typedef uint_fast8_t  size2K_t;
-#elif 2*maxK <= 65535
-    typedef uint_fast16_t size2K_t;
-#elif 2*maxK <= 4294967295
-    typedef uint_fast32_t size2K_t;
-#else
-    typedef uint_fast64_t size2K_t;
-#endif
-
-#if   2*maxK <= 64   // store k-mers as integers, optimizes performance
-    typedef uint2K_t kmer_t;
-    #define x_0b11u_(x) (x & 0b11u)
-#else   // store k-mers in a bitset, allows arbitrarily large k-mers
-    typedef bitset<2*maxK> kmer_t;
-    #define x_0b11u_(x) (2*x[1]+x[0])
-
-    namespace std {   // comparison function extending std::bitset
-        template <size_t N>
-        static inline bool operator<(const bitset<N>& x, const bitset<N>& y) {
-            for (size_t i = N-1; i != -1; --i)
-                if (x[i] ^ y[i]) return y[i];
-            return false;
-        }
-    }
-#endif
+#define CLASS_NAME   kmer_t
+#define STORAGE_TYPE uint2K_t
+#define INDEX_TYPE   size2K_t
+#define BIT_LENGTH   (2*maxK)
+#include "byte.h"
 
 /**
  * This class contains functions for working with k-mer types.
@@ -99,6 +67,22 @@ class kmer {
      * @return 1 if inverted, 0 otherwise
      */
     static bool reverse_represent(kmer_t& kmer);
+
+    /**
+     * This function applies a gap pattern and right-compresses the k-mer.
+     *
+     * @param kmer bit sequence
+     * @param pattern bit mask
+     */
+    static void bmi2_pext(kmer_t& kmer, const kmer_t& pattern);
+
+    /**
+     * This function applies a gap pattern and left-decompresses the k-mer.
+     *
+     * @param kmer bit sequence
+     * @param pattern bit mask
+     */
+    static void bmi2_pdep(kmer_t& kmer, const kmer_t& pattern);
 
  protected:
 

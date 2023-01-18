@@ -39,7 +39,7 @@ void kmer::shift(kmer_t& kmer, const char& chr) {
  * @param chr right character
  */
 void kmer::unshift(kmer_t& kmer, char& chr) {
-    bits_to_char(x_0b11u_(kmer), chr);    // return the rightmost character
+    bits_to_char(kmer & 0b11u, chr);    // return the rightmost character
     kmer >>= 02u;    // shift all current bits to the right by two positions
 //  kmer &= mask;    // set all bits to zero that exceed the k-mer length
 }
@@ -55,7 +55,7 @@ void kmer::reverse_complement(kmer_t& kmer) {
 
     for (size2K_t i = 0; i < k; ++i) {
         rcmp <<= 02u;    // shift in the first base
-        rcmp |= x_0b11u_(bits);
+        rcmp |= bits & 0b11u;
         bits >>= 02u;    // shift out the last base
     }
     kmer = rcmp;
@@ -73,12 +73,32 @@ bool kmer::reverse_represent(kmer_t& kmer) {
 
     for (size2K_t i = 0; i < k; ++i) {
         rcmp <<= 02u;    // shift in the first base
-        rcmp |= x_0b11u_(bits);
+        rcmp |= bits & 0b11u;
         bits >>= 02u;    // shift out the last base
     }
     // return the lexicographically smaller
     if  (kmer < rcmp) return false;    // not reversed
     else kmer = rcmp; return true;    // reversed
+}
+
+/**
+ * This function applies a gap pattern and right-compresses the k-mer.
+ *
+ * @param kmer bit sequence
+ * @param pattern bit mask
+ */
+void kmer::bmi2_pext(kmer_t& kmer, const kmer_t& pattern) {
+    kmer.pext(pattern);
+}
+
+/**
+ * This function applies a gap pattern and left-decompresses the k-mer.
+ *
+ * @param kmer bit sequence
+ * @param pattern bit mask
+ */
+void kmer::bmi2_pdep(kmer_t& kmer, const kmer_t& pattern) {
+    kmer.pdep(pattern);
 }
 
 /**
