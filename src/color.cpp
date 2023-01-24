@@ -9,45 +9,12 @@ color_t  color::mask;   // bit-mask to erase all bits that exceed the color numb
 /**
  * This function initializes the color number and bit-mask.
  *
- * @param color_number color number
+ * @param number color number
  */
-void color::init(const size1N_t& color_number) {
-    n = color_number; mask = 0b0u;
-    for (size1N_t i = 0; i < n; ++i) {
-        mask <<= 01u;    // fill all bits within the color number with ones
-        mask |= 0b1u;    // the remaining zero bits can be used to mask bits
-    }
-}
-
-/**
- * This function sets the bit at the given position to one.
- *
- * @param color bit sequence
- * @param pos position
- */
-void color::set(color_t& color, const size1N_t& pos) {
-    color.set(pos);
-}
-
-/**
- * This function sets the bit at the given position to zero.
- *
- * @param color bit sequence
- * @param pos position
- */
-void color::unset(color_t& color, const size1N_t& pos) {
-    color.reset(pos);
-}
-
-/**
- * This function tests if the bit at the given position is set.
- *
- * @param color bit sequence
- * @param pos position
- * @return 1 if bit is set, 0 otherwise
- */
-bool color::test(const color_t& color, const size1N_t& pos) {
-    return color.test(pos);
+void color::init(const size1N_t& number) {
+    n = number; mask = 0b0u;
+    for (size1N_t i = 0; i < n; ++i)  // fill all bits within the color number with ones
+        (mask <<= 01u) |= 0b1u;      // the remaining zero bits can be used to mask bits
 }
 
 /**
@@ -72,26 +39,6 @@ void color::unshift(color_t& color, char& chr) {
     chr = (color & 0b1u)+48;    // return the rightmost color bit char
     color >>= 01u;    // shift all current bits to the right by one position
 //  color &= mask;    // set all bits to zero that exceed the color number
-}
-
-/**
- * This function returns the index of the first bit set to one.
- *
- * @param color bit sequence
- * @return position (or -1 if all zero)
- */
-size1N_t color::index(const color_t& color) {
-    return color.lzcnt();
-}
-
-/**
- * This function returns the number of bits that are set to one.
- *
- * @param color bit sequence
- * @return number of ones
- */
-size1N_t color::count(const color_t& color) {
-    return color.popcnt();
 }
 
 /**
@@ -126,8 +73,8 @@ bool color::represent(color_t& color) {
  * @return true, if compatible
  */
 bool color::is_compatible(const color_t& c1, const color_t& c2) {
-    color_t n1 = ~c1 & mask, n2 = ~c2 & mask;
-    return ((c1 & c2) == 0b0u || (c1 & n2) == 0b0u || (n1 & c2) == 0b0u || (n1 & n2) == 0b0u);
+    color_t n1 = ~c1 & mask, n2 = ~c2 & mask; using _ = color_t;
+    return (_::disjoint(c1, c2) || _::disjoint(c1, n2) || _::disjoint(n1, c2) || _::disjoint(n1, n2));
 }
 
 /**
@@ -139,7 +86,7 @@ bool color::is_compatible(const color_t& c1, const color_t& c2) {
  * @return true, if weakly compatible
  */
 bool color::is_weakly_compatible(const color_t& c1, const color_t& c2, const color_t& c3) {
-    color_t n1 = ~c1 & mask, n2 = ~c2 & mask, n3 = ~c3 & mask;
-    return ((c1 & c2 & c3) == 0b0u || (c1 & n2 & n3) == 0b0u || (n1 & c2 & n3) == 0b0u || (n1 & n2 & c3) == 0b0u)
-        && ((n1 & n2 & n3) == 0b0u || (n1 & c2 & c3) == 0b0u || (c1 & n2 & c3) == 0b0u || (c1 & c2 & n3) == 0b0u);
+    color_t n1 = ~c1 & mask, n2 = ~c2 & mask, n3 = ~c3 & mask; using _ = color_t;
+    return (_::disjoint(c1, c2, c3) || _::disjoint(c1, n2, n3) || _::disjoint(n1, c2, n3) || _::disjoint(n1, n2, c3))
+        && (_::disjoint(n1, n2, n3) || _::disjoint(n1, c2, c3) || _::disjoint(c1, n2, c3) || _::disjoint(c1, c2, n3));
 }

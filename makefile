@@ -21,14 +21,14 @@ obj/tree.o: src/tree.cpp src/tree.h obj/color.o
 obj/index.o: src/index.cpp src/index.h
 	$(CC) -c src/index.cpp -o obj/index.o
 
-obj/kmer.o: src/kmer.cpp src/kmer.h
+obj/kmer.o: src/kmer.cpp src/kmer.h src/byte.h
 	$(CC) -c src/kmer.cpp -o obj/kmer.o
 
-obj/color.o: src/color.cpp src/color.h
+obj/color.o: src/color.cpp src/color.h src/byte.h
 	$(CC) -c src/color.cpp -o obj/color.o
 
 obj/util.o: src/util.cpp src/util.h
 	$(CC) -c src/util.cpp -o obj/util.o
 
-obj/: makefile src/ansi.h src/byte.h src/*/*.h
+obj/: makefile src/ansi.h src/*/*.h
 	@rm -rf obj/ && mkdir obj/

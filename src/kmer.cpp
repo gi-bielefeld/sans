@@ -4,19 +4,29 @@
 /*
  * This class contains functions for working with k-mer types.
  */
-size2K_t kmer::k;      // length of a k-mer
+size2K_t kmer::k;      // length of a k-mer (including gap positions)
+size2K_t kmer::_k;     // length of a k-mer (not counting gap positions)
 kmer_t   kmer::mask;   // bit-mask to erase all bits that exceed the k-mer length
+kmer_t   kmer::_mask;  // bit-mask to erase certain bits in a gapped k-mer pattern
 
 /**
  * This function initializes the k-mer length and bit-mask.
  *
- * @param kmer_length k-mer length
+ * @param length k-mer length
+ * @param pattern gapped k-mer pattern
  */
-void kmer::init(const size2K_t& kmer_length) {
-    k = kmer_length; mask = 0b0u;
-    for (size2K_t i = 0; i < k; ++i) {
-        mask <<= 02u;    // fill all bits within the k-mer length with ones
-        mask |= 0b11u;    // the remaining zero bits can be used to mask bits
+void kmer::init(const size2K_t& length, const string& pattern) {
+    k = length; mask = 0b0u;
+    for (size2K_t i = 0; i < k; ++i)  // fill all bits within the k-mer length with ones
+        (mask <<= 02u) |= 0b11u;     // the remaining zero bits can be used to mask bits
+
+    if (pattern.empty()) {
+       _k = k; _mask = mask;     // if no pattern specified, copy the regular mask and k
+    } else {
+       _k = 0; _mask = 0b0u;
+        for (auto& chr : pattern) chr-48      // check the pattern at the position
+          ? (_mask <<= 02u) |= 0b11u, ++_k    // case 1: fill ones and increment counter
+          : (_mask <<= 02u);                  // case 0: use zero bits to mask character
     }
 }
 
@@ -51,11 +61,10 @@ void kmer::unshift(kmer_t& kmer, char& chr) {
  */
 void kmer::reverse_complement(kmer_t& kmer) {
     kmer_t bits = ~kmer;    // flip the original k-mer
-    kmer_t rcmp = 0b0u;    // empty reverse complement
-
-    for (size2K_t i = 0; i < k; ++i) {
+    kmer_t rcmp;
+    for (size2K_t i = 0; i < _k; ++i) {
         rcmp <<= 02u;    // shift in the first base
-        rcmp |= bits & 0b11u;
+        rcmp |= bits & 0b11u;    // transfer the character
         bits >>= 02u;    // shift out the last base
     }
     kmer = rcmp;
@@ -69,11 +78,10 @@ void kmer::reverse_complement(kmer_t& kmer) {
  */
 bool kmer::reverse_represent(kmer_t& kmer) {
     kmer_t bits = ~kmer;    // flip the original k-mer
-    kmer_t rcmp = 0b0u;    // empty reverse complement
-
-    for (size2K_t i = 0; i < k; ++i) {
+    kmer_t rcmp;
+    for (size2K_t i = 0; i < _k; ++i) {
         rcmp <<= 02u;    // shift in the first base
-        rcmp |= bits & 0b11u;
+        rcmp |= bits & 0b11u;    // transfer the character
         bits >>= 02u;    // shift out the last base
     }
     // return the lexicographically smaller
@@ -82,27 +90,7 @@ bool kmer::reverse_represent(kmer_t& kmer) {
 }
 
 /**
- * This function applies a gap pattern and right-compresses the k-mer.
- *
- * @param kmer bit sequence
- * @param pattern bit mask
- */
-void kmer::bmi2_pext(kmer_t& kmer, const kmer_t& pattern) {
-    kmer.pext(pattern);
-}
-
-/**
- * This function applies a gap pattern and left-decompresses the k-mer.
- *
- * @param kmer bit sequence
- * @param pattern bit mask
- */
-void kmer::bmi2_pdep(kmer_t& kmer, const kmer_t& pattern) {
-    kmer.pdep(pattern);
-}
-
-/**
- * This function encodes a single character to two bits.
+ * This function encodes a single character as two bits.
  *
  * @param chr character
  * @return bit encoding

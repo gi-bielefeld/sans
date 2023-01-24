@@ -4,7 +4,6 @@
 /*
  * This class manages the k-mer/color hash tables and splits calculation.
  */
-kmer_t   graph::pattern;   // pattern of gapped k-mers
 uint64_t graph::quality;   // min. coverage threshold for k-mers
 uint64_t graph::buffer;    // number of k-mers to retrieve from the queue
 
@@ -20,44 +19,34 @@ function<void(kmer_t&)>                                         graph::restore_k
 function<void(const uint64_t&, const kmer_t&, const size1N_t&)> graph::emplace_kmer;   // qualify a k-mer and place it into the hash table
 
 /**
- * This function initializes the k-mer pattern and coverage threshold.
+ * This function initializes the thread queue and coverage threshold.
  *
- * @param pattern gapped k-mer pattern
  * @param quality coverage threshold
  * @param reverse merge complements
  */
-void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quality, const bool& reverse) {
+void graph::init(const uint64_t& T, const uint64_t& quality, const bool& reverse) {
 
-    graph::pattern = 0b0u;
-    for (auto& pos : pattern) {
-        graph::pattern <<= 02u;
-        if (pos == '1')
-            graph::pattern |= 0b11u;
-    }
-    if (!reverse && graph::pattern == 0b0u) {
+    if (kmer::k == kmer::_k && !reverse) {
         process_kmer = [&] (kmer_t& kmer) {};
         restore_kmer = [&] (kmer_t& kmer) {};
     }
-    if (reverse && graph::pattern == 0b0u) {
+    if (kmer::k == kmer::_k && reverse) {
         process_kmer = [&] (kmer_t& kmer)
           { kmer::reverse_represent(kmer); };
         restore_kmer = [&] (kmer_t& kmer) {};
     }
-    if (!reverse && graph::pattern != 0b0u) {
+    if (kmer::k != kmer::_k && !reverse) {
         process_kmer = [&] (kmer_t& kmer)
-          { kmer::bmi2_pext(kmer, graph::pattern); };
+          { kmer::extract_pattern(kmer); };
         restore_kmer = [&] (kmer_t& kmer)
-          { kmer::bmi2_pdep(kmer, graph::pattern); };
+          { kmer::deposit_pattern(kmer); };
     }
-    if (reverse && graph::pattern != 0b0u) {
+    if (kmer::k != kmer::_k && reverse) {
         process_kmer = [&] (kmer_t& kmer)
-          { kmer_t rcmp = kmer;
-            kmer::reverse_complement(rcmp);
-            kmer::bmi2_pext(kmer, graph::pattern);
-            kmer::bmi2_pext(rcmp, graph::pattern);
-            if (rcmp < kmer) kmer = rcmp;          };
+          { kmer::extract_pattern(kmer);
+            kmer::reverse_represent(kmer); };
         restore_kmer = [&] (kmer_t& kmer)
-          { kmer::bmi2_pdep(kmer, graph::pattern); };
+          { kmer::deposit_pattern(kmer); };
     }
     graph::quality = quality;
 
@@ -67,7 +56,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
         case 1:
             case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-                color::set(kmer_table[kmer], color);
+                kmer_table[kmer].set(color);
             };  break;
         case 2:
             quality_set.resize(1);
@@ -76,7 +65,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_set[T].emplace(kmer);
                 } else {
                     quality_set[T].erase(kmer);
-                    color::set(kmer_table[kmer], color);
+                    kmer_table[kmer].set(color);
                 }
             };  break;
         default:
@@ -86,7 +75,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_map[T][kmer]++;
                 } else {
                     quality_map[T].erase(kmer);
-                    color::set(kmer_table[kmer], color);
+                    kmer_table[kmer].set(color);
                 }
             };  break;
     }}
@@ -100,7 +89,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
         case 1:
             case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-                pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                const pair<const kmer_t&, const size1N_t&> item(kmer, color);
                 while (!main_queue.try_push(item));  // wait for enough space
             };  break;
         case 2:
@@ -110,7 +99,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_set[T].emplace(kmer);
                 } else {
                     quality_set[T].erase(kmer);
-                    pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                    const pair<const kmer_t&, const size1N_t&> item(kmer, color);
                     while (!main_queue.try_push(item));  // wait for enough space
                 }
             };  break;
@@ -121,7 +110,7 @@ void graph::init(const uint64_t& T, const string& pattern, const uint64_t& quali
                     quality_map[T][kmer]++;
                 } else {
                     quality_map[T].erase(kmer);
-                    pair<const kmer_t&, const size1N_t&> item(kmer, color);
+                    const pair<const kmer_t&, const size1N_t&> item(kmer, color);
                     while (!main_queue.try_push(item));  // wait for enough space
                 }
             };  break;
@@ -561,11 +550,11 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
  * This function transfers k-mers & colors from the queue to the k-mer table.
  */
 void graph::merge_threads() {
-    vector<pair<kmer_t, size1N_t>> items(buffer); size_t items_size;
+    pair<kmer_t, size1N_t> items[buffer]; size_t items_size;
     do {
-        items_size = main_queue.try_pop_bulk(items.begin(), items.size());
-        for (uint64_t i = 0; i < items_size; ++i)
-            color::set(kmer_table[items[i].first], items[i].second);
+        items_size = main_queue.try_pop_bulk(items, buffer);
+        for (uint64_t i = 0; i != items_size; ++i)
+            kmer_table[items[i].first].set(items[i].second);
     } //
     while (items_size != 0);   // repeat until queue is empty
 }
@@ -591,6 +580,6 @@ void graph::erase_threads() {
         default: quality_map.clear(); break;
     }
     emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
-        color::set(kmer_table[kmer], color);
+        kmer_table[kmer].set(color);
     };
 }

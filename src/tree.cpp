@@ -4,9 +4,11 @@
 /*
  * This class manages the split/tree filters and Newick output.
  */
-uint64_t                             tree::t;        // max. size of the splits list
-multimap<double, color_t, greater<>> tree::splits;   // list collecting all the splits ordered by weight
-vector<vector<color_t>>              tree::forest;   // collection of (weakly) compatible splits trees
+uint64_t                             tree::t;            // max. size of the splits list
+multimap<double, color_t, greater<>> tree::splits;       // list collecting all the splits ordered by weight
+vector<vector<color_t>>              tree::forest;       // collection of (weakly) compatible splits trees
+function<string(const size1N_t&)>    tree::color_name;   // function to map a color position to a file name
+function<size1N_t(const string&)>    tree::color_index;  // function to map a file name to a color position
 
 /**
  * This is a tree structure used for generating a Newick string.
@@ -42,15 +44,14 @@ void tree::insert_split(const double& weight, const color_t& color) {
 /**
  * This function builds/refines/prints trees and generates a Newick string.
  *
- * @param color_name function to map a color bit to a file name
  * @return Newick string
  */
-string tree::build_string(const function<string(const size1N_t&)>& color_name) {
+string tree::build_string() {
     string str;
     for (auto& tree : forest) {
         if (tree.empty()) break;
         node* root = build_tree(tree);
-        str += print_tree(root, color_name);
+        str += print_tree(root);
         str += ";\n";
     }
     return str;
@@ -64,12 +65,12 @@ string tree::build_string(const function<string(const size1N_t&)>& color_name) {
  */
 tree::node* tree::build_tree(vector<color_t>& color_sets) {
     vector<node*> subsets = {};
-    color_t root_taxa = 0b0u;
+    color_t root_taxa;
 
     for (size1N_t i = 0; i < color::n; ++i) { // initialize set of trivial splits
-        color_t leaf_taxa = 0b0u;
-        color::set(root_taxa, i);
-        color::set(leaf_taxa, i);
+        color_t leaf_taxa;
+        root_taxa.set(i);
+        leaf_taxa.set(i);
 
         double weight = 0; // get weight of split
         for (auto& it : splits) {
@@ -107,7 +108,8 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
     //  - inverse split ... (i.e. split covers one subset partially) -> recurse with inverse
     //  - split covers several subsets completely -> introduce new split
 
-    if (color::count(split) < 2 || color::count(all_taxa) - color::count(split) < 2)
+    const size1N_t& split_count = split.popcnt();
+    if (split_count < 2 || all_taxa.popcnt() - split_count < 2)
         return true;
 
     vector<node*>* current_subsets = &root->subsets;
@@ -142,7 +144,7 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
         }
     }
     else if (fully_covered_subsets.size() > 1) {
-        color_t combined_taxa = 0b0u; // introduce new split
+        color_t combined_taxa; // introduce new split
         for (node* subset : fully_covered_subsets)
             combined_taxa |= subset->taxa;
 
@@ -167,22 +169,22 @@ bool tree::refine_tree(node* root, color_t& split, const color_t& all_taxa) {
  * This function returns a Newick string generated from a given tree structure.
  *
  * @param root root node of the current (sub-)set/tree structure
- * @param color_name function to map a color bit to a file name
  * @return Newick string
  */
-string tree::print_tree(const node* root, const function<string(const size1N_t&)>& color_name) {
+string tree::print_tree(const node* root) {
     if (root->subsets.empty()) {    // leaf set
-        if (color::count(root->taxa) == 0) {
+        const size1N_t& root_count = root->taxa.popcnt();
+        if (root_count == 0) {
             $err << "Error: child with no taxon!?" << _end$$;
-        } else if (color::count(root->taxa) == 1) {
-            return color_name(color::index(root->taxa)) + ":" + to_string(root->weight);
+        } else if (root_count == 1) {
+            return color_name(root->taxa.tzcnt()) + ":" + to_string(root->weight);
         } else {
             $err << "Error: child with more than one taxon!?" << _end$$;
         }
     } else {
         string str = "(";
         for (node* subset : root->subsets) {
-            str += print_tree(subset, color_name);
+            str += print_tree(subset);
             if (subset != root->subsets.back())
                 str += ",";
         }

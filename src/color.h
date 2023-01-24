@@ -9,6 +9,7 @@ using namespace std;
 #define STORAGE_TYPE uint1N_t
 #define INDEX_TYPE   size1N_t
 #define BIT_LENGTH   (1*maxN)
+#define SET_ELEMENT_COMPARATORS
 #include "byte.h"
 
 /**
@@ -33,34 +34,9 @@ class color {
     /**
      * This function initializes the color number and bit-mask.
      *
-     * @param color_number color number
+     * @param number color number
      */
-    static void init(const size1N_t& color_number);
-
-    /**
-     * This function sets the bit at the given position to one.
-     *
-     * @param color bit sequence
-     * @param pos position
-     */
-    static void set(color_t& color, const size1N_t& pos);
-
-    /**
-     * This function sets the bit at the given position to zero.
-     *
-     * @param color bit sequence
-     * @param pos position
-     */
-    static void unset(color_t& color, const size1N_t& pos);
-
-    /**
-     * This function tests if the bit at the given position is set.
-     *
-     * @param color bit sequence
-     * @param pos position
-     * @return 1 if bit is set, 0 otherwise
-     */
-    static bool test(const color_t& color, const size1N_t& pos);
+    static void init(const size1N_t& number);
 
     /**
      * This function shifts a color appending a new bit char to the right.
@@ -77,22 +53,6 @@ class color {
      * @param chr right color bit
      */
     static void unshift(color_t& color, char& chr);
-
-    /**
-     * This function returns the index of the first bit set to one.
-     *
-     * @param color bit sequence
-     * @return position (or -1 if all zero)
-     */
-    static size1N_t index(const color_t& color);
-
-    /**
-     * This function returns the number of bits that are set to one.
-     *
-     * @param color bit sequence
-     * @return number of ones
-     */
-    static size1N_t count(const color_t& color);
 
     /**
      * This function constructs the bit complement of a given color set.

@@ -48,13 +48,11 @@
                 #define _popcnt(_X) _mm_popcnt_u64(_X)
             #endif
         #endif
-        #if defined(__LZCNT__)
-            #if STORAGE_BITS <= 16
-                #define _lzcnt(_X) min(_lzcnt_u32(_X), STORAGE_BITS)
-            #elif STORAGE_BITS <= 32
-                #define _lzcnt(_X) _lzcnt_u32(_X)
+        #if defined(__BMI__)
+            #if STORAGE_BITS <= 32
+                #define _tzcnt(_X) (_X? _tzcnt_u32(_X): STORAGE_BITS)
             #elif STORAGE_BITS <= 64
-                #define _lzcnt(_X) _lzcnt_u64(_X)
+                #define _tzcnt(_X) (_X? _tzcnt_u64(_X): STORAGE_BITS)
             #endif
         #endif
         #if defined(__BMI2__)
@@ -78,8 +76,8 @@
            _temp &= _temp-1;\
         } return _count; } (_X)
 #endif
-#if !defined(_lzcnt)
-    #define _lzcnt(_X)\
+#if !defined(_tzcnt)
+    #define _tzcnt(_X)\
     [] (const STORAGE_TYPE& X) -> INDEX_TYPE {\
     if (!X) return STORAGE_BITS; if (!~X) return 0;\
         INDEX_TYPE _count; STORAGE_TYPE _temp = X^(X-1);\
@@ -380,13 +378,13 @@ class CLASS_NAME {
          return count;
        #endif
     }
-    INDEX_TYPE lzcnt() const noexcept {
+    INDEX_TYPE tzcnt() const noexcept {
        #if BIT_LENGTH <= MAX_STORAGE_BITS
-         return _lzcnt(byte);
+         return _tzcnt(byte);
        #else
-         INDEX_TYPE count = _lzcnt(byte[0]);
+         INDEX_TYPE count = _tzcnt(byte[0]);
          for (INDEX_TYPE i = 1; !byte[i-1] && i != ARRAY_LENGTH; ++i)
-             count += _lzcnt(byte[i]);
+             count += _tzcnt(byte[i]);
          return count;
        #endif
     }
@@ -459,7 +457,7 @@ class CLASS_NAME {
        #endif
     }
 
- #if !defined(CUSTOM_COMPARATORS)
+ #if defined(LEX_INTEGER_COMPARATORS)
     constexpr bool operator<(const CLASS_NAME& other) const noexcept {
        #if BIT_LENGTH <= MAX_STORAGE_BITS
          return byte < other.byte;
@@ -500,9 +498,63 @@ class CLASS_NAME {
          return byte[0] >= other.byte[0];
        #endif
     }
- #else
-    /*def*/ CUSTOM_COMPARATORS
-    #undef  CUSTOM_COMPARATORS
+    #undef LEX_INTEGER_COMPARATORS
+ #endif
+
+ // ########################## SET& COMPARISON OPERATORS ########################## //
+
+ #if defined(SET_ELEMENT_COMPARATORS)
+    constexpr bool operator<(const CLASS_NAME& other) const noexcept {
+        if (*this == other) return false;
+       { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x < y; }
+      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
+         CLASS_NAME X = (*this);          CLASS_NAME Y = other;
+               do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
+                                                                      while (x == y); return x < y; */
+    }
+    constexpr bool operator<=(const CLASS_NAME& other) const noexcept {
+        if (*this == other) return true;
+       { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x < y; }
+      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
+         CLASS_NAME X = (*this);          CLASS_NAME Y = other;
+               do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
+                                                                      while (x == y); return x < y; */
+    }
+    constexpr bool operator>(const CLASS_NAME& other) const noexcept {
+        if (*this == other) return false;
+       { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x > y; }
+      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
+         CLASS_NAME X = (*this);          CLASS_NAME Y = other;
+               do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
+                                                                      while (x == y); return x > y; */
+    }
+    constexpr bool operator>=(const CLASS_NAME& other) const noexcept {
+        if (*this == other) return true;
+       { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x > y; }
+      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
+         CLASS_NAME X = (*this);          CLASS_NAME Y = other;
+               do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
+                                                                      while (x == y); return x > y; */
+    }
+    static constexpr bool disjoint(const CLASS_NAME& x, const CLASS_NAME& y) noexcept {
+       #if BIT_LENGTH <= MAX_STORAGE_BITS
+         return !(x.byte & y.byte);
+       #else
+         for (INDEX_TYPE i = 0; i != ARRAY_LENGTH-1; ++i)
+             if (x.byte[i] & y.byte[i]) return false;
+         return !(x.byte[ARRAY_LENGTH-1] & y.byte[ARRAY_LENGTH-1]);
+       #endif
+    }
+    static constexpr bool disjoint(const CLASS_NAME& x, const CLASS_NAME& y, const CLASS_NAME& z) noexcept {
+       #if BIT_LENGTH <= MAX_STORAGE_BITS
+         return !(x.byte & y.byte & z.byte);
+       #else
+         for (INDEX_TYPE i = 0; i != ARRAY_LENGTH-1; ++i)
+             if (x.byte[i] & y.byte[i] & z.byte[i]) return false;
+         return !(x.byte[ARRAY_LENGTH-1] & y.byte[ARRAY_LENGTH-1] & z.byte[ARRAY_LENGTH-1]);
+       #endif
+    }
+    #undef SET_ELEMENT_COMPARATORS
  #endif
 };
 
@@ -531,6 +583,6 @@ template<> struct std::hash<CLASS_NAME> {
 #undef ARRAY_LENGTH
 
 #undef _popcnt
-#undef _lzcnt
+#undef _tzcnt
 #undef _pext
 #undef _pdep

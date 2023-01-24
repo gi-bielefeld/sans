@@ -9,6 +9,7 @@ using namespace std;
 #define STORAGE_TYPE uint2K_t
 #define INDEX_TYPE   size2K_t
 #define BIT_LENGTH   (2*maxK)
+#define LEX_INTEGER_COMPARATORS
 #include "byte.h"
 
 /**
@@ -23,19 +24,30 @@ class kmer {
      */
     static kmer_t mask;
 
+    /**
+     * This is a bit-mask to erase certain bits in a gapped k-mer pattern.
+     */
+    static kmer_t _mask;
+
  public:
 
     /**
-     * This is the length of a k-mer.
+     * This is the length of a k-mer (including gap positions).
      */
     static size2K_t k;
 
     /**
+     * This is the length of a k-mer (not counting gap positions).
+     */
+    static size2K_t _k;
+
+    /**
      * This function initializes the k-mer length and bit-mask.
      *
-     * @param kmer_length k-mer length
+     * @param length k-mer length
+     * @param pattern gapped k-mer pattern
      */
-    static void init(const size2K_t& kmer_length);
+    static void init(const size2K_t& length, const string& pattern);
 
     /**
      * This function shifts a k-mer appending a new character to the right.
@@ -72,22 +84,24 @@ class kmer {
      * This function applies a gap pattern and right-compresses the k-mer.
      *
      * @param kmer bit sequence
-     * @param pattern bit mask
      */
-    static void bmi2_pext(kmer_t& kmer, const kmer_t& pattern);
+    static inline void extract_pattern(kmer_t& kmer) noexcept {
+        kmer.pext(_mask);
+    }
 
     /**
      * This function applies a gap pattern and left-decompresses the k-mer.
      *
      * @param kmer bit sequence
-     * @param pattern bit mask
      */
-    static void bmi2_pdep(kmer_t& kmer, const kmer_t& pattern);
+    static inline void deposit_pattern(kmer_t& kmer) noexcept {
+        kmer.pdep(_mask);
+    }
 
  protected:
 
     /**
-     * This function encodes a single character to two bits.
+     * This function encodes a single character as two bits.
      *
      * @param chr character
      * @return bit sequence

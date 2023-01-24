@@ -24,14 +24,14 @@ class tree {
  public:
 
     /**
-     * This is a list collecting all the splits ordered by weight.
-     */
-    static multimap<double, color_t, greater<>> splits;
-
-    /**
      * This is the max. size of the splits list.
      */
     static uint64_t t;
+
+    /**
+     * This is a list collecting all the splits ordered by weight.
+     */
+    static multimap<double, color_t, greater<>> splits;
 
     /**
      * This function initializes the max. size of the splits list.
@@ -51,10 +51,9 @@ class tree {
     /**
      * This function builds/refines/prints trees and generates a Newick string.
      *
-     * @param color_name function to map a color bit to a file name
      * @return Newick string
      */
-    static string build_string(const function<string(const size1N_t&)>& color_name);
+    static string build_string();
 
     /**
      * This function filters a greedy maximum weight tree compatible subset.
@@ -77,6 +76,20 @@ class tree {
      * @param verbose print progress
      */
     static void filter_n_tree(const uint64_t& n, const bool& verbose);
+
+    /**
+     * This function maps a color position to a file name.
+     *
+     * @param index color position
+     */
+    static function<string(const size1N_t&)> color_name;
+
+    /**
+     * This function maps a file name to a color position.
+     *
+     * @param name file name
+     */
+    static function<size1N_t(const string&)> color_index;
 
  protected:
 
@@ -107,10 +120,9 @@ class tree {
      * This function returns a Newick string generated from a given tree structure.
      *
      * @param root root node of the current (sub-)set/tree structure
-     * @param color_name function to map a color bit to a file name
      * @return Newick string
      */
-    static string print_tree(const node* root, const function<string(const size1N_t&)>& color_name);
+    static string print_tree(const node* root);
 
     /**
      * This function tests if a split is compatible with an existing set of splits.

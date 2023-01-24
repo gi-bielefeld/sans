@@ -199,13 +199,13 @@ int main(int argc, char* argv[]) {
         }
         file.close();
     }
+    uint64_t file_num = files.size();
 
 #ifdef useBF
     // load an existing Bifrost graph file
     ColoredCDBG<> cdbg(kmer);
     if (!graph.empty()) {
         if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) {
-            num += cdbg.getNbColors();
             if (verbose) $log << end$;
         } else {
             $err << "Error: could not load Bifrost graph: " << graph << _end$$;
@@ -215,6 +215,13 @@ int main(int argc, char* argv[]) {
                 $warn << "Warning: graph file does not match the given k-mer length" << _end$;
             } else {
                 $err << "Error: graph file does not match the given pattern length" << _end$$;
+            }
+        }
+        for (uint64_t i = 0; i < cdbg.getNbColors(); ++i) {
+            const string& name = cdbg.getColorName(i);
+            if (name_table.find(name) == name_table.end()) {
+                files.emplace_back(name);
+                name_table[name] = num++;
             }
         }
         kmer = cdbg.getK();
@@ -227,13 +234,13 @@ int main(int argc, char* argv[]) {
         if (!file.good()) {
             $err << "Error: could not read splits file: " << splits << _end$$;
         }
-        string line;
+        string line; size_t curr, next;
         while (getline(file, line)) {
-            size_t curr = line.find('\t');
-            size_t next = curr + 1;
+            curr = line.find('\t');
+            next = curr + 1;
             do {
                 curr = line.find('\t', next);
-                string name = line.substr(next, curr-next);
+                const string& name = line.substr(next, curr-next);
                 if (name_table.find(name) == name_table.end()) {
                     files.emplace_back(name);
                     name_table[name] = num++;
@@ -245,7 +252,7 @@ int main(int argc, char* argv[]) {
     }
 
     if (kmer == 0)
-        kmer = min<uint64_t>(31, maxK);    // k-mer length not specified & not estimated by pattern
+        kmer = min<uint64_t>(31, maxK);    // k-mer length not specified & not defined by pattern
     if (kmer > maxK)
         $err << "Error: k-mer length exceeds -DmaxK=" << maxK << ", please see makefile" << _end$$;
     if (num > maxN)
@@ -260,10 +267,17 @@ int main(int argc, char* argv[]) {
     }
 
     auto begin = chrono::high_resolution_clock::now();    // time measurement
-    graph::init(T, pattern, quality, reverse);    // initialize the graph
-    tree::init(top);    // initialize the splits list size
-    kmer::init(kmer);    // initialize the k-mer length
     color::init(num);    // initialize the color number
+    kmer::init(kmer, pattern);    // initialize the k-mer length
+    tree::init(top);    // initialize the splits list size
+    graph::init(T, quality, reverse);    // initialize the graph
+
+    tree::color_name = [&] (const size1N_t& index) {
+        return files[index];    // function to map a color position to a file name
+    };
+    tree::color_index = [&] (const string& name) {
+        return name_table[name];    // function to map a file name to a color position
+    };
 
     if (!input.empty() && splits.empty()) {
         if (verbose)
@@ -271,12 +285,12 @@ int main(int argc, char* argv[]) {
 
         vector<thread> list_thread(T); atomic<uint64_t> active(T);
         auto lambda = [&] (const uint64_t& T, const uint64_t& maxT) {
-            for (size1N_t i = T; i < files.size(); i += maxT) {
+            for (size1N_t i = T; i < file_num; i += maxT) {
                 ifstream file(files[i]);    // input file stream
                 if (!file.good())
                     $err $_ << files[i] << " (ERR)" << _end$;    // could not read file
                 else if (verbose)
-                    $log $_ << files[i] << " (" << i+1 << "/" << files.size() << ")" << end$;    // print progress
+                    $log $_ << files[i] << " (" << i+1 << "/" << file_num << ")" << end$;    // print progress
 
                 string line;    // read the file line by line
                 string sequence;    // read in the sequence files and extract the k-mers
@@ -348,8 +362,8 @@ int main(int argc, char* argv[]) {
 
             for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
                 auto substr = sequence.substr(it.getKmerPosition(), kmer);
-                auto color = files.size() + it.getColorID();
-                graph::add_kmers(0, substr, color);
+                const string& name = cdbg.getColorName(it.getColorID());
+                graph::add_kmers(0, substr, name_table[name]);
             }
         }
         if (verbose)
@@ -362,16 +376,17 @@ int main(int argc, char* argv[]) {
             $log $_ << "Reading splits file..." << $;
         ifstream file(splits);
 
-        string line;
+        string line; size_t curr, next;
+        double weight; color_t color;
         while (getline(file, line)) {
-            size_t curr = line.find('\t');
-            double weight = stod(line.substr(0, curr));
-            color_t color = 0b0u;
-            size_t next = curr + 1;
+            curr = line.find('\t');
+            weight = stod(line.substr(0, curr));
+            color = 0b0u;
+            next = curr + 1;
             do {
                 curr = line.find('\t', next);
-                string name = line.substr(next, curr-next);
-                color::set(color, name_table[name]);
+                const string& name = line.substr(next, curr-next);
+                color.set(name_table[name]);
                 next = curr + 1;
             } while (curr != string::npos);
 
@@ -381,15 +396,6 @@ int main(int argc, char* argv[]) {
             $log $_ << $;
         file.close();
     }
-
-    // function to map a color position to a file name
-    function<string(const size1N_t&)> color_name = [&] (const size1N_t& i) {
-        if (i < files.size()) return files[i];
-       #ifdef useBF
-         else return cdbg.getColorName(i-files.size());
-       #endif
-        $err << "Error: color bit does not correspond to a color name" << _end$$;
-    };
 
     if (query) {    // lookup k-mer, interactive query mode
         string query;
@@ -464,8 +470,8 @@ int main(int argc, char* argv[]) {
             for (auto& split : tree::splits) {
                 stream << split.first;    // weight of the split
                 for (size1N_t i = 0; i < num; ++i) {
-                    if (color::test(split.second, i)) {
-                        stream << '\t' << color_name(i);    // name of the file
+                    if (split.second.test(i)) {
+                        stream << '\t' << files[i];    // name of the file
                     }
                 }
                 stream << endl;
@@ -475,7 +481,7 @@ int main(int argc, char* argv[]) {
         if (!newick.empty()) {
             ofstream file(newick);    // output file stream
             ostream stream(file.rdbuf());
-            stream << tree::build_string(color_name);    // filter and print tree
+            stream << tree::build_string();    // filter and print tree
             file.close();
         }
     }

@@ -21,11 +21,6 @@ class graph {
  private:
 
     /**
-     * This is the pattern of gapped k-mers.
-     */
-    static kmer_t pattern;
-
-    /**
      * This is the min. coverage threshold for k-mers.
      */
     static uint64_t quality;
@@ -68,13 +63,12 @@ class graph {
  public:
 
     /**
-     * This function initializes the k-mer pattern and coverage threshold.
+     * This function initializes the thread queue and coverage threshold.
      *
-     * @param pattern gapped k-mer pattern
      * @param quality coverage threshold
      * @param reverse merge complements
      */
-    static void init(const uint64_t& T, const string& pattern, const uint64_t& quality, const bool& reverse);
+    static void init(const uint64_t& T, const uint64_t& quality, const bool& reverse);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
