@@ -33,7 +33,7 @@ class graph {
     /**
      * This is a hash table mapping colors/splits to their weights.
      */
-    static hash_map<color_t, array<uint32_t,2>> color_table;
+    static hash_map<color_t, uint32_t[2]> color_table;
 
     /**
      * This is a hash set used to filter k-mers for coverage (q > 1).
@@ -53,7 +53,7 @@ class graph {
     /**
      * This is a queue used to synchronize k-mers from multiple threads.
      */
-    static queue<kmer_t, size1N_t> main_queue;
+    static queue<kmer_t, size1N_t> thread_queue;
 
     /**
      * This is the number of k-mers to retrieve from the queue.

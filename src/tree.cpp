@@ -4,11 +4,11 @@
 /*
  * This class manages the split/tree filters and Newick output.
  */
-uint64_t                             tree::t;            // max. size of the splits list
-multimap<double, color_t, greater<>> tree::splits;       // list collecting all the splits ordered by weight
-vector<vector<color_t>>              tree::forest;       // collection of (weakly) compatible splits trees
-function<string(const size1N_t&)>    tree::color_name;   // function to map a color position to a file name
-function<size1N_t(const string&)>    tree::color_index;  // function to map a file name to a color position
+uint64_t                          tree::t;            // max. size of the splits list
+multimap<double, color_t>         tree::splits;       // list collecting all the splits ordered by weight
+vector<vector<color_t>>           tree::forest;       // collection of (weakly) compatible splits trees
+function<string(const size1N_t&)> tree::color_name;   // function to map a color position to a file name
+function<size1N_t(const string&)> tree::color_index;  // function to map a file name to a color position
 
 /**
  * This is a tree structure used for generating a Newick string.

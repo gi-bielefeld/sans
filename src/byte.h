@@ -507,34 +507,34 @@ class CLASS_NAME {
     constexpr bool operator<(const CLASS_NAME& other) const noexcept {
         if (*this == other) return false;
        { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x < y; }
-      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
+       { INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
          CLASS_NAME X = (*this);          CLASS_NAME Y = other;
                do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
-                                                                      while (x == y); return x < y; */
+                                                                      while (x == y); return x < y; }
     }
     constexpr bool operator<=(const CLASS_NAME& other) const noexcept {
         if (*this == other) return true;
        { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x < y; }
-      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
+       { INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x < y;
          CLASS_NAME X = (*this);          CLASS_NAME Y = other;
                do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
-                                                                      while (x == y); return x < y; */
+                                                                      while (x == y); return x < y; }
     }
     constexpr bool operator>(const CLASS_NAME& other) const noexcept {
         if (*this == other) return false;
        { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x > y; }
-      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
+       { INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
          CLASS_NAME X = (*this);          CLASS_NAME Y = other;
                do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
-                                                                      while (x == y); return x > y; */
+                                                                      while (x == y); return x > y; }
     }
     constexpr bool operator>=(const CLASS_NAME& other) const noexcept {
         if (*this == other) return true;
        { INDEX_TYPE x = (*this).popcnt(); INDEX_TYPE y = other.popcnt(); if (x != y)  return x > y; }
-      /* INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
+       { INDEX_TYPE x = (*this).tzcnt();  INDEX_TYPE y = other.tzcnt();  if (x != y)  return x > y;
          CLASS_NAME X = (*this);          CLASS_NAME Y = other;
                do { X.reset(x);    x = X.tzcnt();    Y.reset(y);    y = Y.tzcnt(); }
-                                                                      while (x == y); return x > y; */
+                                                                      while (x == y); return x > y; }
     }
     static constexpr bool disjoint(const CLASS_NAME& x, const CLASS_NAME& y) noexcept {
        #if BIT_LENGTH <= MAX_STORAGE_BITS

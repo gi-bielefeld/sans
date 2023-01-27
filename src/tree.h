@@ -1,13 +1,20 @@
 #include <algorithm>
 #include <functional>
 #include <cmath>
-
 #include <vector>
 #include <set>
-#include <map>
 
 #include "color.h"
 using namespace std;
+
+template <typename K, typename V>
+  struct compare: public binary_function<pair<K,V>, pair<K,V>, bool> {
+      constexpr bool operator()(const pair<K,V>& x, const pair<K,V>& y) const noexcept {
+          return x.first > y.first || x.first == y.first && x.second < y.second;
+      }
+  };
+template <typename K, typename V>
+  using multimap = set<pair<K,V>, compare<K,V>>;
 
 /**
  * This class manages the split/tree filters and Newick output.
@@ -31,7 +38,7 @@ class tree {
     /**
      * This is a list collecting all the splits ordered by weight.
      */
-    static multimap<double, color_t, greater<>> splits;
+    static multimap<double, color_t> splits;
 
     /**
      * This function initializes the max. size of the splits list.

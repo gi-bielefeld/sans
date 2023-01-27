@@ -33,10 +33,11 @@ int main(int argc, char* argv[]) {
     file graph;    // Input Graph file: load a Bifrost graph, filename prefix
     file splits;   // Input Splits file: load an existing list of splits file
 
-    file output;   // Output TSV file: list of splits, sorted by weight desc.
-    file newick;   // Output Newick file: convert splits to a tree topology
-    file counts;   // Output K-mer file: list k-mer occurrence per input file
-    file diff;     // Print the difference between two index or splits files
+    file output;     // Output TSV file: list of splits, sorted by weight desc.
+    file newick;     // Output Newick file: convert splits to a tree topology
+    file counts;     // Output K-mer file: list k-mer occurrence per input file
+    file diff;       // Print the difference between two index or splits files
+    bool query = 0;  // Interactive: list k-mer occurrence per input file
 
     uint64_t kmer = 0;     // Length of k-mers (default: 31)
     string   pattern;      // Pattern of gapped k-mers (default: no gaps)
@@ -46,11 +47,11 @@ int main(int argc, char* argv[]) {
     bool     reverse = 0;  // Keep one repr. for reverse complement k-mers
 
     uint64_t num = 0;      // Number of colors, determined from input files
-    bool     query = 0;    // Interactive: list k-mer occurrence per input file
     uint64_t top = -1;     // Number of splits in the output list (default: all)
     string   filter;       // Output a greedy maximum weight subset of splits
     uint64_t T = -1;       // Number of parallel threads (default: auto)
-    bool     verbose = 0;  // Print information messages during execution
+    bool     verbose = 0;  // Print some information messages during execution
+    bool     VERBOSE = 0;  // Print more information messages during execution
 
     auto arithmetic_mean = [] (const uint32_t& x, const uint32_t& y) { return x / 2.0 + y / 2.0; };
     auto geometric_mean  = [] (const uint32_t& x, const uint32_t& y) { return sqrt(x) * sqrt(y); };
@@ -76,6 +77,8 @@ int main(int argc, char* argv[]) {
             counts = file(util::atos(argc, argv, ++i), type::INDEX_FILE, mode::WRITE);
         else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--diff") == 0)
             diff = file(util::atos(argc, argv, ++i), type::INDEX_OR_SPLITS_FILE, mode::READ);
+        else if (strcmp(argv[i], "-C") == 0)    /* hidden option */
+            query = true;    // Interactive: list k-mer occurrence per input file
 
         else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0)
             kmer = util::aton(argc, argv, ++i);    // Length of k-mers (default: 31)
@@ -90,8 +93,6 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--reverse") == 0)
             reverse = true;    // Keep one repr. for reverse complement k-mers
 
-        else if (strcmp(argv[i], "-C") == 0)    /* hidden option */
-            query = true;    // Interactive: list k-mer occurrence per input file
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0)
             top = util::aton(argc, argv, ++i);    // Number of top splits to output (default: all)
         else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mean") == 0) {
@@ -118,11 +119,13 @@ int main(int argc, char* argv[]) {
             T = util::aton(argc, argv, ++i);    // Number of parallel threads (default: auto)
         else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0)
             verbose = true;    // Print information messages during execution
-        else if (strcmp(argv[i], "-rv") == 0 || strcmp(argv[i], "-vr") == 0) {
-            reverse = true;    // Keep one repr. for reverse complement k-mers
+        else if (strcmp(argv[i], "-rv") == 0 || strcmp(argv[i], "-vr") == 0)
+            reverse = true,    // Keep one repr. for reverse complement k-mers
             verbose = true;    // Print information messages during execution
-        }
-        else if (! (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) ) {
+        else if (strcmp(argv[i], "-V") == 0)    /* hidden option */
+            verbose = true,    // Print some information messages during execution
+            VERBOSE = true;    // Print more information messages during execution
+        else if (!(strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)) {
             $err << "Error: unknown argument: " << argv[i] << _end$;
             $err << "       type --help to see the full list of parameters" << _end$$;
         }
@@ -132,6 +135,8 @@ int main(int argc, char* argv[]) {
         $err << "Error: missing argument: --input, --index, --graph, or --splits <file_name>" << _end$$;
     if (!index.empty() && !graph.empty() && !splits.empty())
         $err << "Error: too many input arguments: --index, --graph, and --splits <file_name>" << _end$$;
+    if (!index.empty() && !graph.empty())
+        $err << "Error: too many input arguments: --index and --graph <file_name>" << _end$$;
     if (!index.empty() && !splits.empty())
         $err << "Error: too many input arguments: --index and --splits <file_name>" << _end$$;
     if (!graph.empty() && !splits.empty())
@@ -173,20 +178,27 @@ int main(int argc, char* argv[]) {
             pattern.clear();
     }
 
+    if (!index.empty()) {
+        if (!input.empty() && verbose)
+            $note << "Note: --input is used for lookup only, no additional k-mers are counted" << _end$;
+        if (input.empty() && !output.empty())
+            $warn << "Warning: splits output from a k-mer index, color names might be missing" << _end$,
+            $warn << "         --input can be used to provide the original list of files" << _end$;
+        if (input.empty() && output.empty() && !newick.empty())
+            $warn << "Warning: Newick output from a k-mer index, color names might be missing" << _end$,
+            $warn << "         --input can be used to provide the original list of files" << _end$;
+    }
     if (!splits.empty()) {
-        if (!input.empty()) {
-            $note << "Note: two input arguments --input and --splits were provided" << _end$;
-            $note << "      --input is used for lookup only, no additional splits are inferred" << _end$;
-        }
-        else if (!newick.empty()) {
-            $note << "Note: Newick output from a list of splits, some taxa could be missing" << _end$;
-            $note << "      --input can be used to provide the original list of taxa" << _end$;
-        }
+        if (!input.empty() && verbose)
+            $note << "Note: --input is used for lookup only, no additional splits are inferred" << _end$;
+        if (input.empty() && !newick.empty())
+            $warn << "Warning: Newick output from a list of splits, some taxa could be missing" << _end$,
+            $warn << "         --input can be used to provide the original list of files" << _end$;
     }
 
     // parse the list of input sequence files
-    vector<string> files;
-    hash_map<string, size1N_t> name_table;
+    vector<string> color_name;
+    hash_map<string, size1N_t> color_index;
     if (!input.empty()) {
         ifstream file(input);
         if (!file.good()) {
@@ -194,12 +206,19 @@ int main(int argc, char* argv[]) {
         }
         string line;
         while (getline(file, line)) {
-            files.emplace_back(line);
-            name_table[line] = num++;
+            if (index.empty() && splits.empty()) {
+                ifstream fastx(line);
+                if (!fastx.good()) {
+                    $err << "Error: could not read sequence file: " << line << _end$$;
+                }
+                fastx.close();
+            }
+            color_name.emplace_back(line);
+            color_index[line] = num++;
         }
         file.close();
     }
-    uint64_t file_num = files.size();
+    uint64_t file_num = color_name.size();
 
 #ifdef useBF
     // load an existing Bifrost graph file
@@ -219,9 +238,9 @@ int main(int argc, char* argv[]) {
         }
         for (uint64_t i = 0; i < cdbg.getNbColors(); ++i) {
             const string& name = cdbg.getColorName(i);
-            if (name_table.find(name) == name_table.end()) {
-                files.emplace_back(name);
-                name_table[name] = num++;
+            if (color_index.find(name) == color_index.end()) {
+                color_name.emplace_back(name);
+                color_index[name] = num++;
             }
         }
         kmer = cdbg.getK();
@@ -241,9 +260,9 @@ int main(int argc, char* argv[]) {
             do {
                 curr = line.find('\t', next);
                 const string& name = line.substr(next, curr-next);
-                if (name_table.find(name) == name_table.end()) {
-                    files.emplace_back(name);
-                    name_table[name] = num++;
+                if (color_index.find(name) == color_index.end()) {
+                    color_name.emplace_back(name);
+                    color_index[name] = num++;
                 }
                 next = curr + 1;
             } while (curr != string::npos);
@@ -259,38 +278,34 @@ int main(int argc, char* argv[]) {
         $err << "Error: number of files exceeds -DmaxN=" << maxN << ", please see makefile" << _end$$;
 
     uint64_t maxT = thread::hardware_concurrency()-1; T = min<uint64_t>({T, num, maxT});
-    if (T <= 0) $note << "Note: running SANS-KC using 1(+0) threads" << _end$;
-    else        $note << "Note: running SANS-KC using " << T << "(+1) threads" << _end$;
-    if (T >= 2 && quality > 1) {
-        $warn << "Warning: using --qualify on multiple threads could increase memory usage" << _end$;
-        $warn << "         In case of problems, please specify a smaller number of threads" << _end$;
-    }
 
-    auto begin = chrono::high_resolution_clock::now();    // time measurement
-    color::init(num);    // initialize the color number
-    kmer::init(kmer, pattern);    // initialize the k-mer length
-    tree::init(top);    // initialize the splits list size
-    graph::init(T, quality, reverse);    // initialize the graph
+    auto begin = chrono::high_resolution_clock::now();  // time measurement
+    color::init(num);  // initialize the color number
+    kmer::init(kmer, pattern);  // initialize the k-mer length
+    tree::init(top);  // initialize the splits list size
+    graph::init(T, quality, reverse);  // initialize the graph
 
-    tree::color_name = [&] (const size1N_t& index) {
-        return files[index];    // function to map a color position to a file name
-    };
-    tree::color_index = [&] (const string& name) {
-        return name_table[name];    // function to map a file name to a color position
-    };
+    tree::color_name = [&] (const size1N_t& index)
+     { return color_name[index]; };  // map color position to file name
+    tree::color_index = [&] (const string& name)
+     { return color_index[name]; };  // map file name to color position
 
-    if (!input.empty() && splits.empty()) {
-        if (verbose)
-            $log $_ << "Reading input files..." << $;
+    if (!input.empty() && index.empty() && splits.empty()) {
+        if (T <= 0 && verbose) $note << "Note: running SANS-KC using 1(+0) threads" << _end$;
+        if (T >= 1 && verbose) $note << "Note: running SANS-KC using " << T << "(+1) threads" << _end$;
+        if (T >= 2 && quality > 1)
+            $warn << "Warning: using --qualify on multiple threads could increase memory usage" << _end$,
+            $warn << "         In case of problems, please specify a smaller number of threads" << _end$;
 
-        vector<thread> list_thread(T); atomic<uint64_t> active(T);
+        vector<thread> list_thread(T); atomic<uint64_t> active(T);    // parallel file reading threads
+             if (VERBOSE) $log $_ << "Reading input files..." << $;
+        else if (verbose) $log $_ << "Reading input files..." << end$;
+
         auto lambda = [&] (const uint64_t& T, const uint64_t& maxT) {
             for (size1N_t i = T; i < file_num; i += maxT) {
-                ifstream file(files[i]);    // input file stream
-                if (!file.good())
-                    $err $_ << files[i] << " (ERR)" << _end$;    // could not read file
-                else if (verbose)
-                    $log $_ << files[i] << " (" << i+1 << "/" << file_num << ")" << end$;    // print progress
+                ifstream file(color_name[i]);    // input file stream & print progress
+                     if (VERBOSE) $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << end$;
+                else if (verbose) $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << $;
 
                 string line;    // read the file line by line
                 string sequence;    // read in the sequence files and extract the k-mers
@@ -304,8 +319,8 @@ int main(int argc, char* argv[]) {
                                             : graph::add_minimizers(T, sequence, i, window, iupac);
                             sequence.clear();
 
-                            if (verbose)
-                                $lite $_ << line << _$;    // print progress
+                                 if (VERBOSE) $lite $_ << line << _$;    // print more fine-grained progress
+                            else if (verbose) $lite $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << _$;
                         }
                         else if (line[0] == '+') {    // FASTQ quality values -> ignore
                             getline(file, line);
@@ -363,7 +378,7 @@ int main(int argc, char* argv[]) {
             for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
                 auto substr = sequence.substr(it.getKmerPosition(), kmer);
                 const string& name = cdbg.getColorName(it.getColorID());
-                graph::add_kmers(0, substr, name_table[name]);
+                graph::add_kmers(0, substr, color_index[name]);
             }
         }
         if (verbose)
@@ -386,7 +401,7 @@ int main(int argc, char* argv[]) {
             do {
                 curr = line.find('\t', next);
                 const string& name = line.substr(next, curr-next);
-                color.set(name_table[name]);
+                color.set(color_index[name]);
                 next = curr + 1;
             } while (curr != string::npos);
 
@@ -471,7 +486,7 @@ int main(int argc, char* argv[]) {
                 stream << split.first;    // weight of the split
                 for (size1N_t i = 0; i < num; ++i) {
                     if (split.second.test(i)) {
-                        stream << '\t' << files[i];    // name of the file
+                        stream << '\t' << color_name[i];    // name of the file
                     }
                 }
                 stream << endl;
@@ -486,7 +501,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto end = chrono::high_resolution_clock::now();    // time measurement
-    if (verbose)    // print progress and time
+    auto end = chrono::high_resolution_clock::now();  // time measurement
+    if (verbose)  // print progress and time
         $log << "Done! (" << util::format_time(end - begin) << ")" << end$;
 }

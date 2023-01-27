@@ -7,12 +7,12 @@
 uint64_t graph::quality;   // min. coverage threshold for k-mers
 uint64_t graph::buffer;    // number of k-mers to retrieve from the queue
 
-hash_map<kmer_t, color_t>            graph::kmer_table;    // hash table mapping k-mers to their colors/splits
-hash_map<color_t, array<uint32_t,2>> graph::color_table;   // hash table mapping colors/splits to their weights
-vector<hash_set<kmer_t>>             graph::quality_set;   // hash set used to filter k-mers for coverage (q > 1)
-vector<hash_map<kmer_t, uint64_t>>   graph::quality_map;   // hash map used to filter k-mers for coverage (q > 2)
-hash_map<kmer_t, color_t>            graph::query_table;   // hash table storing temporary results of k-mer queries
-queue<kmer_t, size1N_t>              graph::main_queue;    // queue used to synchronize k-mers from multiple threads
+hash_map<kmer_t, color_t>          graph::kmer_table;    // hash table mapping k-mers to their colors/splits
+hash_map<color_t, uint32_t[2]>     graph::color_table;   // hash table mapping colors/splits to their weights
+vector<hash_set<kmer_t>>           graph::quality_set;   // hash set used to filter k-mers for coverage (q > 1)
+vector<hash_map<kmer_t, uint64_t>> graph::quality_map;   // hash map used to filter k-mers for coverage (q > 2)
+hash_map<kmer_t, color_t>          graph::query_table;   // hash table storing temporary results of k-mer queries
+queue<kmer_t, size1N_t>            graph::thread_queue;  // queue used to synchronize k-mers from multiple threads
 
 function<void(kmer_t&)>                                         graph::process_kmer;   // reverse complement a k-mer and apply a gap pattern
 function<void(kmer_t&)>                                         graph::restore_kmer;   // restore a gap pattern for a right-compressed k-mer
@@ -82,7 +82,7 @@ void graph::init(const uint64_t& T, const uint64_t& quality, const bool& reverse
 
     if (T >= 1) { /* default case: multiple processor cores available, use queues */
         graph::buffer = T * max<uint64_t>(1048576 / sizeof(pair<kmer_t, size1N_t>), 4);
-        graph::main_queue = queue<kmer_t, size1N_t>(buffer);
+        graph::thread_queue = queue<kmer_t, size1N_t>(buffer);
         graph::buffer = T * max<uint64_t>(1024 / sizeof(pair<kmer_t, size1N_t>), 4);
     //
     switch (quality) {
@@ -90,7 +90,7 @@ void graph::init(const uint64_t& T, const uint64_t& quality, const bool& reverse
             case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {
                 const pair<const kmer_t&, const size1N_t&> item(kmer, color);
-                while (!main_queue.try_push(item));  // wait for enough space
+                while (!thread_queue.try_push(item));  // wait for enough space
             };  break;
         case 2:
             quality_set.resize(T);
@@ -100,7 +100,7 @@ void graph::init(const uint64_t& T, const uint64_t& quality, const bool& reverse
                 } else {
                     quality_set[T].erase(kmer);
                     const pair<const kmer_t&, const size1N_t&> item(kmer, color);
-                    while (!main_queue.try_push(item));  // wait for enough space
+                    while (!thread_queue.try_push(item));  // wait for enough space
                 }
             };  break;
         default:
@@ -111,7 +111,7 @@ void graph::init(const uint64_t& T, const uint64_t& quality, const bool& reverse
                 } else {
                     quality_map[T].erase(kmer);
                     const pair<const kmer_t&, const size1N_t&> item(kmer, color);
-                    while (!main_queue.try_push(item));  // wait for enough space
+                    while (!thread_queue.try_push(item));  // wait for enough space
                 }
             };  break;
     }}
@@ -532,8 +532,8 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
     }
 
     for (auto it = color_table.begin(); it != color_table.end(); ++it) {    // iterate over the color table
-        color_t& color = (color_t&) it.key();    // get the color set of the split
-        array<uint32_t,2>& weight = it.value();    // get the weights for each split
+        auto& color = it.key();    // get the color set of the split
+        auto& weight = it.value();    // get the weights for each split
         double new_value = mean(weight[0], weight[1]);    // calculate the new mean value
 
         if (new_value >= min_value) {    // if it is greater than the min. value, add it to the top list
@@ -552,7 +552,7 @@ void graph::calc_weights(const function<double(const uint32_t&, const uint32_t&)
 void graph::merge_threads() {
     pair<kmer_t, size1N_t> items[buffer]; size_t items_size;
     do {
-        items_size = main_queue.try_pop_bulk(items, buffer);
+        items_size = thread_queue.try_pop_bulk(items, buffer);
         for (uint64_t i = 0; i != items_size; ++i)
             kmer_table[items[i].first].set(items[i].second);
     } //
