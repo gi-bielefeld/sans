@@ -148,7 +148,7 @@ class Thruth:
         input_command = "".join(input_command)
 
         ref_list = container.seq_dir.dna_list_path
-        ref_splits = container.seq_dir.dna_splits_path
+        ref_splits = container.seq_dir.dna_nrev_splits_path
         comp_splits = container.data_dir.nrev_target_a_splits_path
 
         executor = _Executor([input_command])

@@ -20,10 +20,7 @@ def __clean_path_nodes(path_nodes: list):
     clean_nodes = []
     for node in path_nodes:
         clean_node = node
-        # remove the first character if it is a separator
-        if clean_node.startswith("/") or clean_node.endswith("\\"):
-            clean_node = clean_node[1:]
-        # remove the last character if it is
+        # remove the last character if it is a seqarator
         if clean_node.endswith("/") or clean_node.endswith("\\"):
             clean_node = clean_node[:-1]
         # add the node if it is not empty

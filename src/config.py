@@ -26,6 +26,7 @@ class Config:
         """
         log_print("[CONFIG] Loading Config")
         config_path = path.nodes_to_dir_path([path.ROOT, "config.json"])
+        print(config_path)   
         if not path.exists(config_path):
             throw_config_error("Config file not found")
 

@@ -1,0 +1,19 @@
+{
+  "Truth32":
+  {
+    "type": "truth",
+    "data":
+    {
+      "source": "synthetic",
+      "seq_num": 31,
+      "seq_len": 10000,
+      "m_rate" : 1
+    },
+    "sans":
+    {
+      "target_a": "/home/fabian/Schreibtisch/AGGI/SANS/SANS-master/SANS",
+      "k": 31
+    },
+    "pipe": ["input", "nrev", "amino"]
+  }
+}
