@@ -75,13 +75,16 @@ class RunData:
         # INPUT
         self.input_target_a_splits_path = path.nodes_to_file_path([self.container_path, "INPUT_target_a_splits.txt"])
         self.input_target_b_splits_path = path.nodes_to_file_path([self.container_path, "INPUT_target_b_splits.txt"])
+        self.input_diff_path = path.nodes_to_file_path([self.container_path, "INPUT_splits_diff.txt"])
+
         # NREV
         self.nrev_target_a_splits_path = path.nodes_to_file_path([self.container_path, "NREV_target_a_splits.txt"])
         self.nrev_target_b_splits_path = path.nodes_to_file_path([self.container_path, "NREV_target_b_splits.txt"])
+        self.nrev_diff_path = path.nodes_to_file_path([self.container_path, "NREV_splits_diff.txt"])
         # AMINO
         self.amino_target_a_splits_path = path.nodes_to_file_path([self.container_path, "AMINO_target_a_splits.txt"])
         self.amino_target_b_splits_path = path.nodes_to_file_path([self.container_path, "AMINO_target_b_splits.txt"])
-
+        self.amino_diff_path = path.nodes_to_file_path([self.container_path, "AMINO_splits_diff.txt"])
         # COMP Fields
 
         container.data_dir = self
