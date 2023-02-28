@@ -1,0 +1,6 @@
+{
+  "ROOT": "DEFAULT_ROOT",
+  "SEQ_PATH": "SEQ",
+  "DATA_PATH": "DATA",
+  "LOG_PATH": "LOG"
+}
