@@ -10,9 +10,9 @@ from . import container
 from .console import log_print
 
 __VALID_RUN_TYPES = ["truth", "comp", "perf"]
-__VALID_DATA_TYPES = ["synthetic", "external"]
+__VALID_DATA_TYPES = ["synthetic", "comp", "external"]
 
-__VALID_PIPES = {"truth": ["input", "nrev", "amino"], "comp": ["input", "nrev", "amino"]}
+__VALID_PIPES = {"truth": ["input", "nrev", "amino"], "comp": ["input", "nrev", "amino", "trans", "iupac", "window"]}
 
 
 def __throw_parsing_error(file, info):
@@ -36,7 +36,7 @@ def __validate_data(file: str, run_name: str, container_type: str, data: dict):
     if container_type == "truth" and ("source" in data and data["source"] != "synthetic"):
         __throw_parsing_error(file, f"Run {run_name}: 'truth' type testing requires synthetic data")
 
-    if data["source"] == "synthetic":
+    if data["source"] in ["synthetic", "comp"]:
         # data.seq_num
         if "seq_num" not in data:
             __throw_parsing_error(file, f"Run {run_name}:  Missing definition of data.seq_num")

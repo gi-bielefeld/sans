@@ -5,6 +5,8 @@ import subprocess
 from .container import Container
 from .console import log_print
 
+from .time import Timer
+
 
 class _Executor:
     def __init__(self, commands):
@@ -12,12 +14,17 @@ class _Executor:
 
     def run(self):
         success = True
+        timer = Timer()
+        times = []
         for command in self.commands:
             log_print(f"[EXECUTING COMMAND]:\n{command}")
+            timer.start()
             proc = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             out, err = proc.communicate()
             retval = proc.wait()
+            timer.stop()
             success = retval == 0
+            times.append(timer.delta)
             out = out.decode("UTF-8")
             err = err.decode("UTF-8")
             log_print(f"[STDOUT] -------")
@@ -27,7 +34,7 @@ class _Executor:
             log_print(f"... DONE")
             if not success:
                 break
-        return success
+        return success, times
 
 
 class _Comparator:
@@ -216,8 +223,108 @@ class Comp:
         return _Pipeline(executor, comparator)
 
     @classmethod
+    def _trans(cls, container: Container):
+        commands = []
+        # Run command for target_a
+        input_command_a = [container.sans.target_a,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.trans_target_a_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -c"
+                          ]
+        input_command_a = "".join(input_command_a)
+        commands.append(input_command_a)
+
+        # Run command for target_b
+        input_command_b = [container.sans.target_b,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.trans_target_b_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -c"
+                          ]
+        input_command_b = "".join(input_command_b)
+        commands.append(input_command_b)
+
+        ref_splits = container.data_dir.trans_target_a_splits_path
+        comp_splits = container.data_dir.trans_target_b_splits_path
+        diff_path = container.data_dir.trans_diff_path
+
+        executor = _Executor(commands)
+        comparator = _Comparator(ref_splits, comp_splits, diff_path)
+        return _Pipeline(executor, comparator)
+
+    @classmethod
+    def _iupac(cls, container: Container):
+        commands = []
+        # Run command for target_a
+        input_command_a = [container.sans.target_a,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.iupac_target_a_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -x 11"
+                          ]
+        input_command_a = "".join(input_command_a)
+        commands.append(input_command_a)
+
+        # Run command for target_b
+        input_command_b = [container.sans.target_b,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.iupac_target_b_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -x 11"
+                          ]
+        input_command_b = "".join(input_command_b)
+        commands.append(input_command_b)
+
+        ref_splits = container.data_dir.iupac_target_a_splits_path
+        comp_splits = container.data_dir.iupac_target_b_splits_path
+        diff_path = container.data_dir.iupac_diff_path
+
+        executor = _Executor(commands)
+        comparator = _Comparator(ref_splits, comp_splits, diff_path)
+        return _Pipeline(executor, comparator)
+
+    @classmethod
+    def _window(cls, container: Container):
+        commands = []
+        # Run command for target_a
+        input_command_a = [container.sans.target_a,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.window_target_a_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -w 11"
+                          ]
+        input_command_a = "".join(input_command_a)
+        commands.append(input_command_a)
+
+        # Run command for target_b
+        input_command_b = [container.sans.target_b,
+                           f" -i {container.seq_dir.dna_list_path}",
+                           f" -o {container.data_dir.window_target_b_splits_path}",
+                           f" -k {container.sans.k}",
+                           f" -m geom2",
+                           f" -w 11"
+                          ]
+        input_command_b = "".join(input_command_b)
+        commands.append(input_command_b)
+
+        ref_splits = container.data_dir.window_target_a_splits_path
+        comp_splits = container.data_dir.window_target_b_splits_path
+        diff_path = container.data_dir.window_diff_path
+
+        executor = _Executor(commands)
+        comparator = _Comparator(ref_splits, comp_splits, diff_path)
+        return _Pipeline(executor, comparator)
+
+
+    @classmethod
     def build_pipeline(cls, container: Container, target_pipe):
-        pipe_map = {"input": cls._input, "nrev": cls._nrev, "amino": cls._amino}
+        pipe_map = {"input": cls._input, "nrev": cls._nrev, "amino": cls._amino, "trans": cls._trans, "iupac": cls._iupac, "window": cls._window}
         builder = pipe_map[target_pipe]
         pipeline = builder(container)
         return pipeline

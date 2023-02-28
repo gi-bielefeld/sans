@@ -5,7 +5,7 @@
     "data":
     {
       "source": "synthetic",
-      "seq_num": 32,
+      "seq_num": 31,
       "seq_len": 10000,
       "m_rate" : 1
     },

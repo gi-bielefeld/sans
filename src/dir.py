@@ -72,6 +72,8 @@ class RunData:
         log_print(f"\t{container_path}")
 
         self.container_path = container_path
+
+        # TRUTH COMPATIBLE PIPELINES
         # INPUT
         self.input_target_a_splits_path = path.nodes_to_file_path([self.container_path, "INPUT_target_a_splits.txt"])
         self.input_target_b_splits_path = path.nodes_to_file_path([self.container_path, "INPUT_target_b_splits.txt"])
@@ -81,11 +83,25 @@ class RunData:
         self.nrev_target_a_splits_path = path.nodes_to_file_path([self.container_path, "NREV_target_a_splits.txt"])
         self.nrev_target_b_splits_path = path.nodes_to_file_path([self.container_path, "NREV_target_b_splits.txt"])
         self.nrev_diff_path = path.nodes_to_file_path([self.container_path, "NREV_splits_diff.txt"])
+
         # AMINO
         self.amino_target_a_splits_path = path.nodes_to_file_path([self.container_path, "AMINO_target_a_splits.txt"])
         self.amino_target_b_splits_path = path.nodes_to_file_path([self.container_path, "AMINO_target_b_splits.txt"])
         self.amino_diff_path = path.nodes_to_file_path([self.container_path, "AMINO_splits_diff.txt"])
-        # COMP Fields
+        
+        # OTHER PIPELINES
+        # TRANS
+        self.trans_target_a_splits_path = path.nodes_to_file_path([self.container_path, "TRANS_target_a_splits.txt"])
+        self.trans_target_b_splits_path = path.nodes_to_file_path([self.container_path, "TRANS_target_b_splits.txt"])
+        self.trans_diff_path = path.nodes_to_file_path([self.container_path, "TRANS_splits_diff.txt"])
+        # IUPAC
+        self.iupac_target_a_splits_path = path.nodes_to_file_path([self.container_path, "IUPAC_target_a_splits.txt"])
+        self.iupac_target_b_splits_path = path.nodes_to_file_path([self.container_path, "IUPAC_target_b_splits.txt"])
+        self.iupac_diff_path = path.nodes_to_file_path([self.container_path, "IUPAC_splits_diff.txt"])       
+        # WINDOW
+        self.window_target_a_splits_path = path.nodes_to_file_path([self.container_path, "WINDOW_target_a_splits.txt"])
+        self.window_target_b_splits_path = path.nodes_to_file_path([self.container_path, "WINDOW_target_b_splits.txt"])
+        self.window_diff_path = path.nodes_to_file_path([self.container_path, "WINDOW_splits_diff.txt"])   
 
         container.data_dir = self
 

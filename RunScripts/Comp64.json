@@ -5,15 +5,15 @@
     "data":
     {
       "source": "comp",
-      "seq_num": 16,
-      "seq_len": 1000000,
+      "seq_num": 33,
+      "seq_len": 500000,
       "m_rate" : 1
     },
     "sans":
     {
       "target_a": "/home/fabian/Schreibtisch/AGGI/SANS/SANS-master/SANS",
       "target_b": "/home/fabian/Schreibtisch/AGGI/SANS/sans/SANS -T 8 -B 99645",
-      "k": 31
+      "k": 63
     },
     "pipe": ["input", "nrev", "amino", "trans", "iupac", "window"]
   }

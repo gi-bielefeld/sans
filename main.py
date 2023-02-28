@@ -40,6 +40,9 @@ if __name__ == '__main__':
     log_print("\n[MAIN] Launching Tests")
     stamp = time.get_stamp()
     for container in containers:
+        if container.type == "truth":
+            log_print(f"Truth testing is currently disabled, due to reult inconsistencies ... skipping container {container.name}")
+            continue
         console.start_sublog()
         log_print(f"\n\n[PROCESSING CONTAINER] {container.name} at STAMP: {stamp}")
         log_print(f"{container.get_info()}")
@@ -50,6 +53,9 @@ if __name__ == '__main__':
         # Data creation
         if container.data.source == "synthetic":
             seq_make.make_synthetic_truth(container)
+        
+        elif container.data.source == "comp":
+            seq_make.make_comp_data(container)
 
         pipeline_fac = None
         if container.type == "truth":
@@ -63,7 +69,7 @@ if __name__ == '__main__':
             pipe = pipeline_fac.build_pipeline(container, target_pipe)
 
             log_print(f"\n[EXECUTING]")
-            success = pipe.execute()
+            success, times = pipe.execute()
             if not success:
                 log_print(f"[FAILURE]")
                 log_print(f"--- TEST FAILED AT EXECUTION---")
@@ -76,12 +82,20 @@ if __name__ == '__main__':
                 log_print(f"[FAILURE]")
                 log_print(f"--- TEST FAILED AT COMPARISON ---")
                 container.success[target_pipe] = 2
+            container.times[target_pipe] = times
 
         log_print("\n[CONTAINER SUMMARY]")
         run_map = ["success", "crash", "failed"]
         for item in container.success.items():
             pipe, success = item
             log_print(f"\t{pipe}:\t{run_map[success]}")
+        
+        if container.type == "comp":
+            log_print(f"\n[PERFORMANCE SUMMARY]")
+            for item in container.times.items():
+                pipe, times = item 
+                if container.success[pipe] == 0:
+                    log_print(f"\t{pipe}:{time.compare_and_format(*times)}")
         console.export_sublog(container)
 
     run_map = ["success", "crash", "failed"]

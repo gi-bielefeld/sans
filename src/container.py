@@ -47,6 +47,10 @@ class Container:
         for element in self.pipe:
             self.success[element] = 0
 
+        self.times = dict()
+        for element in self.pipe:
+            self.times[element] = [0, 0]
+
     def get_info(self):
         info = ""
         info += f"name:\t\t{self.name}\ntype:\t\t{self.type}\n"
