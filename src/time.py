@@ -38,7 +38,7 @@ class Timer:
 def compare_and_format(ref, comp):
     ratio = int((comp/ref)*100)
     space = 20
-    diff = int((ratio - 100) / 5)
+    diff = int((ratio - 100) / 10)
     head = ""
     tail = ""
     if diff > 0:

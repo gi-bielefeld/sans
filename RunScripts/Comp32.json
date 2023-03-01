@@ -6,13 +6,13 @@
     {
       "source": "comp",
       "seq_num": 16,
-      "seq_len": 1000000,
+      "seq_len": 100000,
       "m_rate" : 1
     },
     "sans":
     {
       "target_a": "/home/fabian/Schreibtisch/AGGI/SANS/SANS-master/SANS",
-      "target_b": "/home/fabian/Schreibtisch/AGGI/SANS/sans/SANS -T 8 -B 99645",
+      "target_b": "/home/fabian/Schreibtisch/AGGI/SANS/sans/SANS -T 4 -B 99645",
       "k": 31
     },
     "pipe": ["input", "nrev", "amino", "trans", "iupac", "window"]
