@@ -33,12 +33,14 @@ void util::check_n(uint64_t& n, string& path) {
             exit(1);
         }
         
-        // copy while replacing value for DmaxN
-        regex re("-DmaxN=[0-9]+");
-		string line;
+        // copy while replacing value for DmaxN and dependency on makefile
+        regex ren("-DmaxN=[0-9]+");
+        regex rem("makefile");
+		string line,new_line;
         while (getline(infile, line)) {
-			
-			newfilebuf << regex_replace(line, re, "-DmaxN="+to_string(n)) << endl;
+			new_line=regex_replace(line, ren, "-DmaxN="+to_string(n));
+			new_line=regex_replace(new_line, rem, "makefile_autoN");
+			newfilebuf << new_line << endl;
 		}
 		
  		infile.close();
