@@ -556,10 +556,20 @@ class CLASS_NAME {
     }
     #undef SET_ELEMENT_COMPARATORS
  #endif
-};
 
 // ############################# END CLASS DEFINITION ############################# //
 
+    constexpr STORAGE_TYPE operator%(const STORAGE_TYPE& value) const noexcept {
+       #if BIT_LENGTH <= MAX_STORAGE_BITS
+         return byte % value;
+       #else
+         STORAGE_TYPE hash = byte[0];
+         for (INDEX_TYPE i = 1; i != ARRAY_LENGTH; ++i)
+             hash ^= byte[i];
+         return hash % value;
+       #endif
+    }
+};
 template<> struct std::hash<CLASS_NAME> {
     constexpr STORAGE_TYPE operator()(const CLASS_NAME& obj) const noexcept {
        #if BIT_LENGTH <= MAX_STORAGE_BITS

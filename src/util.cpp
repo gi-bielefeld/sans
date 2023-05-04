@@ -159,7 +159,10 @@ string util::atos(int& argc, char* argv[], int& i) {
 uint64_t util::aton(int& argc, char* argv[], int& i) {
     if (i < argc) {
         try {
-            return stoull(argv[i]);
+            const auto& n = stoull(argv[i]);
+            if (n < 1) {
+                $err << "Error: argument: " << argv[i-1] << ' ' << argv[i] << " (expected a positive integer)" << _end$$;
+            } else return n;
         } catch (...) {
             $err << "Error: malformed argument: " << argv[i-1] << ' ' << argv[i] << " (expected a number)" << _end$$;
         }
@@ -177,7 +180,10 @@ uint64_t util::aton(int& argc, char* argv[], int& i) {
  */
 uint64_t util::ston(const string& param, const string& args) {
     try {
-        return stoull(args);
+        const auto& n = stoull(args);
+        if (n < 1) {
+            $err << "Error: argument: " << param << ' ' << args << " (expected a positive integer)" << _end$$;
+        } else return n;
     } catch (...) {
         $err << "Error: malformed argument: " << param << ' ' << args << " (expected a number)" << _end$$;
     }

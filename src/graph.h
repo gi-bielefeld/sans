@@ -26,34 +26,29 @@ class graph {
     static uint64_t quality;
 
     /**
-     * This is a hash table mapping k-mers to their colors/splits.
+     * This is [Q] hash tables mapping k-mers to their colors/splits.
      */
-    static hash_map<kmer_t, color_t> kmer_table;
+    static vector<hash_map<kmer_t, color_t>> kmer_table;
 
     /**
-     * This is a hash table mapping colors/splits to their weights.
+     * This is [1] hash table mapping colors/splits to their weights.
      */
     static hash_map<color_t, uint32_t[2]> color_table;
 
     /**
-     * This is a hash set used to filter k-mers for coverage (q > 1).
+     * This is [P] hash sets used to filter k-mers for coverage (q > 1).
      */
     static vector<hash_set<kmer_t>> quality_set;
 
     /**
-     * This is a hash map used to filter k-mers for coverage (q > 2).
+     * This is [P] hash maps used to filter k-mers for coverage (q > 2).
      */
     static vector<hash_map<kmer_t, uint64_t>> quality_map;
 
     /**
-     * This is a hash table storing temporary results of k-mer queries.
+     * This is [Q] queues used to synchronize k-mers from multiple threads.
      */
-    static hash_map<kmer_t, color_t> query_table;
-
-    /**
-     * This is a queue used to synchronize k-mers from multiple threads.
-     */
-    static queue<kmer_t, size1N_t> thread_queue;
+    static vector<queue<kmer_t, size1N_t>> thread_queue;
 
     /**
      * This is the number of k-mers to retrieve from the queue.
@@ -63,16 +58,19 @@ class graph {
  public:
 
     /**
-     * This function initializes the thread queue and coverage threshold.
+     * This function initializes the thread queues and coverage threshold.
      *
      * @param quality coverage threshold
      * @param reverse merge complements
+     * @param P number of file reading threads
+     * @param Q number of queue hashing threads
      */
-    static void init(const uint64_t& T, const uint64_t& quality, const bool& reverse);
+    static void init(const uint64_t& quality, const bool& reverse, const uint64_t& P, const uint64_t& Q);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
      *
+     * @param T thread id [P]
      * @param str dna sequence
      * @param color color flag
      */
@@ -81,6 +79,7 @@ class graph {
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
      *
+     * @param T thread id [P]
      * @param str dna sequence
      * @param color color flag
      * @param window number of k-mers to minimize
@@ -90,6 +89,7 @@ class graph {
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
      *
+     * @param T thread id [P]
      * @param str dna sequence
      * @param color color flag
      * @param max_iupac allowed number of ambiguous k-mers per position
@@ -99,6 +99,7 @@ class graph {
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
      *
+     * @param T thread id [P]
      * @param str dna sequence
      * @param color color flag
      * @param window number of k-mers to minimize
@@ -107,26 +108,24 @@ class graph {
     static void add_minimizers(const uint64_t& T, const string& str, const size1N_t& color, const uint64_t& window, const uint64_t& max_iupac);
 
     /**
-     * This function iterates over the hash table and outputs all the k-mer/color pairs.
+     * This function iterates over the hash tables and outputs all the k-mer/color pairs.
      *
      * @param kmer string to store the k-mer
      * @param color string to store the color
-     * @return iterator function
      */
-    static function<bool(string&, string&)> lookup_kmer();
+    static void lookup_kmer(const function<void(string&, string&)>& iterator);
 
     /**
-     * This function iterates over the hash table and outputs matching k-mer/color pairs.
+     * This function iterates over the hash tables and outputs matching k-mer/color pairs.
      *
+     * @param kmer string to store the k-mer
+     * @param color string to store the color
      * @param query query sequence
-     * @param kmer string to store the k-mer
-     * @param color string to store the color
-     * @return iterator function
      */
-    static function<bool(string&, string&)> lookup_kmer(const string& query);
+    static void lookup_kmer(const function<void(string&, string&)>& iterator, const string& query);
 
     /**
-     * This function iterates over the hash table and calculates the split weights.
+     * This function iterates over the hash tables and calculates the split weights.
      *
      * @param mean weight function
      * @param verbose print progress
@@ -135,18 +134,22 @@ class graph {
 
     /**
      * This function transfers k-mers & colors from the queue to the k-mer table.
+     *
+     * @param T thread id [Q]
      */
-    static void merge_threads();
+    static void merge_thread(const uint64_t& T);
 
     /**
-     * This function clears the quality filters after full procession of a color.
+     * This function clears a quality filter after full procession of a color.
+     *
+     * @param T thread id [P]
      */
-    static void clear_thread(const uint64_t& T);
+    static void clear_filter(const uint64_t& T);
 
     /**
-     * This function erases the quality filters and switches to sequential mode.
+     * This function erases the quality filters and updates the distributor.
      */
-    static void erase_threads();
+    static void erase_filters();
 
  protected:
 
@@ -167,6 +170,7 @@ class graph {
     /**
      * This function qualifies a k-mer and places it into the hash table.
      *
+     * @param T thread id [P]
      * @param kmer bit sequence
      * @param color color flag
      */

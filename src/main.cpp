@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     file newick;     // Output Newick file: convert splits to a tree topology
     file counts;     // Output K-mer file: list k-mer occurrence per input file
     file diff;       // Print the difference between two index or splits files
-    bool query = 0;  // Interactive: list k-mer occurrence per input file
+    bool search = 0; // Interactive: list k-mer occurrence per input file
 
     uint64_t kmer = 0;     // Length of k-mers (default: 31)
     string   pattern;      // Pattern of gapped k-mers (default: no gaps)
@@ -49,9 +49,13 @@ int main(int argc, char* argv[]) {
     uint64_t num = 0;      // Number of colors, determined from input files
     uint64_t top = -1;     // Number of splits in the output list (default: all)
     string   filter;       // Output a greedy maximum weight subset of splits
-    uint64_t T = -1;       // Number of parallel threads (default: auto)
     bool     verbose = 0;  // Print some information messages during execution
     bool     VERBOSE = 0;  // Print more information messages during execution
+
+    uint64_t T = 0;    // Number of parallel threads (default: auto)
+    uint64_t P = 0;    // Number of file reading threads (default: auto)
+    uint64_t Q = 0;    // Number of queue hashing threads (default: auto)
+    uint64_t B = 1;    // Number of Bifrost process threads (default: 1)
 
     auto arithmetic_mean = [] (const uint32_t& x, const uint32_t& y) { return x / 2.0 + y / 2.0; };
     auto geometric_mean  = [] (const uint32_t& x, const uint32_t& y) { return sqrt(x) * sqrt(y); };
@@ -78,7 +82,7 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--diff") == 0)
             diff = file(util::atos(argc, argv, ++i), type::INDEX_OR_SPLITS_FILE, mode::READ);
         else if (strcmp(argv[i], "-C") == 0)    /* hidden option */
-            query = true;    // Interactive: list k-mer occurrence per input file
+            search = true;    // Interactive: list k-mer occurrence per input file
 
         else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0)
             kmer = util::aton(argc, argv, ++i);    // Length of k-mers (default: 31)
@@ -117,6 +121,16 @@ int main(int argc, char* argv[]) {
 
         else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--threads") == 0)
             T = util::aton(argc, argv, ++i);    // Number of parallel threads (default: auto)
+        else if (strcmp(argv[i], "-P") == 0) {    /* hidden option */
+            string arg = util::atos(argc, argv, ++i);    // Number of threads... (default: auto)
+            if (arg.find('+') > 0 && arg.find('+') < arg.size()-1)
+                P = util::ston(argv[i-1], arg.substr(0, arg.find('+'))),    // file reading
+                Q = util::ston(argv[i-1], arg.substr(arg.find('+')+1));    // queue hashing
+            else {
+                $err << "Error: unknown argument: " << argv[i-1] << ' ' << arg << _end$;
+                $err << "       type --help to see a list of supported options" << _end$$;
+           }}
+
         else if (strcmp(argv[i], "-v") == 0 || strcmp(argv[i], "--verbose") == 0)
             verbose = true;    // Print information messages during execution
         else if (strcmp(argv[i], "-rv") == 0 || strcmp(argv[i], "-vr") == 0)
@@ -142,7 +156,7 @@ int main(int argc, char* argv[]) {
     if (!graph.empty() && !splits.empty())
         $err << "Error: too many input arguments: --graph and --splits <file_name>" << _end$$;
 
-    if (output.empty() && newick.empty() && (counts.empty() && !query) && diff.empty())
+    if (output.empty() && newick.empty() && (counts.empty() && !search) && diff.empty())
         $err << "Error: missing argument: --output, --newick, --counts, or --diff <file_name>" << _end$$;
     if (!output.empty() && !newick.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
         $err << "Error: too many output arguments: --output, --newick, and --diff <file_name>" << _end$$;
@@ -151,7 +165,7 @@ int main(int argc, char* argv[]) {
     if (!newick.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
         $err << "Error: too many output arguments: --newick and --diff <file_name>" << _end$$;
 
-    if (!splits.empty() && !(counts.empty() && !query))
+    if (!splits.empty() && !(counts.empty() && !search))
         $err << "Error: k-mer counts cannot be calculated if the input is a list of splits" << _end$$;
     if (!splits.empty() && !(diff.empty() || diff.is(type::SPLITS_FILE)))
         $err << "Error: k-mer counts cannot be calculated if the input is a list of splits" << _end$$;
@@ -196,9 +210,14 @@ int main(int argc, char* argv[]) {
             $warn << "         --input can be used to provide the original list of files" << _end$;
     }
 
-    // parse the list of input sequence files
+    if (T == 0) T = P + Q;   // users can provide either a total number for T or separate values for P & Q
+    if (T == 0) T = thread::hardware_concurrency();   // if not, auto-detect max. number of hardware-threads
+    if (T == 0) $err << "Error: missing argument: number of parallel threads -p/--threads <number>" << _end$$;
+
     vector<string> color_name;
     hash_map<string, size1N_t> color_index;
+    uint64_t file_num = 0;
+    // parse the list of input sequence files
     if (!input.empty()) {
         ifstream file(input);
         if (!file.good()) {
@@ -212,19 +231,19 @@ int main(int argc, char* argv[]) {
                     $err << "Error: could not read sequence file: " << line << _end$$;
                 }
                 fastx.close();
+                file_num++;
             }
             color_name.emplace_back(line);
             color_index[line] = num++;
         }
         file.close();
     }
-    uint64_t file_num = color_name.size();
 
 #ifdef useBF
     // load an existing Bifrost graph file
     ColoredCDBG<> cdbg(kmer);
     if (!graph.empty()) {
-        if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", 1, verbose)) {
+        if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", T, verbose)) {
             if (verbose) $log << end$;
         } else {
             $err << "Error: could not load Bifrost graph: " << graph << _end$$;
@@ -275,15 +294,30 @@ int main(int argc, char* argv[]) {
     if (kmer > maxK)
         $err << "Error: k-mer length exceeds -DmaxK=" << maxK << ", please see makefile" << _end$$;
     if (num > maxN)
-        $err << "Error: number of files exceeds -DmaxN=" << maxN << ", please see makefile" << _end$$;
+        $err << "Error: color number exceeds -DmaxN=" << maxN << ", please see makefile" << _end$$;
 
-    uint64_t maxT = thread::hardware_concurrency()-1; T = min<uint64_t>({T, num, maxT});
+    if (P == 0 && Q == 0) {    // distribute file reading (P) and queue hashing (Q) threads
+        if (T == 1) P = 1, Q = 0;    // special case: only a single thread, don't use queues
+        if (T >= 2) {                // default case: find the best ratio of P and Q threads
+            double PQ_ratio = 0.32142857142857145;    // empirical factor for different configs
+
+            if (!pattern.empty()) PQ_ratio = 0.39285714285714285;
+            if (iupac > 1)        PQ_ratio = 0.5357142857142857;
+            if (window > 1)       PQ_ratio = 1 - 0.5178156588230793 * exp(-0.059280448208551134 * window);
+            if (quality > 1)      PQ_ratio = 1.0;
+
+            P = min(max<uint64_t>(1, round(PQ_ratio * T)), T-1);
+            for (uint64_t I = (file_num / P) + (bool) (file_num % P); P > 1
+                       && I == (file_num / (P-1)) + (bool) (file_num % (P-1)); P--);
+            Q = T - P;    // correction based on the actual number of files to read
+        }
+    }
 
     auto begin = chrono::high_resolution_clock::now();  // time measurement
     color::init(num);  // initialize the color number
     kmer::init(kmer, pattern);  // initialize the k-mer length
     tree::init(top);  // initialize the splits list size
-    graph::init(T, quality, reverse);  // initialize the graph
+    graph::init(quality, reverse, P, Q);  // initialize the graph
 
     tree::color_name = [&] (const size1N_t& index)
      { return color_name[index]; };  // map color position to file name
@@ -291,21 +325,25 @@ int main(int argc, char* argv[]) {
      { return color_index[name]; };  // map file name to color position
 
     if (!input.empty() && index.empty() && splits.empty()) {
-        if (T <= 0 && verbose) $note << "Note: running SANS-KC using 1(+0) threads" << _end$;
-        if (T >= 1 && verbose) $note << "Note: running SANS-KC using " << T << "(+1) threads" << _end$;
-        if (T >= 2 && quality > 1)
+        if (Q == 0 && verbose)
+            $note << "Note: running SANS-KC using 1 thread" << _end$;
+        if (Q >= 1 && verbose)
+            $note << "Note: running SANS-KC using " << (P+Q) << " (" << P << '+' << Q << ") threads" << _end$;
+        if (P >= 2 && quality > 1)
             $warn << "Warning: using --qualify on multiple threads could increase memory usage" << _end$,
             $warn << "         In case of problems, please specify a smaller number of threads" << _end$;
 
-        vector<thread> list_thread(T); atomic<uint64_t> active(T);    // parallel file reading threads
+        vector<thread> P_thread(P);  // parallel file reading threads
+        vector<thread> Q_thread(Q);  // parallel queue hashing threads
+        atomic<uint64_t> active(P); mutex mutex;
              if (VERBOSE) $log $_ << "Reading input files..." << $;
         else if (verbose) $log $_ << "Reading input files..." << end$;
 
-        auto lambda = [&] (const uint64_t& T, const uint64_t& maxT) {
-            for (size1N_t i = T; i < file_num; i += maxT) {
+        auto P_lambda = [&] (const uint64_t& T) {
+            for (size1N_t i = T; i < file_num; i += P) {
                 ifstream file(color_name[i]);    // input file stream & print progress
-                     if (VERBOSE) $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << end$;
-                else if (verbose) $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << $;
+                     if (VERBOSE) $SYNC( $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << end$ );
+                else if (verbose) $SYNC( $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << $ );
 
                 string line;    // read the file line by line
                 string sequence;    // read in the sequence files and extract the k-mers
@@ -319,8 +357,8 @@ int main(int argc, char* argv[]) {
                                             : graph::add_minimizers(T, sequence, i, window, iupac);
                             sequence.clear();
 
-                                 if (VERBOSE) $lite $_ << line << _$;    // print more fine-grained progress
-                            else if (verbose) $lite $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << _$;
+                                 if (VERBOSE) $SYNC( $lite $_ << line << _$ );    // print more fine-grained per-file progress
+                            else if (verbose) $SYNC( $lite $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << _$ );
                         }
                         else if (line[0] == '+') {    // FASTQ quality values -> ignore
                             getline(file, line);
@@ -341,48 +379,73 @@ int main(int argc, char* argv[]) {
                     $log $_ << $;
                 file.close();
 
-                graph::clear_thread(T);
+                graph::clear_filter(T);
             } --active;
         };
-
-        if (T <= 0) lambda(0, 1);
-        else {
-            for (uint64_t x = 0; x < T; ++x)
-                list_thread[x] = thread(lambda, x, T);
+        auto Q_lambda = [&] (const uint64_t& T) {
             while (active) {   // wait for threads
-                graph::merge_threads();
+                graph::merge_thread(T);
                 this_thread::sleep_for(1ns);
-            }   graph::merge_threads();
-            for (uint64_t x = 0; x < T; ++x)
-                list_thread[x].join();
+            }   graph::merge_thread(T);
+        };
+
+        if (Q == 0)   // single-CPU: execute everything in the main thread
+            P_lambda(0);
+        else {   // multi-CPU: distribute file reading & queue hashing threads
+            for (uint64_t p = 0; p < P; ++p) P_thread[p] = thread(P_lambda, p);
+            for (uint64_t q = 0; q < Q; ++q) Q_thread[q] = thread(Q_lambda, q);
+            for (uint64_t p = 0; p < P; ++p) P_thread[p].join();
+            for (uint64_t q = 0; q < Q; ++q) Q_thread[q].join();
         }
     }
-    graph::erase_threads();
+    graph::erase_filters();
 
 #ifdef useBF
     if (!graph.empty()) {
+        vector<thread> B_thread(B);  // (one) Bifrost process threads
+        vector<thread> Q_thread(Q);  // parallel queue hashing threads
+        atomic<uint64_t> active(B); mutex mutex;
         if (verbose)
             $log $_ << "Processing unitigs..." << $;
-        uint64_t cur = 0, prog = 0, next;
-        uint64_t max = cdbg.size();
 
-        for (auto& unitig : cdbg) {
+        auto B_lambda = [&] (const uint64_t& T) {
+            uint64_t cur = 0, prog = 0, next;
+            uint64_t max = cdbg.size();
+
+            for (auto& unitig : cdbg) {
+                if (verbose) {
+                    next = 100 * cur / max;
+                     if (prog < next)  $log $_ << "Processed " << cur << " unitigs (" << next << "%) " << $;
+                    prog = next; cur++;
+                }
+                auto sequence = unitig.mappedSequenceToString();
+                auto* colors = unitig.getData()->getUnitigColors(unitig);
+
+                for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
+                    auto substr = sequence.substr(it.getKmerPosition(), kmer);
+                    const string& name = cdbg.getColorName(it.getColorID());
+                    graph::add_kmers(T, substr, color_index[name]);
+                }
+            }
             if (verbose) {
-                next = 100 * cur / max;
-                 if (prog < next)  $log $_ << "Processed " << cur << " unitigs (" << next << "%) " << $;
-                prog = next; cur++;
-            }
-            auto sequence = unitig.mappedSequenceToString();
-            auto* colors = unitig.getData()->getUnitigColors(unitig);
+                $log $_ << "Processed " << max << " unitigs (100%)" << end$;
+            } --active;
+        };
+        auto Q_lambda = [&] (const uint64_t& T) {
+            while (active) {   // wait for threads
+                graph::merge_thread(T);
+                this_thread::sleep_for(1ns);
+            }   graph::merge_thread(T);
+        };
 
-            for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
-                auto substr = sequence.substr(it.getKmerPosition(), kmer);
-                const string& name = cdbg.getColorName(it.getColorID());
-                graph::add_kmers(0, substr, color_index[name]);
-            }
+        if (Q == 0)   // single-CPU: execute everything in the main thread
+            B_lambda(0);
+        else {   // multi-CPU: distribute Bifrost process & queue hashing threads
+            for (uint64_t b = 0; b < B; ++b) B_thread[b] = thread(B_lambda, b);
+            for (uint64_t q = 0; q < Q; ++q) Q_thread[q] = thread(Q_lambda, q);
+            for (uint64_t b = 0; b < B; ++b) B_thread[b].join();
+            for (uint64_t q = 0; q < Q; ++q) Q_thread[q].join();
         }
-        if (verbose)
-            $log $_ << "Processed " << max << " unitigs (100%)" << end$;
     }
 #endif
 
@@ -412,36 +475,32 @@ int main(int argc, char* argv[]) {
         file.close();
     }
 
-    if (query) {    // lookup k-mer, interactive query mode
-        string query;
+    if (search) {    // lookup k-mer, interactive query mode
+        string request;
         $link << ">>> " << _$;    // display a command line prompt
-        while (getline(cin, query)) {    // wait for user to enter a k-mer
+        while (getline(cin, request)) {    // wait for user to enter a k-mer
             $link $_ << _$;
-                                            // remove leading whitespaces
-            auto l1 = find_if(query.begin(), query.end(), ::isspace);
-            auto l2 = find_if_not(query.begin(), query.end(), ::isspace);
-             if (l1 < l2) query.erase(l1, l2);    // remove trailing whitespaces
-            auto r1 = find_if_not(query.rbegin(), query.rend(), ::isspace);
-            auto r2 = find_if(query.rbegin(), query.rend(), ::isspace);
-             if (r1.base() < r2.base()) query.erase(r1.base(), r2.base());
+                                              // remove leading whitespaces
+            auto l1 = find_if(request.begin(), request.end(), ::isspace);
+            auto l2 = find_if_not(request.begin(), request.end(), ::isspace);
+             if (l1 < l2) request.erase(l1, l2);    // remove trailing whitespaces
+            auto r1 = find_if_not(request.rbegin(), request.rend(), ::isspace);
+            auto r2 = find_if(request.rbegin(), request.rend(), ::isspace);
+             if (r1.base() < r2.base()) request.erase(r1.base(), r2.base());
 
-            if (query.empty()) { $link << ">>> " << _$; continue; }
-            transform(query.begin(), query.end(), query.begin(), ::toupper);
-            replace(query.begin(), query.end(), '.', 'N');    // allow . gaps
-            replace(query.begin(), query.end(), '-', 'N');    // allow - gaps
-            replace(query.begin(), query.end(), '*', 'N');    // allow * gaps
+            if (request.empty()) { $link << ">>> " << _$; continue; }
+            transform(request.begin(), request.end(), request.begin(), ::toupper);
+            replace(request.begin(), request.end(), '.', 'N');    // allow . gaps
+            replace(request.begin(), request.end(), '-', 'N');    // allow - gaps
+            replace(request.begin(), request.end(), '*', 'N');    // allow * gaps
 
-            $lite << "Searching..." << _$;
-            auto iterator = graph::lookup_kmer(query);
-            $lite $_ << _$;
-            string kmer, color;    // iterate over the hash table
-            while (iterator(kmer, color)) {
+            graph::lookup_kmer([&] (string& kmer_string, string& color_string) {
                 for (size_t i = 0; i < pattern.length(); ++i)
-                    if (pattern[i] == '0') kmer[i] = '-';
+                    if (pattern[i] == '0') kmer_string[i] = '-';
                 $lite << "... " << _$;
-                $out << kmer << ": " << color << end$;
+                $out << kmer_string << ": " << color_string << end$;
                 $lite $_ << _$;
-            }
+            }, request);
             $link << ">>> " << _$;
         }
         $link $_ << _$;
@@ -451,13 +510,11 @@ int main(int argc, char* argv[]) {
             $log $_ << "Please wait... " << $;
         ofstream file(counts);    // output file stream
         ostream stream(file.rdbuf());
-        auto iterator = graph::lookup_kmer();
-        string kmer, color;    // iterate over the hash table
-        while (iterator(kmer, color)) {
+        graph::lookup_kmer([&] (string& kmer_string, string& color_string) {
             for (size_t i = 0; i < pattern.length(); ++i)
-                if (pattern[i] == '0') kmer[i] = '-';
-            stream << kmer << ": " << color << endl;
-        }
+                if (pattern[i] == '0') kmer_string[i] = '-';
+            stream << kmer_string << ": " << color_string << endl;
+        });
         file.close();
     }
 

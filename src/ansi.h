@@ -16,3 +16,5 @@
 #define _$     "\33[0m" << std::flush
 #define _end$  "\33[0m" << std::endl
 #define _end$$ "\33[0m" << std::endl, exit(1)
+
+#define $SYNC(STREAM) mutex.lock(), STREAM, mutex.unlock()
