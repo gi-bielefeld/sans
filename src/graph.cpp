@@ -509,8 +509,8 @@ void graph::hash_kmer_amino(const kmerAmino_t& kmer, const uint64_t& color)
  */
 bool graph::search_kmer(const kmer_t& kmer)
 {   
- 
-    return kmer_table[compute_bin(kmer)].contains(kmer);
+	uint64_t bin = compute_bin(kmer);
+    return kmer_table[bin].find(kmer)!=kmer_table[bin].end();
 }
 
 /**
@@ -520,7 +520,7 @@ bool graph::search_kmer(const kmer_t& kmer)
  */
 bool graph::search_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
 {    
-    return kmer_table[bin].contains(kmer) && color::test(kmer_table[bin][kmer], color);
+    return kmer_table[bin].find(kmer)!=kmer_table[bin].end() && color::test(kmer_table[bin][kmer], color);
 }
 
 
@@ -531,7 +531,8 @@ bool graph::search_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color
  */
 bool graph::search_kmer_amino(const kmerAmino_t& kmer)
 {
-    return kmer_tableAmino[compute_amino_bin(kmer)].contains(kmer);
+	uint64_t bin = compute_amino_bin(kmer);
+    return kmer_tableAmino[bin].find(kmer)!=kmer_tableAmino[bin].end();
 }
 
 
