@@ -60,7 +60,7 @@ void color64::erase(uint64_t& color, uint64_t& pos) {
  * @param pos position
  * @return 1 if bit is set, 0 otherwise
  */
-bool color64::test(uint64_t& color, uint64_t& pos) {
+bool color64::test(uint64_t& color, const uint64_t& pos) {
     return (color >> pos) & 0b1u;
 }
 

@@ -65,7 +65,7 @@ void colorXX::erase(bitset<maxN>& color, uint64_t& pos) {
  * @param pos position
  * @return 1 if bit is set, 0 otherwise
  */
-bool colorXX::test(bitset<maxN>& color, uint64_t& pos) {
+bool colorXX::test(bitset<maxN>& color, const uint64_t& pos) {
     return color.test(pos);
 }
 

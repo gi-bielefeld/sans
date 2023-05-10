@@ -256,6 +256,13 @@ public:
     static bool search_kmer(const kmer_t& kmer);
 
     /**
+    * This function searches the corresponding hash table for the given kmer and checks whether the given color is stored
+    * @param kmer the kmer to search
+    * @param color the single color to verify
+    */
+    static bool search_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color);
+
+    /**
      * This function searches the bit-wise corresponding hash table for the given amnio kmer
      * @param kmer The kmer to search
      * @return Ture if the kmer is stored

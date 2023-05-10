@@ -62,7 +62,7 @@ public:
      * @param pos position
      * @return 1 if bit is set, 0 otherwise
      */
-    static bool test(uint64_t& color, uint64_t& pos);
+    static bool test(uint64_t& color, const uint64_t& pos);
 
     /**
      * This function inverts a color set to reduce the number of ones.
