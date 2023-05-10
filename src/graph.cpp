@@ -510,6 +510,7 @@ void graph::hash_kmer_amino(const kmerAmino_t& kmer, const uint64_t& color)
 bool graph::search_kmer(const kmer_t& kmer)
 {   
 	uint64_t bin = compute_bin(kmer);
+    std::lock_guard<mutex> lg(lock[bin]); 
     return kmer_table[bin].find(kmer)!=kmer_table[bin].end();
 }
 
@@ -520,6 +521,7 @@ bool graph::search_kmer(const kmer_t& kmer)
  */
 bool graph::search_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
 {    
+	std::lock_guard<mutex> lg(lock[bin]); 
     return kmer_table[bin].find(kmer)!=kmer_table[bin].end() && color::test(kmer_table[bin][kmer], color);
 }
 
