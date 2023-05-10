@@ -287,12 +287,13 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
             isAmino ? quality_mapAmino.resize(thread_count) : quality_map.resize(thread_count);
 			if (q_table.size()>0){
 				emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
-					if (search_kmer(bin, kmer, color)) return;
-					if (quality_map[T][kmer] < q_table[color]-1) {
-						quality_map[T][kmer]++;
-					} else {
-						quality_map[T].erase(kmer);
-						hash_kmer(bin, kmer, color);
+					if (!search_kmer(bin, kmer, color)){
+						if (quality_map[T][kmer] < q_table[color]-1) {
+							quality_map[T][kmer]++;
+						} else {
+							quality_map[T].erase(kmer);
+							hash_kmer(bin, kmer, color);
+						}
 					}
 				};
 				emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
@@ -305,12 +306,13 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
 				};
             }else { // global quality value
 				emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
-					if (search_kmer(bin, kmer, color)) return;
-					if (quality_map[T][kmer] < quality-1) {
-						quality_map[T][kmer]++;
-					} else {
-						quality_map[T].erase(kmer);
-						hash_kmer(bin, kmer, color);
+					if (!search_kmer(bin, kmer, color)){
+						if (quality_map[T][kmer] < quality-1) {
+							quality_map[T][kmer]++;
+						} else {
+							quality_map[T].erase(kmer);
+							hash_kmer(bin, kmer, color);
+						}
 					}
 				};
 				emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
@@ -518,7 +520,7 @@ bool graph::search_kmer(const kmer_t& kmer)
  */
 bool graph::search_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
 {    
-    return color::test(kmer_table[bin][kmer], color);
+    return kmer_table[bin].contains(kmer) && color::test(kmer_table[bin][kmer], color);
 }
 
 
