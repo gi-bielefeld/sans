@@ -94,7 +94,7 @@ class Thruth:
     def _nrev(cls, container: Container):
         input_command = [container.sans.target_a,
                          f" -i {container.seq_dir.dna_nrev_list_path}",
-                         f" -o {container.data_dir.nrev_target_a_splits_path}"
+                         f" -o {container.data_dir.nrev_target_a_splits_path}",
                          f" -k {container.sans.k}",
                          f" -m geom2"]
         input_command = "".join(input_command)
@@ -169,6 +169,7 @@ class Comp:
         input_command_a = [container.sans.target_a,
                            f" -i {container.seq_dir.dna_nrev_list_path}",
                            f" -o {container.data_dir.nrev_target_a_splits_path}",
+                           f" -k {container.sans.k}",
                            f" -m geom2",
                            f" -n"]
         input_command_a = "".join(input_command_a)
