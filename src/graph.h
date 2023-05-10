@@ -268,6 +268,13 @@ public:
      * @return Ture if the kmer is stored
      */
     static bool search_kmer_amino(const kmerAmino_t& kmer);
+ 
+	/**
+    * This function searches the corresponding hash table for the given kmer and checks whether the given color is stored
+    * @param kmer the kmer to search
+    * @param color the single color to verify
+    */
+    static bool search_kmer_amino(uint64_t& bin, const kmerAmino_t& kmer, const uint64_t& color);
 
 
     /**

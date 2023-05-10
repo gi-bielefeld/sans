@@ -287,16 +287,16 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
             isAmino ? quality_mapAmino.resize(thread_count) : quality_map.resize(thread_count);
 			if (q_table.size()>0){
 				emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
-					if (!search_kmer(bin, kmer, color)){
-						if (quality_map[T][kmer] < q_table[color]-1) {
-							quality_map[T][kmer]++;
-						} else {
-							quality_map[T].erase(kmer);
-							hash_kmer(bin, kmer, color);
-						}
+					if (search_kmer(bin, kmer, color)) return;
+					if (quality_map[T][kmer] < q_table[color]-1) {
+						quality_map[T][kmer]++;
+					} else {
+						quality_map[T].erase(kmer);
+						hash_kmer(bin, kmer, color);
 					}
 				};
 				emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+					if (search_kmer_amino(bin, kmer, color)) return;
 					if (quality_mapAmino[T][kmer] < q_table[color]-1) {
 						quality_mapAmino[T][kmer]++;
 					} else {
@@ -306,16 +306,16 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
 				};
             }else { // global quality value
 				emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
-					if (!search_kmer(bin, kmer, color)){
-						if (quality_map[T][kmer] < quality-1) {
-							quality_map[T][kmer]++;
-						} else {
-							quality_map[T].erase(kmer);
-							hash_kmer(bin, kmer, color);
-						}
+					if (search_kmer(bin, kmer, color)) return;
+					if (quality_map[T][kmer] < quality-1) {
+						quality_map[T][kmer]++;
+					} else {
+						quality_map[T].erase(kmer);
+						hash_kmer(bin, kmer, color);
 					}
 				};
 				emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+					if (search_kmer_amino(bin, kmer, color)) return;
 					if (quality_mapAmino[T][kmer] < quality-1) {
 						quality_mapAmino[T][kmer]++;
 					} else {
@@ -535,6 +535,18 @@ bool graph::search_kmer_amino(const kmerAmino_t& kmer)
 {
 	uint64_t bin = compute_amino_bin(kmer);
     return kmer_tableAmino[bin].find(kmer)!=kmer_tableAmino[bin].end();
+}
+
+
+/**
+ * This function searches the corresponding hash table for the given kmer and checks whether the given color is stored
+ * @param kmer the kmer to search
+ * @param color the one color to verify
+ */
+bool graph::search_kmer_amino(uint64_t& bin, const kmerAmino_t& kmer, const uint64_t& color)
+{    
+	std::lock_guard<mutex> lg(lock[bin]); 
+    return kmer_tableAmino[bin].find(kmer)!=kmer_tableAmino[bin].end() && color::test(kmer_tableAmino[bin][kmer], color);
 }
 
 
