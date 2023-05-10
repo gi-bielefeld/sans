@@ -729,6 +729,8 @@ int main(int argc, char* argv[]) {
                         cout << "\33[2K\r" << folder+file_name;
 						if (q_table.size()>0) {
 							cout <<" q="<<q_table[i];
+						}else if (quality>1) {
+							cout <<" q="<<quality;
 						}
 						cout << " (" << i+1 << "/" << denom_file_count << ")" << endl;    // print progress
                     }

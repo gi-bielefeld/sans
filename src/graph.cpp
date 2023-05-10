@@ -232,7 +232,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
         graph::q_table = q_table;
         switch (quality) {
         case 1:
-            case 0: /* no quality check */
+		case 0: /* no quality check */
             emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
                 hash_kmer(bin, kmer, color);
             };
