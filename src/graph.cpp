@@ -550,6 +550,8 @@ bool graph::search_kmer_amino(uint64_t& bin, const kmerAmino_t& kmer, const uint
 }
 
 
+
+
 /**
 * This function returns the stored colores of the given kmer
 * @param kmer The target kmer
