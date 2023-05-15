@@ -22,6 +22,7 @@
 
 using namespace std;
 
+
 template <typename K, typename V>
     // using hash_map = unordered_map<K,V>;
     using hash_map = tsl::sparse_pg_map<K,V>;
@@ -29,21 +30,10 @@ template <typename T>
     // using hash_set = unordered_set<T>;
     using hash_set = tsl::sparse_pg_set<T>;
 
+
+#include "index.h"
 #include "kmer.h"
 #include "kmerAmino.h"
-
-
-/**
-#if maxK > 12 // store k-mers in a bitset, allows larger k-mers
-    typedef kmerAminoXX kmerAmino;
-    typedef bitset<5*maxK> kmerAmino_t;
-#else // store k-mer bits in an integer, optimizes performance
-    typedef kmerAmino12 kmerAmino;
-    typedef uint64_t kmerAmino_t;
-#endif
-*/
-
-
 #include "color.h"
 
 

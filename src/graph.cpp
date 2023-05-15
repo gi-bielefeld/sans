@@ -450,9 +450,12 @@ uint64_t graph::compute_bin(const kmer_t& kmer)
 */
 void graph::hash_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
 {
-    std::lock_guard<mutex> lg(lock[bin]); 
-    kmer_table[bin][kmer].set(color);
-}
+    // std::lock_guard<mutex> lg(lock[bin]); 
+    // kmer_table[bin][kmer].set(color);
+    
+    // Test index
+    Index::add_colored_kmer(kmer, color);
+}   
 
 /**
 * This function hashes a k-mer and stores it in the correstponding hash table.
@@ -1246,8 +1249,16 @@ multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
 	
-	
-	
+    for (auto it : Index::colored_support)
+    {
+        color_t color = Index::colors[it.first];
+        bool pos = color::represent(color);
+        if (color == 0) continue;    // ignore empty splits
+        // add_weight(color, mean, min_value, pos);
+        array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+        weight[pos]+=it.second; // update the weight or the inverse weight of the current color set
+    }
+    /*
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
 
@@ -1299,6 +1310,7 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
 		}
     }
 //    compile_split_list(mean,min_value); done in main.cpp
+    */
 }
 
 /**
