@@ -1248,16 +1248,27 @@ multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t
  * @param verbose print progess
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
-	
-    for (auto it : Index::colored_support)
+    cout << "KT_TRUTH : " << kmer_table[0].size() << endl;
+    cout << "KT_INDEX : " << Index::kmer_color.size() << endl;
+    
+    hash_map<kmer_t, uint64_t>::iterator base_it;
+    base_it = Index::kmer_color.begin();
+    color_t color;
+
+    while (base_it != Index::kmer_color.end())
     {
-        color_t color = Index::colors[it.first];
+        color = Index::color_by_id[base_it.value()];
+        base_it++;
+        
         bool pos = color::represent(color);
+
         if (color == 0) continue;    // ignore empty splits
         // add_weight(color, mean, min_value, pos);
         array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-        weight[pos]+=it.second; // update the weight or the inverse weight of the current color set
+        weight[pos]++; // update the weight or the inverse weight of the current color set
+        // cout << weight[0] << ":" << weight[1] << endl;
     }
+
     /*
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
@@ -1309,8 +1320,11 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
 			weight[pos]++; // update the weight or the inverse weight of the current color set
 		}
     }
-//    compile_split_list(mean,min_value); done in main.cpp
     */
+//    compile_split_list(mean,min_value); done in main.cpp
+
+    cout << "CT_TRUTH : " << color_table.size() << endl;
+    cout << "CT_INDEX : " << Index::id_by_color.size() << endl;
 }
 
 /**

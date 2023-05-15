@@ -24,10 +24,9 @@ using namespace std;
 class Index
 {    
     public:
-        static hash_map<uint64_t, color_t> colors;
-        static hash_map<color_t, uint64_t> color_address;
-        static hash_map<kmer_t, uint64_t> colored_kmer;
-        static hash_map<uint64_t, uint64_t> colored_support;
+        static hash_map<uint64_t, color_t> color_by_id;
+        static hash_map<color_t, uint64_t> id_by_color;
+        static hash_map<kmer_t, uint64_t> kmer_color;
         static uint64_t next_address;
         
         static void add_colored_kmer(const kmer_t& kmer, const uint64_t& color);
