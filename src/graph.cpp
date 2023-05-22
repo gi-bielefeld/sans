@@ -137,19 +137,25 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
  */
 
 void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, uint64_t& thread_count) {
+
+    Index::init();
+
     t = top_size;
     isAmino = amino;
-    hash_in_parallel = thread_count > 1 ? true : false;
+    // hash_in_parallel = thread_count > 1 ? true : false;
+    hash_in_parallel = true;
     if(!isAmino){
 
         // Automatic table count
+        /*
         if (hash_in_parallel)
         {
             table_count = 45 * thread_count - 33; // Estimated scaling
             table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
         }
         else {table_count = 1;}
-        
+        */
+        table_count = Index::bins;
 
         // Init base tables
 	    kmer_table = vector<hash_map<kmer_t, color_t>> (table_count);
@@ -454,7 +460,7 @@ void graph::hash_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
     // kmer_table[bin][kmer].set(color);
     
     // Test index
-    Index::add_colored_kmer(kmer, color);
+    Index::add_colored_kmer(kmer, bin, color);
 }   
 
 /**
@@ -1248,28 +1254,42 @@ multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t
  * @param verbose print progess
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
-    cout << "KT_TRUTH : " << kmer_table[0].size() << endl;
-    cout << "KT_INDEX : " << Index::kmer_color.size() << endl;
-    
-    hash_map<kmer_t, uint64_t>::iterator base_it;
-    base_it = Index::kmer_color.begin();
-    color_t color;
 
-    while (base_it != Index::kmer_color.end())
+    uint64_t kmers_in_table = 0;
+    uint64_t kmers_in_index = 0;
+    for (auto table: kmer_table){kmers_in_table += table.size();}
+    for (auto table: Index::kmerMatrix){kmers_in_index += table.size();}
+    cout << "TABLE_KMERS: " << kmers_in_table << endl;
+    cout << "INDEX_KMERS: " << kmers_in_index << endl;
+
+    for (auto table : Index::kmerMatrix)
     {
-        color = Index::color_by_id[base_it.value()];
-        base_it++;
-        
-        bool pos = color::represent(color);
-
+        for (auto it : table)
+        {
+            colorQ0_t q0_color = Index::q0Tree.color_by_id[it.second];
+            color_t color;
+            for (int i = 0; i < maxN; i++){if (q0_color.test(i)){color.set(i);}}
+            bool pos = color::represent(color);    // invert the color set, if necessary
+            if (color == 0) continue;    // ignore empty splits
+            // add_weight(color, mean, min_value, pos);
+            array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+            weight[pos]++; // update the weight or the inverse weight of the current color set
+        }
+    }
+    /*
+    for (auto it : Index::q2Tree.support)  
+    {
+        uint32_t color_id = it.first;
+        colorQ2_t q2_color = Index::q2Tree.color_by_id[color_id];
+        color_t color = 0b0u;
+        for (int i=0; i< maxN - SECOND_QUARTILE_BOUNDARY; i++){if(q2_color.test(i)){color.set(i + SECOND_QUARTILE_BOUNDARY);}}
+        bool pos = color::represent(color);    // invert the color set, if necessary
         if (color == 0) continue;    // ignore empty splits
         // add_weight(color, mean, min_value, pos);
         array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-        weight[pos]++; // update the weight or the inverse weight of the current color set
-        // cout << weight[0] << ":" << weight[1] << endl;
+        weight[pos]+=it.second; // update the weight or the inverse weight of the current color set
     }
 
-    /*
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
 
@@ -1283,13 +1303,13 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         return;
     }
     // The iterators for the tables
-    hash_map<kmer_t, color_t>::iterator base_it;
+    hash_map<kmer_t, color_t>::iterator it;
     hash_map<kmerAmino_t, color_t>::iterator amino_it;
 
     // Iterate the tables
     for (int i = 0; i < graph::table_count; i++) // Iterate all tables
     {
-        if (!isAmino){base_it = kmer_table[i].begin();} // base table iterator
+        if (!isAmino){it = kmer_table[i].begin();} // base table iterator
         else {amino_it = kmer_tableAmino[i].begin();} // amino table iterator
 
         while (true) { // process splits
@@ -1308,8 +1328,8 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 }
             else { // if the base tables is used update the base iterator
                 // Todo: Get the target hash map index from the kmer bits
-                if (base_it == kmer_table[i].end()){break;} // stop itearating if done
-                else {color_ref = &base_it.value(); ++base_it;} // iterate the base table
+                if (it == kmer_table[i].end()){break;} // stop itearating if done
+                else {color_ref = &it.value(); ++it;} // iterate the base table
                 }
             // process
             color_t& color = *color_ref;
@@ -1320,11 +1340,10 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
 			weight[pos]++; // update the weight or the inverse weight of the current color set
 		}
     }
-    */
+    cout << "TABLE_COLORS: " << color_table.size() << endl;
+    cout << "INDEX_COLORS: " << Index::q0Tree.color_by_id.size() << endl;
 //    compile_split_list(mean,min_value); done in main.cpp
-
-    cout << "CT_TRUTH : " << color_table.size() << endl;
-    cout << "CT_INDEX : " << Index::id_by_color.size() << endl;
+*/
 }
 
 /**

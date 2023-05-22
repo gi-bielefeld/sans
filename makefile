@@ -33,17 +33,23 @@ ifeq ("$(wildcard $(TD))", "")
 endif
 
 SANS: start makefile obj/main.o done
-	$(CC) -o SANS obj/main.o obj/graph.o obj/index.o obj/kmer.o obj/kmerAmino.o obj/color.o obj/util.o obj/translator.o obj/cleanliness.o obj/gzstream.o -lz $(BF)
+	$(CC) -o SANS obj/main.o obj/graph.o obj/index.o obj/idQueue.o obj/kEntry.o obj/kmer.o obj/kmerAmino.o obj/color.o obj/util.o obj/translator.o obj/cleanliness.o obj/gzstream.o -lz $(BF)
 
 
-obj/main.o: makefile src/main.cpp src/main.h obj/translator.o obj/graph.o obj/util.o obj/cleanliness.o obj/gzstream.o
+obj/main.o: makefile src/main.cpp src/main.h obj/translator.o obj/graph.o obj/index.o obj/util.o obj/cleanliness.o obj/gzstream.o
 	$(CC) -c src/main.cpp
 
 obj/graph.o: makefile src/graph.cpp src/graph.h obj/index.o obj/kmer.o obj/kmerAmino.o obj/color.o
 	$(CC) -c src/graph.cpp
 
-obj/index.o: makefile src/index.cpp src/index.h obj/kmer.o obj/color.o
-	$(CC) -c src/index.cpp
+obj/index.o: makefile src/index/index.cpp src/index/index.h src/index/subtree.h src/index/subtree.cpp src/index/q0Color.h src/index/q1Color.h obj/idQueue.o obj/kEntry.o obj/kmer.o obj/color.o
+	$(CC) -c src/index/index.cpp
+
+obj/kEntry.o: makefile src/index/kEntry.cpp src/index/kEntry.h
+	$(CC) -c src/index/kEntry.cpp
+
+obj/idQueue.o: makefile src/index/idQueue.cpp src/index/idQueue.h
+	$(CC) -c src/index/idQueue.cpp
 
 obj/kmer.o: makefile src/kmer.cpp src/kmer.h
 	$(CC) -c src/kmer.cpp

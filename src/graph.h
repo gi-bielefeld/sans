@@ -31,7 +31,7 @@ template <typename T>
     using hash_set = tsl::sparse_pg_set<T>;
 
 
-#include "index.h"
+#include "index/index.h"
 #include "kmer.h"
 #include "kmerAmino.h"
 #include "color.h"
