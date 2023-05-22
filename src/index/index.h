@@ -1,4 +1,6 @@
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #include <map>
 #include <set>
@@ -35,14 +37,13 @@ class Index
         // The number of hash-maps in the kmerMatrix (equal to the module 2**MOD_POWER + 1)
         static uint64_t bins;
 
-        // The mask for tree-id and color-id separation
-        static uint32_t color_mask; 
-
-
-        static vector<hash_map<kmer_t, uint64_t>> kmerMatrix;
-
-        static subtree<colorQ0_t> q0Tree;
-        static subtree<colorQ2_t> q2Tree;
+        // Kmer
+        static vector<hash_map<kmer_t, uint32_t>> kmerMatrix;
+        // ID queue
+        static IDQueue idQueue;
+        static hash_map<color_t, uint32_t> id_by_color;
+        static hash_map<uint32_t, color_t> color_by_id;
+        static hash_map<uint32_t, uint32_t> support;
 
         static void init();
 
