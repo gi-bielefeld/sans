@@ -1266,7 +1266,8 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     {
         for (auto it : table)
         {
-            color_t color = Index::color_by_id[it.second];
+            uint32_t color_bin = it.second % table_count;
+            color_t color = Index::color_by_id[color_bin][it.second];
             bool pos = color::represent(color);    // invert the color set, if necessary
             if (color == 0) continue;    // ignore empty splits
             // add_weight(color, mean, min_value, pos);

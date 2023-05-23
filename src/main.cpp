@@ -154,8 +154,7 @@ int main(int argc, char* argv[]) {
     auto mean = util::geometric_mean2;    // weight function
 
     // parallel hashing
-    // uint64_t threads = thread::hardware_concurrency(); // The number of threads to run on (default is number of virtual cores including smt)
-    uint64_t threads = 1;
+    uint64_t threads = thread::hardware_concurrency(); // The number of threads to run on (default is number of virtual cores including smt)
     
     // amino acid processing
     bool amino = false;      // input files are amino acid sequences

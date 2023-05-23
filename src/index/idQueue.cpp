@@ -5,8 +5,8 @@ uint32_t IDQueue::pop()
 {
     if (queue.size()==0)
     {
-        max_id++;
-        queue.push_back(max_id);
+        max_multiplier++;
+        queue.push_back(max_multiplier * bins + offset);
     }
 
     uint32_t id = *queue.begin();

@@ -37,13 +37,19 @@ class Index
         // The number of hash-maps in the kmerMatrix (equal to the module 2**MOD_POWER + 1)
         static uint64_t bins;
 
+        static vector<IDQueue> idQueue;
+        
         // Kmer
+        static vector<mutex> kmer_lock;
         static vector<hash_map<kmer_t, uint32_t>> kmerMatrix;
         // ID queue
-        static IDQueue idQueue;
-        static hash_map<color_t, uint32_t> id_by_color;
-        static hash_map<uint32_t, color_t> color_by_id;
-        static hash_map<uint32_t, uint32_t> support;
+        static vector<mutex> color_lock;
+
+        static vector<hash_map<color_t, uint32_t>> id_by_color;
+        static vector<hash_map<uint32_t, color_t>> color_by_id;
+        static vector<hash_map<uint32_t, uint32_t>> support;
+
+        static vector<uint32_t> color_period;
 
         static void init();
 
