@@ -7,13 +7,13 @@ uint64_t Index::bins;
 vector<IDQueue> Index::idQueue;
 
 vector<mutex> Index::kmer_lock;
-vector<hash_map<kmer_t, uint32_t>> Index::kmerMatrix;          // The binned hash table
+vector<hash_map<kmer_t, uint64_t>> Index::kmerMatrix;          // The binned hash table
 
 vector<mutex> Index::color_lock;
-vector<uint32_t> Index::color_period;
-vector<hash_map<color_t, uint32_t>> Index::id_by_color; 
-vector<hash_map<uint32_t, color_t>> Index::color_by_id;                              // The set of current colors
-vector<hash_map<uint32_t, uint32_t>> Index::support;
+vector<uint64_t> Index::color_period;
+vector<hash_map<color_t, uint64_t>> Index::id_by_color; 
+vector<hash_map<uint64_t, color_t>> Index::color_by_id;                              // The set of current colors
+vector<hash_map<uint64_t, uint64_t>> Index::support;
 
 
 void Index::init()
@@ -27,14 +27,14 @@ void Index::init()
 
     // Kmer data init
     kmer_lock = vector<mutex> (bins);
-    kmerMatrix = vector<hash_map<kmer_t, uint32_t>> (bins);
+    kmerMatrix = vector<hash_map<kmer_t, uint64_t>> (bins);
     
     // Color data init
     color_lock = vector<mutex> (bins);
     if (bins == 1){color_period.push_back(0);}
 
     else{
-        uint32_t carry = 1;
+        uint64_t carry = 1;
         for (int i = 0; i <= maxN; i++)
         {
             color_period.push_back(carry);
@@ -42,9 +42,9 @@ void Index::init()
         }
     }
     
-    id_by_color = vector<hash_map<color_t, uint32_t>> (bins);
-    color_by_id = vector<hash_map<uint32_t, color_t>> (bins);
-    support = vector<hash_map<uint32_t, uint32_t>> (bins);
+    id_by_color = vector<hash_map<color_t, uint64_t>> (bins);
+    color_by_id = vector<hash_map<uint64_t, color_t>> (bins);
+    support = vector<hash_map<uint64_t, uint64_t>> (bins);
     cout << "INIT DONE" << endl;
 }
 

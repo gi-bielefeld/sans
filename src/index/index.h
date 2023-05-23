@@ -41,15 +41,15 @@ class Index
         
         // Kmer
         static vector<mutex> kmer_lock;
-        static vector<hash_map<kmer_t, uint32_t>> kmerMatrix;
+        static vector<hash_map<kmer_t, uint64_t>> kmerMatrix;
         // ID queue
         static vector<mutex> color_lock;
 
-        static vector<hash_map<color_t, uint32_t>> id_by_color;
-        static vector<hash_map<uint32_t, color_t>> color_by_id;
-        static vector<hash_map<uint32_t, uint32_t>> support;
+        static vector<hash_map<color_t, uint64_t>> id_by_color;
+        static vector<hash_map<uint64_t, color_t>> color_by_id;
+        static vector<hash_map<uint64_t, uint64_t>> support;
 
-        static vector<uint32_t> color_period;
+        static vector<uint64_t> color_period;
 
         static void init();
 
