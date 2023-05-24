@@ -20,13 +20,20 @@ template <typename T>
 
 // Index includes
 #include "../kmer.h"
-#include "kEntry.h"
+// #include "kEntry.h"
 
+// Color includes
+#include "idQueue.h"
 #include "../color.h"
-#include "q0Color.h"
-#include "q2Color.h"
 
-#include "subtree.h"
+//#include "q0Color.h"
+//#include "q2Color.h"
+
+//#include "subtree.h"
+
+#ifndef MOD_POWER
+#define MOD_POWER (16)
+#endif
 
 using namespace std;
 
@@ -53,17 +60,17 @@ class Index
 
         static void init();
 
-        static void add_colored_kmer(const kmer_t& kmer, uint64_t& bin, const uint64_t& color);
+        static void add_colored_kmer(const kmer_t& kmer, uint64_t& kmer_bin, const uint64_t& color);
 
         /**
         *This method compresses a kmer_t into a k_entry vie increase of order after binning
         *@param kmer The kmer to compress
-        *@param bin The target hash_table_id of this kmer
+        *@param kmer_bin The target hash_table_id of this kmer
         *@return The compressed kmer_entry
         */
-        static kmer_t compress_kmer(const kmer_t& kmer, uint64_t& bin);
+        static kmer_t compress_kmer(const kmer_t& kmer, uint64_t& kmer_bin);
 
         // Not implemented yet
-        static kmer_t decompress_kmer(kmer_t& kmer_entry, uint64_t& bin);
+        static kmer_t decompress_kmer(kmer_t& kmer_entry, uint64_t& kmer_bin);
 
 };

@@ -51,8 +51,7 @@ void Index::init()
 /*
 * Creating a compressed kmer entry
 BUGGED
-*/
-kmer_t Index::compress_kmer(const kmer_t& kmer, uint64_t& bin)
+kmer_t Index::compress_kmer(const kmer_t& kmer, uint64_t& kmer_bin)
 {
     auto show_bits = [&] (kmer_t kmer)
     {
@@ -108,31 +107,32 @@ kmer_t Index::compress_kmer(const kmer_t& kmer, uint64_t& bin)
         return result;
     };
 
-    // Compute the kmer multiplier c, such that kmer = c * bins + bin
-    // Compute kmer - bin
-    kmer_t bit_bin = bin;
+    // Compute the kmer multiplier c, such that kmer = c * bins + kmer_bin
+    // Compute kmer - kmer_bin
+    kmer_t bit_bin = kmer_bin;
     kmer_t mod_multiple = sub(kmer, bit_bin);
-    // Compute the multiplier (kmer - bin) / #bins
+    // Compute the multiplier (kmer - kmer_bin) / #bins
     kmer_t bit_module = bins;
     kmer_t mod_multipler = div(mod_multiple, bit_module);
     return mod_multipler;
 }
-
+*/
 // --- COLOR HANDLING ---
-void Index::add_colored_kmer(const kmer_t& kmer, uint64_t& bin, const uint64_t& color)
+void Index::add_colored_kmer(const kmer_t& kmer, uint64_t& kmer_bin, const uint64_t& color)
 {
     // Create the compressed kmer key
-    // kmer_t kmer_entry = compress_kmer(kmer, bin);
-
+    // kmer_t kmer_entry = compress_kmer(kmer, kmer_bin);
+    color_t bit_color;
+    bit_color.set(color);
+    // Lock the kmer_bin column
+    std::lock_guard<mutex> kl(kmer_lock[kmer_bin]);
     // If the kmer has not occured before
-    std::lock_guard<mutex> kl(kmer_lock[bin]); 
-    if (!kmerMatrix[bin][kmer])
+    if (!kmerMatrix[kmer_bin][kmer])
     {
+        uint64_t color_bin = color_period[color]; // The binning value of the color
         // Create the target color
-        uint32_t color_id;
-        color_t bit_color = (0b1u << color);
-        uint32_t color_bin = color_period[color];
         std::lock_guard<mutex> bcl(color_lock[color_bin]); // Lock the bit_bin color column
+        uint64_t color_id;
         // If the color has not occured before
         if (!id_by_color[color_bin][bit_color]){
             color_id = idQueue[color_bin].pop();
@@ -146,60 +146,61 @@ void Index::add_colored_kmer(const kmer_t& kmer, uint64_t& bin, const uint64_t& 
             color_id = id_by_color[color_bin][bit_color];
             support[color_bin][color_id]++;
         }
-        kmerMatrix[bin][kmer] = color_id;
+        kmerMatrix[kmer_bin][kmer] = color_id;
     }
 
     // If the kmer occurred before
     else{
-        
         // Get the current concat identifier
-        uint32_t color_id = kmerMatrix[bin][kmer];
-        uint32_t color_bin = color_id % bins;
+        uint64_t current_color_id = kmerMatrix[kmer_bin][kmer];
+        uint64_t current_color_bin = current_color_id % bins;
 
-        color_t current_color;
-        color_t update_color;
+        color_t  update_color;
+        uint64_t update_color_bin;
 
-        // Start of current color lock section
+        // Start of old color lock section
         {
-        std::lock_guard<mutex> ccl(color_lock[color_bin]); // Lock the current_color column
-        current_color = color_by_id[color_bin][color_id];
-        // Decrement the support value
-        // If the bit is already set -> The kmer reoccurred in the same sequence -> nothing to do
-        if (current_color.test(color)){return;}
+            std::lock_guard<mutex> ccl(color_lock[current_color_bin]); // Lock the current_color column
+            color_t old_color = color_by_id[current_color_bin][current_color_id];
+            // Decrement the support value
 
-        // Otherwise the color changes
-        support[color_bin][color_id]--;
-        if (support[color_bin][color_id] == 0)
-        {
-            id_by_color[color_bin].erase(current_color);
-            color_by_id[color_bin].erase(color_id);
-            support[color_bin].erase(color_id);
-            idQueue[color_bin].push(color_id);
-        } 
+            // If the bit is already set -> The kmer reoccurred in the same sequence -> nothing to do
+            if (old_color.test(color)){return;}
+
+            // Otherwise the color changes
+            support[current_color_bin][current_color_id]--;
+            if (!support[current_color_bin][current_color_id])
+            {
+                id_by_color[current_color_bin].erase(old_color);
+                color_by_id[current_color_bin].erase(current_color_id);
+                support[current_color_bin].erase(current_color_id);
+                idQueue[current_color_bin].push(current_color_id);
+            }
+
+            // Transcribe to new color
+            update_color = bit_color | old_color;
+            update_color_bin = (current_color_bin + color_period[color]) % bins;
         } // End of current color lock section
 
         // Start of update color lock section
         {
         // Create the updated color
-        update_color = current_color;
-        update_color.set(color);
-        uint32_t update_color_bin = (color_bin + color_period[color]) % bins;
         std::lock_guard<mutex> ucl(color_lock[update_color_bin]); // Lock the update color bin column
+        update_color.set(color);
         // If the updated color already exists
         if (id_by_color[update_color_bin][update_color])
         {
             support[update_color_bin][id_by_color[update_color_bin][update_color]]++;
-            kmerMatrix[bin][kmer] = id_by_color[update_color_bin][update_color];
+            kmerMatrix[kmer_bin][kmer] = id_by_color[update_color_bin][update_color];
         }
-
         // Create the update color
         else
         {
-            uint32_t update_color_id = idQueue[update_color_bin].pop();
+            uint64_t update_color_id = idQueue[update_color_bin].pop();
             color_by_id[update_color_bin][update_color_id] = update_color;
             id_by_color[update_color_bin][update_color] = update_color_id;
             support[update_color_bin][update_color_id] = 0b1u;
-            kmerMatrix[bin][kmer] = update_color_id;
+            kmerMatrix[kmer_bin][kmer] = update_color_id;
         }
         }
         // End of the update color lock section
