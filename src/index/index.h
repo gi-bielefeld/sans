@@ -20,16 +20,9 @@ template <typename T>
 
 // Index includes
 #include "../kmer.h"
-// #include "kEntry.h"
-
 // Color includes
 #include "idQueue.h"
 #include "../color.h"
-
-//#include "q0Color.h"
-//#include "q2Color.h"
-
-//#include "subtree.h"
 
 #ifndef MOD_POWER
 #define MOD_POWER (16)
