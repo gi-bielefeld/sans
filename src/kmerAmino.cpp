@@ -20,26 +20,6 @@ void kmerAmino::init(const size5K_t& kmer_length) {
 }
 
 /**
-* This function returns the first acid in binary code
-*
-*/
-uint5K_t kmerAmino::head(kmerAmino_t& kmer)
-{
-    uint5K_t head = kmer & 0b11111u;
-    return head;
-}
-
-/**
-* This function returns the last acid in binary code
-*
-*/
-uint5K_t kmerAmino::tail(kmerAmino_t& kmer)
-{
-    uint5K_t tail = (kmer >> (5*k-05u)) & 0b11111u;
-    return tail;
-} 
-
-/**
  * This function shifts a k-mer adding a new character to the left.
  *
  * @param kmer bit sequence

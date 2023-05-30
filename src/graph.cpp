@@ -17,23 +17,28 @@ int graph::quality;
 
 bool graph::isAmino;
 
-bool graph::hash_in_parallel;
+/*
+*
+* [Parallelization]
+*
+*/
+
 uint64_t graph::table_count;
+
+/**
+ * This is a vecotr of spinlocks protecting the hash maps 
+ */
+vector<spinlock> graph::lock;
+
+/**
+ * This vector holds the carries of 2**i % table_count for fast distribution of binary represented kmers
+ */
+vector<uint_fast32_t> graph::period;
 
 /**
  * This is vector of hash tables mapping k-mers to colors [O(1)].
  */
 vector<hash_map<kmer_t, color_t>> graph::kmer_table;
-
-/**
- * This is a vecotr of spinlocks protecting the hash maps 
- */
-vector<mutex> graph::lock;
-
-/**
- * This vector holds the carries of 2**i % table_count for fast distribution of bitset represented kmers
- */
-vector<uint64_t> graph::period;
 
 /**
  * This is the amino equivalent.
@@ -80,8 +85,8 @@ vector<char> graph::allowedChars;
 /**
  * This function qualifies a k-mer and places it into the hash table.
  */
-function<void(uint64_t& T, uint64_t& bin, const kmer_t&, uint64_t&)> graph::emplace_kmer;
-function<void(uint64_t& T, uint64_t& bin, const kmerAmino_t&, uint64_t&)> graph::emplace_kmer_amino;
+function<void(uint64_t& T, uint_fast32_t& bin, const kmer_t&, uint64_t&)> graph::emplace_kmer;
+function<void(uint64_t& T, uint_fast32_t& bin, const kmerAmino_t&, uint64_t&)> graph::emplace_kmer_amino;
 
 // [DEBUG:]
 void graph::showTableSizes(){
@@ -143,7 +148,6 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
     t = top_size;
     isAmino = amino;
     // hash_in_parallel = thread_count > 1 ? true : false;
-    hash_in_parallel = true;
     if(!isAmino){
 
         // Automatic table count
@@ -160,12 +164,12 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
         // Init base tables
 	    kmer_table = vector<hash_map<kmer_t, color_t>> (table_count);
 
-        // Init the mutex lock vector
-	    lock = vector<mutex> (table_count);
+        // Init the lock vector
+	    lock = vector<spinlock> (table_count);
 
         // Precompute the period for fast shift update kmer binning in bitset representation 
         #if (maxK > 32)     
-        uint64_t last = 1 % table_count;
+        uint_fast32_t last = 1 % table_count;
         for (int i = 1; i <= 2*(kmer::k); i++)
         {
             // cout << last << endl;
@@ -180,17 +184,14 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
         graph::allowedChars.push_back('T');
     }else{
         // Automatic table count
-        if (hash_in_parallel)
-        {
-            table_count = 33 * thread_count + 33; // Estimated scaling
-            table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
-        }
-        else {table_count = 1;}
+        //    table_count = 33 * thread_count + 33; // Estimated scaling
+        //    table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
+        table_count = (0b1u << 14) + 1;
 
         // Init amino tables
         kmer_tableAmino = vector<hash_map<kmerAmino_t, color_t>> (table_count);
         // Init the mutex lock vector
-        lock = vector<mutex> (table_count);
+        lock = vector<spinlock> (table_count);
 
         // Precompute the period for fast shift update kmer binning in bitset representation 
         #if (maxK > 12)     
@@ -235,10 +236,10 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
     switch (quality) {
     case 1:
         case 0: /* no quality check */
-        emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
+        emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const size_t& color) {
             hash_kmer(bin, kmer, color);
         };
-        emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+        emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const size_t& color) {
             hash_kmer_amino(bin, kmer, color);
         };
         break;
@@ -246,7 +247,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
     case 2:
         isAmino ? quality_setAmino.resize(thread_count) : quality_set.resize(thread_count);
         if (q_table.size()>0){
-            emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
+            emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const size_t& color) {
                 if (q_table[color]==1){
                     hash_kmer(bin, kmer, color);
                 } else if (quality_set[T].find(kmer) == quality_set[T].end()) {
@@ -256,7 +257,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                     hash_kmer(bin, kmer, color);
                 }
             };
-            emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+            emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const size_t& color) {
                 if (q_table[color]==1){
                     hash_kmer_amino(bin, kmer, color);
                 } else if (quality_setAmino[T].find(kmer) == quality_setAmino[T].end()) {
@@ -267,7 +268,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                 }
             };
         } else { // global quality value (one if-clause fewer)
-            emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
+            emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const size_t& color) {
                 if (quality_set[T].find(kmer) == quality_set[T].end()) {
                     quality_set[T].emplace(kmer);
                 } else {
@@ -275,7 +276,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                     hash_kmer(bin, kmer, color);
                 }
             };
-            emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+            emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const size_t& color) {
                 if (quality_setAmino[T].find(kmer) == quality_setAmino[T].end()) {
                     quality_setAmino[T].emplace(kmer);
                 } else {
@@ -288,7 +289,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
     default:
         isAmino ? quality_mapAmino.resize(thread_count) : quality_map.resize(thread_count);
         if (q_table.size()>0){
-            emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
+            emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const size_t& color) {
                 if (quality_map[T][kmer] < q_table[color]-1) {
                     quality_map[T][kmer]++;
                 } else {
@@ -296,7 +297,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                     hash_kmer(bin, kmer, color);
                 }
             };
-            emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+            emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const size_t& color) {
                 if (quality_mapAmino[T][kmer] < q_table[color]-1) {
                     quality_mapAmino[T][kmer]++;
                 } else {
@@ -305,7 +306,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                 }
             };
         }else { // global quality value
-            emplace_kmer = [&] (const uint64_t& T, uint64_t& bin, const kmer_t& kmer, const size_t& color) {
+            emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const size_t& color) {
                 if (quality_map[T][kmer] < quality-1) {
                     quality_map[T][kmer]++;
                 } else {
@@ -313,7 +314,7 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
                     hash_kmer(bin, kmer, color);
                 }
             };
-            emplace_kmer_amino = [&] (const uint64_t& T, uint64_t& bin, const kmerAmino_t& kmer, const size_t& color) {
+            emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const size_t& color) {
                 if (quality_mapAmino[T][kmer] < quality-1) {
                     quality_mapAmino[T][kmer]++;
                 } else {
@@ -329,18 +330,15 @@ void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& qual
 
 /**
 * --- [Hash map access] ---
-* The following methods
-* are used to access the entries of the multi_table hash maps
+* The following methods are used to access the entries of the vectorized hash maps
 */ 
 
 /**
  * This method shift-updates the bin of a kmer
  */
 
-uint64_t graph::shift_update_bin(uint64_t& bin, char& c_left, char& c_right)
+uint_fast32_t graph::shift_update_bin(uint_fast32_t& bin, uint_fast8_t& left, uint_fast8_t& right)
 {
-    uint64_t left = util::char_to_bits(c_left);
-    uint64_t right = util::char_to_bits(c_right);
         return (8 * table_count // Bias
             + 4 * (bin - period[2*kmer::k-1] * (left / 2) - (left % 2) * period[2*kmer::k - 2]) // Shift
             + period[1] * (right / 2) + period[0] * (right % 2)) // Update   
@@ -350,11 +348,8 @@ uint64_t graph::shift_update_bin(uint64_t& bin, char& c_left, char& c_right)
 /**
  * This method shift updates the reverse complement bin of a kmer
  */
-uint64_t graph::shift_update_rc_bin(uint64_t& rc_bin, char& c_left, char& c_right)
-{
-    uint64_t left = util::char_to_bits(c_left);
-    uint64_t right = util::char_to_bits(c_right);
-    
+uint_fast32_t graph::shift_update_rc_bin(uint_fast32_t& rc_bin, uint_fast8_t& left, uint_fast8_t& right)
+{   
     // Remove
     rc_bin += 8 * table_count - period[1] * (!(left / 2 )) - period[0] * (!(left % 2 ));
     // First shift
@@ -373,30 +368,24 @@ uint64_t graph::shift_update_rc_bin(uint64_t& rc_bin, char& c_left, char& c_righ
 /**
  * This method shift-updates the bin of an amino kmer
  */
-uint64_t graph::shift_update_amino_bin(uint64_t& bin, kmerAmino_t& kmer, char& c_right)
+uint_fast32_t graph::shift_update_amino_bin(uint_fast32_t& bin, kmerAmino_t& kmer, uint_fast8_t& right)
 {
-    #if (maxK <= 12) // This is not a real shift update due to performance of the build in mod
-        return  kmer % table_count; 
-    #else
-        // update the binning carry (solution of the shift-update-carry equation)
-        uint64_t right = util::amino_char_to_bits(c_right); // Transcode the new character to bits
-        
-        // shift
-        bin = 160 * table_count + // Bias 
-                    32 * (bin // Shift
-                    - kmer.test(5*kmerAmino::k - 1) * period[5*kmerAmino::k - 1]
-                    - kmer.test(5*kmerAmino::k - 2) * period[5*kmerAmino::k - 2]
-                    - kmer.test(5*kmerAmino::k - 3) * period[5*kmerAmino::k - 3]
-                    - kmer.test(5*kmerAmino::k - 4) * period[5*kmerAmino::k - 4]
-                    - kmer.test(5*kmerAmino::k - 5) * period[5*kmerAmino::k - 5]);
-        // update
-        for(int i = 4; i>=0; i--){
-            bin += period[i] * ((right >> i) & 0b1u);
-        }
-        // mod
-        bin %= table_count;
-        return bin;
-    #endif
+    // update the binning carry (solution of the shift-update-carry equation)
+    // shift
+    bin = 160 * table_count + // Bias 
+                32 * (bin // Shift
+                - kmer.test(5*kmerAmino::k - 1) * period[5*kmerAmino::k - 1]
+                - kmer.test(5*kmerAmino::k - 2) * period[5*kmerAmino::k - 2]
+                - kmer.test(5*kmerAmino::k - 3) * period[5*kmerAmino::k - 3]
+                - kmer.test(5*kmerAmino::k - 4) * period[5*kmerAmino::k - 4]
+                - kmer.test(5*kmerAmino::k - 5) * period[5*kmerAmino::k - 5]);
+    // update
+    for(int i = 4; i>=0; i--){
+        bin += period[i] * ((right >> i) & 0b1u);
+    }
+    // mod
+    bin %= table_count;
+    return bin;
 }
 
 /**
@@ -405,19 +394,17 @@ uint64_t graph::shift_update_amino_bin(uint64_t& bin, kmerAmino_t& kmer, char& c
  * @return uint64_t The bin
  */
 #if (maxK <= 32)
-uint64_t graph::compute_bin(const kmer_t& kmer)
+uint_fast32_t graph::compute_bin(const kmer_t& kmer)
 {
-    return hash_in_parallel ? kmer % table_count : 0;
+    return kmer % table_count;
 }
 #else
-uint64_t graph::compute_bin(const kmer_t& kmer)
+uint_fast32_t graph::compute_bin(const kmer_t& kmer)
 {
-	if (!hash_in_parallel){return 0;}
-
-	uint64_t carry = 1;
-	uint64_t rest = 0;
+	uint_fast32_t carry = 1;
+	uint_fast32_t rest = 0;
 	if (kmer.test(0)){rest++;} // Test the last bit
-	for (uint64_t it=1; it < 2 * kmer::k; it++){
+	for (uint_fast32_t it=1; it < 2 * kmer::k; it++){
 	    carry = (2*carry) % table_count;
 	    if (kmer.test(it)){rest += carry;}
 	}
@@ -425,23 +412,21 @@ uint64_t graph::compute_bin(const kmer_t& kmer)
 }
 #endif
 
-#if makX <= 12
-    uint64_t graph::compute_amino_bin(const kmerAmino_t& kmer)
+#if maxK <= 12
+    uint_fast32_t graph::compute_amino_bin(const kmerAmino_t& kmer)
     {
-        return hash_in_parallel ? kmer % table_count : 0;
+        return kmer % table_count;
     }
 #else
-    uint64_t graph::compute_amino_bin(const kmerAmino_t& kmer)
+    uint_fast32_t graph::compute_amino_bin(const kmerAmino_t& kmer)
     {
-	    if (!hash_in_parallel){return 0;}
-	
-	    uint64_t carry = 1;
-	    uint64_t rest = 0;
+	    uint_fast32_t carry = 1;
+	    uint_fast32_t rest = 0;
 
-	    if (kmer[0]){rest++;} // Test the last bit
-	    for (uint64_t it=1; it < 5* kmerAmino::k; it--){
+	    if (kmer.test(0)){rest++;} // Test the last bit
+	    for (uint_fast32_t it=1; it < 5* kmerAmino::k; it--){
 	        carry = (2*carry) % table_count;
-	        if (kmer[it]){rest += carry;}
+	        if (kmer.test(it)){rest += carry;}
 	    }
 	    return rest % table_count;
     }
@@ -454,7 +439,7 @@ uint64_t graph::compute_bin(const kmer_t& kmer)
 *  @param kmer The kmer to store
 *  @param color The color to store 
 */
-void graph::hash_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
+void graph::hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint64_t& color)
 {
     // std::lock_guard<mutex> lg(lock[bin]); 
     // kmer_table[bin][kmer].set(color);
@@ -463,20 +448,6 @@ void graph::hash_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color)
     Index::add_colored_kmer(kmer, bin, color);
 }   
 
-/**
-* This function hashes a k-mer and stores it in the correstponding hash table.
-* The corresponding table is chosen by the carry of the encoded k-mer given the number of tables as module.
-*  @param kmer The kmer to store
-*  @param color The color to store 
-*/
-void graph::hash_kmer(const kmer_t& kmer, const uint64_t& color)
-{
-    uint64_t table_id = compute_bin(kmer);
-    std::lock_guard<mutex> lg(lock[table_id]); 
-    kmer_table[table_id][kmer].set(color);
-}
-
-
 
 /**
  * This function hashes an amino k-mer and stores it in the corresponding hash table.
@@ -484,25 +455,12 @@ void graph::hash_kmer(const kmer_t& kmer, const uint64_t& color)
  * @param kmer The kmer to store
  * @param color The color to store
  */
-void graph::hash_kmer_amino(uint64_t& bin, const kmerAmino_t& kmer, const uint64_t& color)
+void graph::hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint64_t& color)
 {
-    std::lock_guard<mutex> lg(lock[bin]);
+    lock[bin].lock();
     kmer_tableAmino[bin][kmer].set(color);
+    lock[bin].unlock();
 }
-
-/**
- * This function hashes an amino k-mer and stores it in the corresponding hash table.
- * The correspontind table is chosen by the carry of the encoded k-mer bitset by the bit-module function.
- * @param kmer The kmer to store
- * @param color The color to store
- */
-void graph::hash_kmer_amino(const kmerAmino_t& kmer, const uint64_t& color)
-{
-    uint64_t table_id = compute_amino_bin(kmer);
-    std::lock_guard<mutex> lg(lock[table_id]); 
-    kmer_tableAmino[table_id][kmer].set(color);
-}
-
 
 /**
  * This function searches the corresponding hash table for the given kmer
@@ -560,6 +518,11 @@ void graph::remove_kmer_amino(const kmerAmino_t& kmer){
     kmer_tableAmino[compute_amino_bin(kmer)].erase(kmer);
 }
 
+/*
+*
+* [Sequence processing]
+*
+*/
 
 /**
  * This function extracts k-mers from a sequence and adds them to the hash table.
@@ -571,16 +534,17 @@ void graph::remove_kmer_amino(const kmerAmino_t& kmer){
 void graph::add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse) {
     if (str.length() < kmer::k) return;    // not enough characters
 
-    uint64_t bin = 0; // current hash_map vector index
-    uint64_t rc_bin = 0; // current reverse hash_map vector index
-    uint64_t amino_bin = 0; 
+    uint_fast32_t bin = 0; // current hash_map vector index
+    uint_fast32_t rc_bin = 0; // current reverse hash_map vector index
 
     uint64_t pos;    // current position in the string, from 0 to length
 
     kmer_t kmer;    // create a new empty bit sequence for the k-mer
     kmer_t rcmer; // create a bit sequence for the reverse complement
 
-    char left;  // The character that is shifted out 
+
+    uint_fast8_t left;  // The character that is shifted out 
+    uint_fast8_t right; // The binary code of the character that is shifted in
 
     #if maxK > 32
     if (!isAmino){
@@ -594,8 +558,8 @@ void graph::add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse) 
     uint64_t begin = 0;
     
     next_kmer:
-    pos = begin;
 
+    pos = begin;
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         if (!isAllowedChar(pos, str)) {
             begin = pos+1;    // str = str.substr(pos+1, string::npos);
@@ -603,37 +567,47 @@ void graph::add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse) 
         }
         // DNA processing 
         if (!isAmino) {
-            left = kmer::shift_right(kmer, str[pos]);    // shift each base into the bit sequence
+            right = util::char_to_bits(str[pos]);
             #if maxK <= 32
-                bin = kmer % table_count; // Simple update of the forward complement bin
-            #else
-                bin = shift_update_bin(bin, left, str[pos]); // Shift update the forward complement bin
-            #endif
+                kmer::shift(kmer, right); // shift each base into the bit sequence
+                rcmer = kmer;
 
-            // Reverse complement handling
-            rcmer = kmer;
-	        if (reverse){
-                kmer::reverse_complement(rcmer); // invert the k-mer
-                #if maxK <= 32
+                bin = kmer % table_count; // update the forward bin
+	            if (reverse){
+                    kmer::reverse_complement(rcmer); // invert the k-mer
                     rc_bin = rcmer % table_count;
-                #else
-                    rc_bin = shift_update_rc_bin(rc_bin, left, str[pos]);  // Update the reverse complement table index
-                #endif
-            }
-            // The current word is a k-mer
+                }
+            #else
+                left = 2*kmer.test(2*kmer::k-1)+kmer.test(2*kmer::k-2); // old leftmost character
+                bin = shift_update_bin(bin, left, right); // Shift update the forward complement bin
+                
+                kmer::shift(kmer, right); // shift each base into the bit sequence
+                rcmer = kmer;
+                if (reverse){
+                    kmer::reverse_complement(rcmer);
+                    rc_bin = shift_update_rc_bin(rc_bin, left, right);  // Update the reverse complement table index
+                }
+            #endif
+             // If the current word is a k-mer
             if (pos+1 - begin >= kmer::k) {
                 rcmer < kmer ? emplace_kmer(T, rc_bin, rcmer, color) : emplace_kmer(T, bin, kmer, color);
             }
         
         // Amino processing
         } else {
-            amino_bin = shift_update_amino_bin(amino_bin, kmerAmino, str[pos]);
-            kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
+            right = util::amino_char_to_bits(str[pos]);
+            #if maxK <= 12
+                kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
+                bin = kmerAmino % table_count;
+            #else
+                bin = shift_update_amino_bin(bin, kmerAmino, right);
+                kmerAmino::shift_right(kmerAmino, str[pos]);
+            #endif
             // The current word is a k-mer
             if (pos+1 - begin >= kmerAmino::k) {
                 // shift update the bin
                 // Insert the k-mer into its table
-                emplace_kmer_amino(T, amino_bin, kmerAmino, color);  // update the k-mer with the current color
+                emplace_kmer_amino(T, bin, kmerAmino, color);  // update the k-mer with the current color
             }
         }
     }
@@ -670,8 +644,8 @@ next_kmer:
     value_order.clear();
     sequence_order_Amino.clear();
     
-    uint64_t bin = 0;
-    uint64_t amino_bin = 0;
+    uint_fast32_t bin = 0;
+    uint_fast32_t amino_bin = 0;
 
     for (; pos < str.length(); ++pos) {    // collect the bases from the string
         if (!isAllowedChar(pos, str)) {
@@ -700,9 +674,8 @@ next_kmer:
                 }
             }
         } else {
-            shift_update_amino_bin(amino_bin, kmerAmino, str[pos]);
             kmerAmino::shift_right(kmerAmino, str[pos]);    // shift each base into the bit sequence
-
+            bin = compute_amino_bin(kmerAmino);
             if (pos+1 - begin >= kmerAmino::k) {
                 if (sequence_order.size() == m) {
                     value_order_Amino.erase(*sequence_order_Amino.begin());    // remove k-mer outside the window
@@ -747,7 +720,7 @@ bool graph::isAllowedChar(uint64_t pos, string &str) {
 void graph::add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac) {
     if (str.length() < (!isAmino ? kmer::k : kmerAmino::k)) return;    // not enough characters
 
-    uint64_t bin = 0;
+    uint_fast32_t bin = 0;
 
     if (!isAmino) {
         hash_set<kmer_t> ping;    // create a new empty set for the k-mers
@@ -853,7 +826,7 @@ void graph::add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse, 
 void graph::add_minimizers(uint64_t& T, string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac) {
     if (str.length() < (!isAmino ? kmer::k : kmerAmino::k)) return;    // not enough characters
 
-    uint64_t bin = 0;
+    uint_fast32_t bin = 0;
 
    if (!isAmino) {
        vector<kmer_t> sequence_order;    // k-mers ordered by their position in sequence
@@ -1147,6 +1120,68 @@ void graph::iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>
 }
 
 /**
+ * This function clears color-related temporary files.
+ */
+void graph::clear_thread(uint64_t& T) {
+    switch (quality) {
+        case 1:  case 0: break;
+        case 2:  quality_set[T].clear(); break;
+        default: quality_map[T].clear(); break;
+    }
+}
+
+/**
+ * This function computes a color table entry from the current kmer map and a cdbg colored kmer. 
+ * (To call befor add_weights)
+ * @param seq kmer
+ * @param kmer_color the split colors
+ * @param min_value the minimal weight represented in the top list
+ */
+void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value){
+    
+    bool has_kmers = false; 
+    for (auto table : kmer_table){if(!table.empty()){has_kmers = true; break;}} // Check if any entries exist
+
+    if (has_kmers){ // check if the kmer is already stored
+        kmer_t kmer; // create a kmer to search in the set of tables
+
+        for (int pos=0; pos < kmer_seq.length(); ++pos) // collect the bases from the k-mer sequence.
+        {
+            kmer::shift(kmer, kmer_seq[pos]);
+        }
+
+	    bool reversed = kmer::reverse_represent(kmer);
+
+        if (search_kmer(kmer)){ // Check if additional colors are stored for this kmer
+            // Get the colors stored for this kmer
+            color_t hashed_color = get_color(kmer, reversed); // the currently stored colores of the kmer
+            for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
+                    if(hashed_color.test(pos) && !kmer_color.test(pos)){ // test if the color is set in the stored color set
+                        kmer_color.set(pos);
+                    }
+           }
+           // Remove the kmer from the hash table
+           remove_kmer(kmer, reversed); // remove the kmer from the table
+	   }
+    }            
+    //Todo 
+    bool pos = color::represent(kmer_color);  // invert the color set, if necessary
+    if (kmer_color == 0) return; // ignore empty splits
+    // min_value = add_weight(kmer_color, mean, min_value, pos); // compute weight
+	array<uint32_t,2>& weight = color_table[kmer_color]; // get the weight and inverse weight for the color set
+	weight[pos]++; // update the weight or the inverse weight of the current color set
+}
+
+/*
+*
+* [Color table processing]
+*
+*/
+
+
+
+
+/**
  * This function calculates the weight for all splits and puts them into the split_ölist
  * @param mean weight function
  * @param min_value the minimal weight represented in the top list
@@ -1177,74 +1212,6 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
 		it++;
 	}
 }
-
-
-
-/**
- * This function generates a bootstrap replicate. We mimic drawing n k-mers at random with replacement from all n observed k-mers. Say a k-mer would be drawn x times. Instead, we calculate x for each k-mer (in each split in color_table) from a binomial distribution (n repetitions, 1/n success rate) and calculate a new split weight according to the new number of k-mers.
- * @param mean weight function
- * @return the new list of splits of length at least t ordered by weight as usual
- */
-multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t&, uint32_t&)) {
-
-	uint64_t max = 0;
-	
-	if (isAmino){ // use the sum of amino table sizes
-		for (auto table: kmer_tableAmino){max += table.size();}
-	} else { // use the sum of base table sizeskmer_table.size(); 
-		for (auto table: kmer_table){max+=table.size();}
-	}
-
-	std::random_device rd;
-	std::mt19937 gen(rd());
-
-	multiset<pair<double, color_t>, greater<>> sl;
-	double min_value=0;
-
-	// perform n time max trials, each succeeds 1/max
-	std::binomial_distribution<> d(max, 1.0/max);
-	
-	// Iterating over the map using Iterator till map end.
-	hash_map<color_t, array<uint32_t,2>>::iterator it = color_table.begin();
-	while (it != color_table.end())	{
-
-		// Accessing the key
-		color_t colors = it->first;
-		
-		// Accessing the value
-		array<uint32_t,2> weights = it->second;
-		
-		// bootstrap the number of kmer occurrences for split and inverse
-		array<uint32_t,2> new_weights;
-		new_weights[0]=0;
-		new_weights[1]=0;
-		for (int i=0;i<2;i++) {
-			for (int r=0;r<weights[i];r++){
-				new_weights[i] += d(gen);
-			}
-// 			uint64_t n = weights[i]*max;
-// 			std::binomial_distribution<> dn(n, 1.0/max);
-// 			cout << weights[i] << "\t" << dn(gen) << "\t" << new_weights[i] << "\n" << flush;
-		}
-		
-		//insert into new split list
-		double new_mean = mean(new_weights[0], new_weights[1]);    // calculate the new mean value
-		if (new_mean >= min_value) {    // if it is greater than the min. value, add it to the top list
-			sl.emplace(new_mean, colors);    // insert it at the correct position ordered by weight
-			if (sl.size() > t) {
-				sl.erase(--sl.end());    // if the top list exceeds its limit, erase the last entry
-				min_value = sl.rbegin()->first;    // update the min. value for the next iteration (only necessary of t is exceeded, otherwise min_value does not play a role.
-			}
-		}
-		
-		// iterator incremented to point next item
-		it++;
-		
-	}
-
-	return sl;
-}
-
 
 /**
  * This function iterates over the hash table and calculates the split weights.
@@ -1345,6 +1312,74 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
 */
 }
 
+
+
+/**
+ * This function generates a bootstrap replicate. We mimic drawing n k-mers at random with replacement from all n observed k-mers. Say a k-mer would be drawn x times. Instead, we calculate x for each k-mer (in each split in color_table) from a binomial distribution (n repetitions, 1/n success rate) and calculate a new split weight according to the new number of k-mers.
+ * @param mean weight function
+ * @return the new list of splits of length at least t ordered by weight as usual
+ */
+multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t&, uint32_t&)) {
+
+	uint64_t max = 0;
+	
+	if (isAmino){ // use the sum of amino table sizes
+		for (auto table: kmer_tableAmino){max += table.size();}
+	} else { // use the sum of base table sizeskmer_table.size(); 
+		for (auto table: kmer_table){max+=table.size();}
+	}
+
+	std::random_device rd;
+	std::mt19937 gen(rd());
+
+	multiset<pair<double, color_t>, greater<>> sl;
+	double min_value=0;
+
+	// perform n time max trials, each succeeds 1/max
+	std::binomial_distribution<> d(max, 1.0/max);
+	
+	// Iterating over the map using Iterator till map end.
+	hash_map<color_t, array<uint32_t,2>>::iterator it = color_table.begin();
+	while (it != color_table.end())	{
+
+		// Accessing the key
+		color_t colors = it->first;
+		
+		// Accessing the value
+		array<uint32_t,2> weights = it->second;
+		
+		// bootstrap the number of kmer occurrences for split and inverse
+		array<uint32_t,2> new_weights;
+		new_weights[0]=0;
+		new_weights[1]=0;
+		for (int i=0;i<2;i++) {
+			for (int r=0;r<weights[i];r++){
+				new_weights[i] += d(gen);
+			}
+// 			uint64_t n = weights[i]*max;
+// 			std::binomial_distribution<> dn(n, 1.0/max);
+// 			cout << weights[i] << "\t" << dn(gen) << "\t" << new_weights[i] << "\n" << flush;
+		}
+		
+		//insert into new split list
+		double new_mean = mean(new_weights[0], new_weights[1]);    // calculate the new mean value
+		if (new_mean >= min_value) {    // if it is greater than the min. value, add it to the top list
+			sl.emplace(new_mean, colors);    // insert it at the correct position ordered by weight
+			if (sl.size() > t) {
+				sl.erase(--sl.end());    // if the top list exceeds its limit, erase the last entry
+				min_value = sl.rbegin()->first;    // update the min. value for the next iteration (only necessary of t is exceeded, otherwise min_value does not play a role.
+			}
+		}
+		
+		// iterator incremented to point next item
+		it++;
+		
+	}
+
+	return sl;
+}
+
+
 /**
  * This function calls add_split onthe global split_list
  *
@@ -1369,60 +1404,11 @@ void graph::add_split(double& weight, color_t& color, multiset<pair<double, colo
     }
 }
 
-
-/**
- * This function computes a split from the current map and cdbg colored kmer. 
- * 
- * @param seq kmer
- * @param kmer_color the split colors
- * @param min_value the minimal weight represented in the top list
- */
-void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value){
-    
-    bool has_kmers = false; 
-    for (auto table : kmer_table){if(!table.empty()){has_kmers = true; break;}} // Check if any entries exist
-
-    if (has_kmers){ // check if the kmer is already stored
-        kmer_t kmer; // create a kmer to search in the set of tables
-
-        for (int pos=0; pos < kmer_seq.length(); ++pos) // collect the bases from the k-mer sequence.
-        {
-            kmer::shift(kmer, kmer_seq[pos]);
-        }
-
-	    bool reversed = kmer::reverse_represent(kmer);
-
-        if (search_kmer(kmer)){ // Check if additional colors are stored for this kmer
-            // Get the colors stored for this kmer
-            color_t hashed_color = get_color(kmer, reversed); // the currently stored colores of the kmer
-            for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
-                    if(hashed_color.test(pos) && !kmer_color.test(pos)){ // test if the color is set in the stored color set
-                        kmer_color.set(pos);
-                    }
-           }
-           // Remove the kmer from the hash table
-           remove_kmer(kmer, reversed); // remove the kmer from the table
-	   }
-    }            
-    //Todo 
-    bool pos = color::represent(kmer_color);  // invert the color set, if necessary
-    if (kmer_color == 0) return; // ignore empty splits
-    // min_value = add_weight(kmer_color, mean, min_value, pos); // compute weight
-	array<uint32_t,2>& weight = color_table[kmer_color]; // get the weight and inverse weight for the color set
-	weight[pos]++; // update the weight or the inverse weight of the current color set
-}
-
-/**
- * This function clears color-related temporary files.
- */
-void graph::clear_thread(uint64_t& T) {
-    switch (quality) {
-        case 1:  case 0: break;
-        case 2:  quality_set[T].clear(); break;
-        default: quality_map[T].clear(); break;
-    }
-}
-
+/*
+*
+* [Filtering]
+*
+*/
 
 
 /**

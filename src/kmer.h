@@ -13,6 +13,8 @@ using namespace std;
 #define LEX_INTEGER_COMPARATORS
 #include "byte.h"
 
+#include "util.h"
+
 /**
  * This class contains functions for working with k-mer types.
  */
@@ -46,16 +48,16 @@ class kmer {
      * @param kmer bit sequence
      * @param chr right character
      */
-    static void shift(kmer_t& kmer, const char& chr);
+    static void shift(kmer_t& kmer, uint8_t& right);
 
-    /**
-     * This function shifts a k-mer adding a new character to the right.
-     *
-     * @param kmer bit sequence
-     * @param c right character
-     * @return left character
-     */
-    static char shift_right(kmer_t& kmer, char& c);
+
+   /**
+    * This function shifts a k-mer appending a new character to the right.
+    *
+    * @param kmer bit sequence
+    * @param chr right character
+    */
+    static void shift(kmer_t& kmer, char& c_right);
 
     /**
      * This function unshifts a k-mer returning the character on the right.
@@ -79,24 +81,5 @@ class kmer {
      * @return 1 if inverted, 0 otherwise
      */
     static bool reverse_represent(kmer_t& kmer);
-
-
- protected:
-
-    /**
-     * This function encodes a single character as two bits.
-     *
-     * @param chr character
-     * @return bit sequence
-     */
-    static uint2K_t char_to_bits(const char& chr);
-
-    /**
-     * This function decodes two bits to a single character.
-     *
-     * @param b bit sequence
-     * @param chr character
-     */
-    static void bits_to_char(const uint2K_t& b, char& chr);
 
 };

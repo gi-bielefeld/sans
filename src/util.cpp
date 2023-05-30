@@ -122,7 +122,7 @@ string util::format_time(chrono::high_resolution_clock::duration time) {
  * @param c character
  * @return bit sequence
  */
-uint64_t util::char_to_bits(char& c) {
+uint64_t util::char_to_bits(const char& c) {
     switch (c) {
         case 'A':
             return 0b00u;

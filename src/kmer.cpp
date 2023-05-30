@@ -21,27 +21,27 @@ void kmer::init(const size2K_t& length) {
  * This function shifts a k-mer appending a new character to the right.
  *
  * @param kmer bit sequence
+ * @param uint_fast8_t right character in binary-code
+ */
+void kmer::shift(kmer_t& kmer, uint_fast8_t& right) {
+    kmer <<= 02u;    // shift all current bits to the left by two positions
+    kmer |= right;    // encode the new rightmost character
+    kmer &= mask;    // set all bits to zero that exceed the k-mer length
+}
+
+/**
+ * This function shifts a k-mer appending a new character to the right.
+ *
+ * @param kmer bit sequence
  * @param chr right character
  */
-void kmer::shift(kmer_t& kmer, const char& chr) {
+void kmer::shift(kmer_t& kmer, char& c_right) {
     kmer <<= 02u;    // shift all current bits to the left by two positions
-    kmer |= char_to_bits(chr);    // encode the new rightmost character
+    kmer |= util::char_to_bits(c_right);    // encode the new rightmost character
     kmer &= mask;    // set all bits to zero that exceed the k-mer length
 }
 
-char kmer::shift_right(kmer_t& kmer, char& c) {
-    uint64_t left = 2*kmer.test(2*k-1)+kmer.test(2*k-2);    // old leftmost character
-    char c_left;
 
-    uint64_t right = char_to_bits(c);    // new rightmost character
-
-    kmer <<= 02u;    // shift all current bits to the left by two positions
-    kmer |= right;    // encode the new character within the rightmost two bits
-    kmer &= mask;    // set all bits to zero that exceed the k-mer length
-
-    bits_to_char(left, c_left);    // return the dropped leftmost character
-    return c_left;
-}
 
 /**
  * This function unshifts a k-mer returning the character on the right.
@@ -50,9 +50,7 @@ char kmer::shift_right(kmer_t& kmer, char& c) {
  * @param chr right character
  */
 void kmer::unshift(kmer_t& kmer, char& chr) {
-    bits_to_char(kmer & 0b11u, chr);    // return the rightmost character
     kmer >>= 02u;    // shift all current bits to the right by two positions
-//  kmer &= mask;    // set all bits to zero that exceed the k-mer length
 }
 
 /**
@@ -90,37 +88,3 @@ bool kmer::reverse_represent(kmer_t& kmer) {
     else kmer = rcmp; return true;    // reversed
 }
 
-/**
- * This function encodes a single character as two bits.
- *
- * @param chr character
- * @return bit encoding
- */
-uint2K_t kmer::char_to_bits(const char& chr) {
-    switch (chr) {
-        case 'A': return 0b00u;
-        case 'C': return 0b01u;
-        case 'G': return 0b10u;
-        case 'T': return 0b11u;
-        default:
-            cerr << "Error: invalid character: " << chr << endl;
-            return -1;
-    }
-}
-
-/**
- * This function decodes two bits to a single character.
- *
- * @param b bit encoding
- * @param chr character
- */
-void kmer::bits_to_char(const uint2K_t& b, char& chr) {
-    switch (b) {
-        case 0b00u: chr = 'A'; break;
-        case 0b01u: chr = 'C'; break;
-        case 0b10u: chr = 'G'; break;
-        case 0b11u: chr = 'T'; break;
-        default:
-            cerr << "Error: invalid bit encoding: " << b << endl;
-    }
-}

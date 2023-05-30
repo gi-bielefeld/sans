@@ -42,19 +42,6 @@ class kmerAmino {
      */
     static void init(const size5K_t& length);
 
-   /**
-   * This method returns the first character of the kmer in binary cody
-   * @param kmer bit sequence
-   */
-   static uint5K_t head(kmerAmino_t& kmer);
-
-
-   /**
-   * This method returns the last character of the kmer in binary code
-   * @param kmer bit sequence
-   */
-   static uint5K_t tail(kmerAmino_t& kmer);
-
     /**
      * This function shifts a k-mer appending a new character to the right.
      *

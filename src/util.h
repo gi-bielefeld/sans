@@ -73,7 +73,7 @@ public:
      * @param c character
      * @return bit sequence
      */
-    static uint64_t char_to_bits(char& c);
+    static uint64_t char_to_bits(const char& c);
 
     /**
      * This function decodes two bits to a single character.

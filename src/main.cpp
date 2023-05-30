@@ -210,6 +210,8 @@ int main(int argc, char* argv[]) {
             input = argv[++i];    // Input file: list of sequence files, one per line
         }
         else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graph") == 0) {
+            cout << "Error: Graph support is currently disabled, due to a bug" << endl;
+            return 0;
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             graph = argv[++i];    // Graph file: load a Bifrost graph, file name prefix
             #ifndef useBF
