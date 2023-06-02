@@ -141,9 +141,9 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
  * @param quality global q or maximum among all q values
  */
 
-void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, uint64_t& thread_count) {
+void graph::init(uint64_t& top_size, uint64_t& num, bool amino, vector<int>& q_table, int& quality, uint64_t& thread_count) {
 
-    Index::init();
+    Index::init(num);
 
     t = top_size;
     isAmino = amino;
@@ -1221,7 +1221,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
  * @param verbose print progess
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
-
+    
     uint64_t kmers_in_table = 0;
     uint64_t kmers_in_index = 0;
     for (auto table: kmer_table){kmers_in_table += table.size();}
@@ -1229,17 +1229,14 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     cout << "TABLE_KMERS: " << kmers_in_table << endl;
     cout << "INDEX_KMERS: " << kmers_in_index << endl;
 
-    for (auto table : Index::kmerMatrix)
+    for (auto table : Index::support)
     {
         for (auto it : table)
         {
-            uint64_t color_bin = it.second % table_count;
-            color_t color = Index::color_by_id[color_bin][it.second];
-            bool pos = color::represent(color);    // invert the color set, if necessary
+            uint64_t color_bin = it.first % table_count;
+            color_t color = Index::color_by_id[color_bin][it.first];
             if (color == 0) continue;    // ignore empty splits
-            // add_weight(color, mean, min_value, pos);
-            array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-            weight[pos]++; // update the weight or the inverse weight of the current color set
+            color_table[color] = it.second;
         }
     }
     /*

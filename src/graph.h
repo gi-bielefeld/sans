@@ -178,7 +178,7 @@ public:
      * @param bins hash_tables to use for parallel processing
      * @param thread_count the number of threads used for processing
      */
-    static void init(uint64_t& top_size, bool isAmino, vector<int>& q_table, int& quality, uint64_t& thread_count);
+    static void init(uint64_t& top_size, uint64_t& num, bool isAmino, vector<int>& q_table, int& quality, uint64_t& thread_count);
 
 
 

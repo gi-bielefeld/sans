@@ -716,7 +716,7 @@ int main(int argc, char* argv[]) {
     kmer::init(kmer);      // initialize the k-mer length
     kmerAmino::init(kmer); // initialize the k-mer length
     color::init(num);    // initialize the color number
-    graph::init(top, amino, q_table, quality, threads); // initialize the toplist size and the allowed characters
+    graph::init(top, num, amino, q_table, quality, threads); // initialize the toplist size and the allowed characters
 
     /**
      *  --- Split processing ---

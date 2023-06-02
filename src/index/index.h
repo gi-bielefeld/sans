@@ -1,6 +1,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <array>
 
 #include <map>
 #include <set>
@@ -47,11 +48,13 @@ class Index
 
         static vector<hash_map<color_t, uint64_t>> id_by_color;
         static vector<hash_map<uint64_t, color_t>> color_by_id;
-        static vector<hash_map<uint64_t, uint64_t>> support;
+        static vector<hash_map<uint64_t, array<uint32_t, 2>>> support;
 
+        static uint64_t relevant_bits; // number of targets
         static vector<uint64_t> color_period;
+        static uint64_t color_period_sum;
 
-        static void init();
+        static void init(uint64_t num);
 
         static void add_colored_kmer(const kmer_t& kmer, uint64_t& kmer_bin, const uint64_t& color);
 
