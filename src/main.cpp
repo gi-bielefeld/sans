@@ -14,14 +14,14 @@
  * @return exit status
  */
 int main(int argc, char* argv[]) {
+
     /**
-    * [Info]
-    * --- Help page ---
-    * - Print the help page to console
-    * - Describes the program arguments
+    * [help page definition]
+    * - show the help page
+    * - describes the software and argument usage
     */
 
-    if (argc <= 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) {
+    auto show_help_page = [](){
         cout << endl;
         cout << "SANS serif | version " << SANS_VERSION << endl;
         cout << "Usage: SANS [PARAMETERS]" << endl;
@@ -33,9 +33,9 @@ int main(int argc, char* argv[]) {
         cout << "                  \t Or: kmtricks input format (see https://github.com/tlemane/kmtricks)" << endl;
         cout << endl;
         cout << "    -g, --graph   \t Graph file: load a Bifrost graph, file name prefix" << endl;
-#ifndef useBF
+        #ifndef useBF
         cout << "                  \t (requires compiler flag -DuseBF, please edit makefile)" << endl;
-#endif
+        #endif
         cout << endl;
         cout << "    -s, --splits  \t Splits file: load an existing list of splits file" << endl;
         cout << "                  \t (allows to filter -t/-f, other arguments are ignored)" << endl;
@@ -110,21 +110,20 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -h, --help    \t Display this help page and quit" << endl;
         cout << endl;
-        cout << "    -d, --debug \t Show debug information" << endl;
-        cout << endl;
         cout << "  Contact: sans-service@cebitec.uni-bielefeld.de" << endl;
         cout << "  Evaluation: https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans" << endl;
         cout << endl;
-        return 0;
-    }
+    };
 
+    // show the help page if no args are given or the arg is --help 
+    if (argc <= 1 || strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0) { show_help_page(); return(0);}
 
     /**
-    * [Meta]
-    * --- Defaults ---
-    * - Initialise meta variables and set defaults
+    * [argument and meta variable initialization]
+    * defaults are set here
     */
 
+    // file definitions
     string input;    // name of input file
     string graph;    // name of graph file
     string splits;    // name of splits file
@@ -132,42 +131,89 @@ int main(int argc, char* argv[]) {
     string newick;    // name of newick output file // Todo
     string translate; // name of translate file
 
-    uint64_t kmer = 31;    // length of k-mers
-    uint64_t window = 1;    // number of k-mers
+    // input
     uint64_t num = 0;    // number of input files
-    uint64_t top = -1;    // number of splits
-    bool dyn_top = false; // bind number of splits to num
 
-    uint64_t threads = thread::hardware_concurrency(); // The number of threads to run on
+    // automatic recompilation
+    string path = "./makefile"; // path to makefile for automatic recompilation
+    bool check_n = false; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
 
-    bool debug = false;
+    // kmer args --
+    bool userKmer = false; // is k-mer default or custom
+    uint64_t kmer = 31;    // length of k-mers
+    uint64_t window = 1;    // number of k-mers in a minimizer window
 
-    auto mean = util::geometric_mean2;    // weight function
-    string filter;    // filter function
-    string consensus_filter; // filter function for filtering after bootstrapping
-    uint64_t iupac = 1;    // allow extended iupac characters
-	int quality = 1;    // min. coverage threshold for k-mers (if individual q values per file are given, this is the maximum among all)
+    // kmer preprocessing and filtering
     bool reverse = true;    // consider reverse complement k-mers
-    bool verbose = false;    // print messages during execution
+    uint64_t iupac = 1;    // allow extended iupac characters
+    int quality = 1;    // min. coverage threshold for k-mers (if individual q values per file are given, this is the maximum among all)
 
+    // amino processing
     bool amino = false;      // input files are amino acid sequences
     bool shouldTranslate = false;   // translate input files
-    bool userKmer = false; // is k-mer default or custom
-    bool check_n = false; // compare num (number of input genomes) to maxN (compile parameter DmaxN)
-    string path = "./makefile"; // path to makefile
     uint64_t code = 1;
+
+    // split processing
+    auto mean = util::geometric_mean2;    // weight function
+    string filter;    // filter function
+
+    // output limiter
+    uint64_t top = -1;    // maximal number of splits to compute
+    bool dyn_top = false; // use multiplicity of inputs as maximal number of splits
+
+    // parallel hashing
+    uint64_t threads = thread::hardware_concurrency(); // The number of threads to run on (default is #cores including smt / ht)
+
+    // bootsrapping
+    string consensus_filter; // filter function for filtering after bootstrapping
 	uint32_t bootstrap_no=0; // = no bootstrapping
 
+    // qol
+    bool verbose = false;    // print messages during execution
+
     /**
-     * --- Argument parser ---
-     * - Parse the command line arguments and update the meta variables accordingly
+     * [argument parser]
+     * - parse the command line arguments and update the meta variables accordingly
      */
+
+    // this lambda function throws an error, if a dependent argument is NULL
+    auto catch_missing_dependent_args = [] (auto arg, string parent)
+    {
+        if(arg == NULL){cerr << "Error: Missing dependent argument after " << parent << endl;exit(1);}
+    };
+
+    // this lambda function throws an error if the target arg-string could not be parsed as int 
+    auto catch_failed_stoi_cast = [] (auto arg, string parent)
+    {
+    try {stoi(arg);}
+    catch( invalid_argument &excp )    {cerr << "Error: Invalid dependent argument: '" << arg << "' at: " << parent << " " << arg << endl; cerr << endl; exit(1);}
+    };
+
+    // this lambda function asks for user confirmation
+    auto ask_for_user_confirmation = [] ()
+    {
+        string user_confirmation;
+        int requests = 0;
+        cout << "Please enter 'yes' or 'no'" << endl;
+        while (requests <= 5)
+        {
+            getline(cin, user_confirmation);
+            if (user_confirmation.compare("yes") == 0){return true;}
+            if (user_confirmation.compare("no") == 0){return false;}
+            requests++;
+        }
+        return false;
+    };   
 
     for (int i = 1; i < argc; ++i) {
         if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--input") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             input = argv[++i];    // Input file: list of sequence files, one per line
         }
         else if (strcmp(argv[i], "-g") == 0 || strcmp(argv[i], "--graph") == 0) {
+            cout << "Error: Graph support is currently disabled, due to a bug" << endl;
+            return 0;
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             graph = argv[++i];    // Graph file: load a Bifrost graph, file name prefix
             #ifndef useBF
                 cerr << "Error: requires compiler flag -DuseBF" << endl;
@@ -175,15 +221,20 @@ int main(int argc, char* argv[]) {
             #endif
         }
         else if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--splits") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             splits = argv[++i];    // Splits file: load an existing list of splits file
         }
         else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             output = argv[++i];    // Output file: list of splits, sorted by weight desc.
         }
         else if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--newick") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             newick = argv[++i];    // Output newick file
         }
-        else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0) {
+        else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0) {            
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+
             kmer = stoi(argv[++i]);    // Length of k-mers (default: 31, 10 for amino acids)
             userKmer = true;
         }
@@ -194,6 +245,8 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
             i++;
             string top_str = argv[i];
             top = stoi(top_str); // Number of splits (default: all)
@@ -203,6 +256,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mean") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             string arg = argv[++i];    // Mean weight function to handle asymmetric splits
             if (arg == "arith") {
                 mean = util::arithmetic_mean;
@@ -219,6 +273,7 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--filter") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
             filter = argv[++i];    // Filter a greedy maximum weight subset
             if (filter == "strict" || filter == "tree") {
                 // compatible to a tree
@@ -250,9 +305,13 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (strcmp(argv[i], "-x") == 0 || strcmp(argv[i], "--iupac") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
             iupac = stoi(argv[++i]);    // Extended IUPAC alphabet, resolve ambiguous bases
         }
         else if (strcmp(argv[i], "-q") == 0 || strcmp(argv[i], "--qualify") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
             quality = stoi(argv[++i]);    // Discard k-mers below a min. coverage threshold
         }
         else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--norev") == 0) {
@@ -282,15 +341,27 @@ int main(int argc, char* argv[]) {
             }
             shouldTranslate = true;
         }
-        // Parallelization 
+        // parallelization 
         else if (strcmp(argv[i], "-T") == 0 || strcmp(argv[i], "--threads") == 0){ 
-            threads = stoi(argv[++i]);  // The number of threads to run
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
+            threads = stoi(argv[++i]); // Number of threads to create
+            // Catch negative thread count
+            if (threads <= 0) 
+            {
+                cerr << "Error: processing requires at least one thread" << threads << endl;
+            }
+            // Ask for user confirmation if the number of threads exceeds 64
+            else if(threads > 64)
+            {
+                cout << "Are you sure you want to create " << threads << " threads?" << endl;
+                if (!ask_for_user_confirmation()){return 0;}
+            }
         }
-
-        else if (strcmp(argv[i], "-d") == 0 || strcmp(argv[i], "--debug") == 0){
-            debug = true;    // Debug mode shows internal information
-        }
+        // bootsrapping
         else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--bootstrapping") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
             bootstrap_no = stoi(argv[++i]);
         }
         else if (strcmp(argv[i], "-C") == 0 || strcmp(argv[i], "--consensus") == 0) {
@@ -332,8 +403,8 @@ int main(int argc, char* argv[]) {
 
     
     /**
-     * --- Version check --- 
-     * - Request the current SANS version from gitlab and check if this version is up to date (Requires wget)
+     *   [version check]
+     *   request the current SANS version from gitlab and check if this version is up to date (requires wget)
      */
 
     if (verbose){cout << "Checking for updates" << endl;}
@@ -349,17 +420,9 @@ int main(int argc, char* argv[]) {
 
 
     /**
-     * --- Restriction check ---
+     *  [restriction check]
      * - Check if the given argument configuration does violate any run restrictions
      */ 
-    if (!userKmer) {
-        if (amino || shouldTranslate) {
-            kmer = 10;
-        } else {
-            kmer = 31;
-        }
-    }
-
     if (input.empty() && graph.empty() && splits.empty()) {
         cerr << "Error: missing argument: --input <file_name> or --graph <file_name>" << endl;
         return 1;
@@ -433,36 +496,35 @@ int main(int argc, char* argv[]) {
 	}
 
 
+    /*[processing setup]
+    *
+    * prepare the processing based on the input
+    */
 
-    // --- Post parse ---
-
-    // check if we need to init translation
+    // enable translation
     if (shouldTranslate) {
         amino = true;
         if (!translator::init(code)) {
             cerr << "Error: No translation data found" << translate << endl;
         }
     }
-
-    if (threads <= 0)
-    {
-        threads = 1;
-    }
+    // deduct default kmer size if not user defined
+    if (!userKmer) {kmer = amino == true ? 10 : 31;}
 
 
     /**
-     * [Indexing]
-     * --- Indexing inputs ---
+     *  [indexing]
      * - Collect all target file names and locations
-     * - Check if the given files exist
+     * - Check whether the given files exist or not
      */ 
 
     // determine the folder the list is contained in
     string folder="";
 	uint64_t found=input.find_last_of("/\\");
-	if (found!=string::npos){
-	  folder=input.substr(0,found+1);
-	}
+	if (found!=string::npos)
+    { 
+        folder=input.substr(0,found+1);
+    }
 
     // parse the list of input sequence files
     hash_map<string, uint64_t> name_table; // the name to color map
@@ -575,8 +637,9 @@ int main(int argc, char* argv[]) {
 
 
     /**
-     * --- Indexing CDBG input --- 
-     * - Collect all target sequence names from the Bifrost CDBG
+     * --- [indexing CDBG input] --- 
+     * - Collect all target sequence names from the Bifrost-CDBG
+     * - // TODO diabled due to bugs
      */ 
 
 #ifdef useBF
@@ -601,10 +664,7 @@ int main(int argc, char* argv[]) {
 
         vector<string> cdbg_names = cdbg.getColorNames(); // color names of the cdbg compacted genomes.
         for (auto &col_name: cdbg_names){ // iterate the cdbg names and transcribe them to the name table
-            
-            // DEBUG
-	    // cout << col_name << " SANS ID: " << num << endl;
-	    // cout << col_name << " BIFROST COL: " << cdbg.getColorName(num) << endl;
+        
 
 	    if (name_table.find(col_name) == name_table.end()){
                             name_table[col_name] = num++;
@@ -627,7 +687,7 @@ int main(int argc, char* argv[]) {
 
 
     /**
-     * --- Post indexing check ---
+     *   [post indexing check]
      * - Update and check validity of input dependent meta variables
      */ 
 
@@ -649,8 +709,8 @@ int main(int argc, char* argv[]) {
 
 
     /**
-     * [Input processing]
-     * - Transcribe each given input to the graph
+     * [input processing]
+     * - transcribe each given input to the graph
      */ 
 
     chrono::high_resolution_clock::time_point begin = chrono::high_resolution_clock::now();    // time measurement
@@ -661,8 +721,8 @@ int main(int argc, char* argv[]) {
     graph::init(top, amino, q_table, quality, threads); // initialize the toplist size and the allowed characters
 
     /**
-     *  --- Split processing ---
-     *  - Transcibe all splits from the input split file
+     *  ---> Split processing
+     *  - transcibe all splits from the input split file
      */
 
     // iterate splits and add them to the toplist
@@ -687,7 +747,7 @@ int main(int argc, char* argv[]) {
                 name_table[name] = num++;
                 denom_names.push_back(name);
             }
-            color::set(color, name_table[name]);
+            color.set(name_table[name]);
             next = curr + 1;
         } while (curr != string::npos);
 
@@ -697,9 +757,9 @@ int main(int argc, char* argv[]) {
     }
 
     /**
-     * --- Sequence processing ---
-     * - Translate all given sequence k-mers
-     * - Transcribe all given sequence k-mers to the graph
+     * ---> sequence processing ---
+     * - translate all given sequence k-mers
+     * - transcribe all given sequence k-mers to the graph
      */ 
     
 
@@ -808,18 +868,15 @@ int main(int argc, char* argv[]) {
         for (uint64_t thread_id = 0; thread_id < threads; ++thread_id){thread_holder[thread_id].join();}
     }
 
-    // debug: show the number of kmers hashed per table
-    if (debug) {graph::showTableSizes();}
-
-
     /**
-     * --- Bifrost CDBG processing ---
-     * - Iterate all colored k-mers from a CDBG
-     * - Compute the splits created by the CDBG k-mers given the graphs colore k-mer collection
-     * (Has to be executed after sequence processing)
+     * ---> bifrost CDBG processing ---
+     * - iterate all colored k-mers from a CDBG
+     * - compute the splits created by the CDBG k-mers given the graphs colore k-mer collection
+     * (has to be executed after sequence processing)
+     * // Todo: Bug
      */ 
 
-double min_value = numeric_limits<double>::min(); // Current minimal weight represented in the top list
+double min_value = numeric_limits<double>::min(); // current minimal weight represented in the top list
 #ifdef useBF
     if (!graph.empty()) {
         if (verbose) {
@@ -845,9 +902,6 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
             auto end = colors->end();
             for (it ; it != end; ++it) { // iterate the unitig and collect the colors and corresponding k-mer starts
                 uc_kmers[it.getKmerPosition()].add(unitig_map, it.getColorID());
-            	
-		// DEBUG
-		// cout << it.getColorID() << "->" << cdbg.getColorName(it.getColorID()) << endl;
 	    
 	    }
             
@@ -862,12 +916,12 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
         }
     }
 #endif
-    /**
-     * [Output]
-     * - Compute the weighted splits of the k-mers that are left in the graph
-     * - Apply the target filter method
-     * - Write to output
-     */ 
+
+    /*
+    * [graph prossing]
+    * - collect all colors and kmers into the color table
+    * - weight the colors based on the weight function and the kmers that support them
+    */
 
     // function to map color position to file name
     std::function<string(const uint64_t&)> map=[=](uint64_t i) {
@@ -880,13 +934,23 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
         cout << "Processing splits..." << flush;
     }
     graph::add_weights(mean, min_value, verbose);  // accumulate split weights
+
+
+
+    /* [split processing]
+     * - compute the splits
+     */ 
+
 	graph::compile_split_list(mean, min_value);
 	
 
+
+    /*
+    * [bootstrap handling]
+    */
+
 	// for bootstrapping: hash_map for each original split with zero counts
 	hash_map<color_t, uint32_t> support_values;
-	
-
 	if(bootstrap_no==0){ // if bootstrapping -> no initial filtering
 		
 	// NO BOOTSTRAPPING
@@ -983,7 +1047,7 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
 	}
 
     /**
-     * --- Write to output ---
+     * [write to output]
      */ 
 
     if (verbose) {
@@ -1009,7 +1073,7 @@ double min_value = numeric_limits<double>::min(); // Current minimal weight repr
 // 			stream_bootstrap << support_values[split.second];
 		}
         for (uint64_t i = 0; i < num; ++i) {
-            if (color::test(split_color, pos)) {
+            if (split_color.test(pos)) {
                 if (i < denom_names.size())
                     stream << '\t' << denom_names[i];    // name of the file
                     if(bootstrap_no>0){

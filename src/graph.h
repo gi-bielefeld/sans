@@ -4,8 +4,9 @@
 #include <functional>
 #include <utility>
 #include <vector>
+
 #include <thread>
-#include <mutex>
+#include <atomic>
 
 #include <iomanip>
 #include <string>
@@ -29,39 +30,12 @@ template <typename T>
     // using hash_set = unordered_set<T>;
     using hash_set = tsl::sparse_pg_set<T>;
 
-#include "kmer32.h"
-#include "kmerXX.h"
-#include "kmerAmino12.h"
-#include "kmerAminoXX.h"
-
-#if maxK > 32 // store k-mers in a bitset, allows larger k-mers
-    typedef kmerXX kmer;
-    typedef bitset<2*maxK> kmer_t;
-#else // store k-mer bits in an integer, optimizes performance
-    typedef kmer32 kmer;
-    typedef uint64_t kmer_t;
-#endif
-
-#if maxK > 12 // store k-mers in a bitset, allows larger k-mers
-    typedef kmerAminoXX kmerAmino;
-    typedef bitset<5*maxK> kmerAmino_t;
-#else // store k-mer bits in an integer, optimizes performance
-    typedef kmerAmino12 kmerAmino;
-    typedef uint64_t kmerAmino_t;
-#endif
+#include "kmer.h"
+#include "kmerAmino.h"
 
 
 
-#include "color64.h"
-#include "colorXX.h"
-
-#if maxN > 64 // store colors in a bitset, allows more input files
-    typedef colorXX color;
-    typedef bitset<maxN> color_t;
-#else // store color bits in an integer, optimizes performance
-    typedef color64 color;
-    typedef uint64_t color_t;
-#endif
+#include "color.h"
 
 
 /**
@@ -72,6 +46,41 @@ struct node {
     double weight;
     vector<node*> subsets;
 };
+
+/**
+* A spinlock implementation
+* source: https://rigtorp.se/spinlock/
+*/
+struct spinlock {
+  atomic<bool> lock_ = {0};
+
+  void lock() noexcept {
+    for (;;) {
+      // Optimistically assume the lock is free on the first try
+      if (!lock_.exchange(true, std::memory_order_acquire)) {
+        return;
+      }
+      // Wait for lock to be released without generating cache misses
+      while (lock_.load(std::memory_order_relaxed)) {
+        // Issue X86 PAUSE or ARM YIELD instruction to reduce contention between
+        // hyper-threads
+        __builtin_ia32_pause();
+      }
+    }
+  }
+
+  bool try_lock() noexcept {
+    // First do a relaxed load to check if lock is free in order to prevent
+    // unnecessary cache misses if someone does while(!try_lock())
+    return !lock_.load(std::memory_order_relaxed) &&
+           !lock_.exchange(true, std::memory_order_acquire);
+  }
+
+  void unlock() noexcept {
+    lock_.store(false, std::memory_order_release);
+  }
+};
+
 
 
 /**
@@ -94,8 +103,6 @@ private:
 
     static bool isAmino;
     
-
-    static bool hash_in_parallel;
     /**
      * This int indicates the number of tables to use for hashing
      */
@@ -113,7 +120,7 @@ private:
     /**
      * This is a vector of spinlocks protecting the hash tables.
      */
-    static vector<mutex> lock;
+    static vector<spinlock> lock;
 
     /**
      * This is a hash table mapping k-mers to colors [O(1)].
@@ -138,9 +145,6 @@ private:
     static vector<hash_map<kmerAmino_t, uint64_t>> quality_mapAmino;
 
 public:
-     
-    // [Temporary: Test]
-    static void showTableSizes();
 
 	/**
 	* This function generates a bootstrap replicate. We mimic drawing n k-mers at random with replacement from all n observed k-mers. Say a k-mer would be drawn x times. Instead, we calculate x for each k-mer (in each split in color_table) from a binomial distribution (n repetitions, 1/n success rate) and calculate a new split weight according to the new number of k-mers.
@@ -180,39 +184,32 @@ public:
     /**
      * This function shift updates the bin of a kmer
     */
-    static uint64_t shift_update_bin(uint64_t& bin, char& left, char& right);
+    static uint_fast32_t shift_update_bin(uint_fast32_t& bin, uint_fast8_t& left, uint_fast8_t& right);
     
     /**
      * This method shift updates the reverse complement bin for a kmer
     */
-   static uint64_t shift_update_rc_bin(uint64_t& rc_bin, char& c_left, char& c_right);
+    static uint_fast32_t shift_update_rc_bin(uint_fast32_t& rc_bin, uint_fast8_t& left, uint_fast8_t& right);
 
     /**
     * This function shift updates a bin for an amino kmer
     */
-    static uint64_t shift_update_amino_bin(uint64_t& bin, kmerAmino_t& kmer, char& c_right);
+    static uint_fast32_t shift_update_amino_bin(uint_fast32_t& bin, kmerAmino_t& kmer, uint_fast8_t& right);
 
     /**
      *  This method computes the bin of a given kmer(slower than shift update)
      * @param kmer The target kmer
      * @return uint64_t The bin
      */
-    #if (maxK <= 32)
-    static uint64_t compute_bin(const kmer_t& kmer);
-    #else
-    static uint64_t compute_bin(const bitset<2*maxK>& kmer);
-    #endif
+     
+    static uint_fast32_t compute_bin(const kmer_t& kmer);
 
     /**
      *  This function computes the bin of a given amino kmer(slower than shift update)
      * @param kmer The target kmer
      * @return uint64_t The bin
      */
-    #if (maxK <= 12)
-        static uint64_t compute_amino_bin(const kmerAmino_t& kmer);
-    #else
-        static uint64_t compute_amino_bin(const bitset<5*maxK>& kmer);
-    #endif
+    static uint_fast32_t compute_amino_bin(const kmerAmino_t& kmer);
 
     /**
      * This function hashes a base k-mer and stores it in the corresponding hash table
@@ -220,17 +217,7 @@ public:
      *  @param kmer  The k-mer to store
      *  @param color The color to store 
      */
-    static void hash_kmer(uint64_t& bin, const kmer_t& kmer, const uint64_t& color);
-
-
-    /**
-     * This function hashes a base k-mer and stores it in the corresponding hash table (sequential version)
-     *  @param kmer The k-mer to store
-     *  @param color The color to store 
-     */
-    static void hash_kmer(const kmer_t& kmer, const uint64_t& color);
-
-
+    static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint64_t& color);
 
     /**
      * This function hashes an amino k-mer and stores it in the correstponding hash table
@@ -238,15 +225,7 @@ public:
      *  @param kmer The kmer to store
      *  @param color The color to store 
      */
-    static void hash_kmer_amino(uint64_t& bin, const kmerAmino_t& kmer, const uint64_t& color);
-
-    /**
-     * This function hashes an amino k-mer and stores it in the correstponding hash table (sequential version)
-     *  @param kmer The kmer to store
-     *  @param color The color to store 
-     */
-    static void hash_kmer_amino(const kmerAmino_t& kmer, const uint64_t& color);
-
+    static void hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint64_t& color);
 
     /**
      * This function searches the bit-wise corresponding hash table for the given kmer
