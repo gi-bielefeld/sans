@@ -21,8 +21,10 @@ int main(int argc, char* argv[]) {
         $out << end$;
         $out << "SANS-KC | version " << SANS_VERSION << end$;
         $out << "Usage: SANS [PARAMETERS]" << end$;
-        if (argc <= 1) util::print_help();
-        else           util::print_extended_help();
+        $out << end$;
+        if (argc <= 1) help::print_usage();
+        else           help::print_extended_usage();
+        $out << end$;
         $out << "  Contact: sans-service@cebitec.uni-bielefeld.de" << end$;
         $out << "  Evaluation: https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans" << end$;
         $out << end$$;
@@ -30,7 +32,7 @@ int main(int argc, char* argv[]) {
 
     file input;    // Input FASTA files: list of sequence files, one per line
     file index;    // Input Index file: load a k-mer index, e.g. counts table
-    file graph;    // Input Graph file: load a Bifrost graph, filename prefix
+    file graph;    // Input Graph files: load Bifrost graph, file name prefix
     file splits;   // Input Splits file: load an existing list of splits file
 
     file output;     // Output TSV file: list of splits, sorted by weight desc.
@@ -241,9 +243,9 @@ int main(int argc, char* argv[]) {
 
 #ifdef useBF
     // load an existing Bifrost graph file
-    ColoredCDBG<> cdbg(kmer);
+    ColoredCDBG<> cdbg;
     if (!graph.empty()) {
-        if (cdbg.read(graph + ".gfa", graph + ".bfg_colors", T, verbose)) {
+        if (cdbg.read(graph["graph_fn"], graph["color_fn"], T, verbose)) {
             if (verbose) $log << end$;
         } else {
             $err << "Error: could not load Bifrost graph: " << graph << _end$$;
@@ -335,12 +337,15 @@ int main(int argc, char* argv[]) {
 
         vector<thread> P_thread(P);  // parallel file reading threads
         vector<thread> Q_thread(Q);  // parallel queue hashing threads
-        atomic<uint64_t> active(P); mutex mutex;
+        atomic<uint64_t> I(0), active(P); mutex mutex;  // sync threads
              if (VERBOSE) $log $_ << "Reading input files..." << $;
         else if (verbose) $log $_ << "Reading input files..." << end$;
 
         auto P_lambda = [&] (const uint64_t& T) {
-            for (size1N_t i = T; i < file_num; i += P) {
+            while (true) {  // select next file to process
+                const size1N_t i = I++;  // atomic update
+                if (i >= file_num) break;
+
                 ifstream file(color_name[i]);    // input file stream & print progress
                      if (VERBOSE) $SYNC( $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << end$ );
                 else if (verbose) $SYNC( $log $_ << color_name[i] << " (" << i+1 << "/" << file_num << ")" << $ );
@@ -404,7 +409,7 @@ int main(int argc, char* argv[]) {
     if (!graph.empty()) {
         vector<thread> B_thread(B);  // (one) Bifrost process threads
         vector<thread> Q_thread(Q);  // parallel queue hashing threads
-        atomic<uint64_t> active(B); mutex mutex;
+        atomic<uint64_t> active(B); mutex mutex;  // sync threads
         if (verbose)
             $log $_ << "Processing unitigs..." << $;
 
@@ -419,9 +424,9 @@ int main(int argc, char* argv[]) {
                     prog = next; cur++;
                 }
                 auto sequence = unitig.mappedSequenceToString();
-                auto* colors = unitig.getData()->getUnitigColors(unitig);
+                auto* matrix = unitig.getData()->getUnitigColors(unitig);
 
-                for (auto it = colors->begin(unitig); it != colors->end(); ++it) {
+                for (auto it = matrix->begin(unitig); it != matrix->end(); ++it) {
                     auto substr = sequence.substr(it.getKmerPosition(), kmer);
                     const string& name = cdbg.getColorName(it.getColorID());
                     graph::add_kmers(T, substr, color_index[name]);
@@ -539,6 +544,7 @@ int main(int argc, char* argv[]) {
         if (!output.empty()) {
             ofstream file(output);    // output file stream
             ostream stream(file.rdbuf());
+         // stream << fixed;
             for (auto& split : tree::splits) {
                 stream << split.first;    // weight of the split
                 for (size1N_t i = 0; i < num; ++i) {
@@ -553,6 +559,7 @@ int main(int argc, char* argv[]) {
         if (!newick.empty()) {
             ofstream file(newick);    // output file stream
             ostream stream(file.rdbuf());
+         // stream << fixed;
             stream << tree::build_string();    // filter and print tree
             file.close();
         }

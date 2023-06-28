@@ -583,7 +583,7 @@ void graph::erase_filters() {
         case 2:  quality_set.clear(); break;
         default: quality_map.clear(); break;
     }
-    const uint64_t& Q = thread_queue.size();    // number of thread-separate hash queues
+    static const uint64_t& Q = thread_queue.size();    // number of thread-separate hash queues
 
     if (Q == 0) { /* single-CPU: read one file at a time, don't use queues, put into one table directly */
         emplace_kmer = [&] (const uint64_t& T, const kmer_t& kmer, const size1N_t& color) {

@@ -3,23 +3,30 @@
 using namespace std;
 
 /**
- * This class contains some helpful utility functions.
+ * This class can display the help page of the program.
  */
-class util {
-
- private:
+class help {
 
  public:
 
     /**
      * This function prints a minimal version of the help page.
      */
-    static void print_help();
+    static void print_usage();
 
     /**
      * This function prints an extended version of the help page.
      */
-    static void print_extended_help();
+    static void print_extended_usage();
+
+};
+
+/**
+ * This class contains some helpful utility functions.
+ */
+class util {
+
+ public:
 
     /**
      * This function converts a command line argument to a string.
@@ -57,7 +64,5 @@ class util {
      * @return formatted string
      */
     static string format_time(const chrono::high_resolution_clock::duration& time);
-
- protected:
 
 };

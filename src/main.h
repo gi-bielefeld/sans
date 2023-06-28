@@ -1,5 +1,4 @@
 #include <cstring>
-#include <fstream>
 #include <thread>
 
 #include "index.h"
@@ -18,7 +17,7 @@ using namespace std;
 
 // Symmetric Alignment-free phylogeNomic Splits
 // simple efficient re-implementation + filters
-#define SANS_VERSION "2.0_10E-KC-2.3_04A"    // SANS-KC
+#define SANS_VERSION "2.0_10E-KC-2.3_05A"    // SANS-KC
 
 /**
  * This is the entry point of the program.

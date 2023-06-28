@@ -4,13 +4,12 @@
 /**
  * This function prints a minimal version of the help page.
  */
-void util::print_help() {
-    $out << end$;
+void help::print_usage() {
     $out << "  Input arguments:" << end$;
     $out << end$;
     $out << "    -i, --input   \t Input FASTA files: list of sequence files, one per line" << end$;
     $out << "    -j, --index   \t Input Index file: load a k-mer index, e.g. counts table" << end$;
-    $out << "    -g, --graph   \t Input Graph file: load a Bifrost graph, filename prefix" << end$;
+    $out << "    -g, --graph   \t Input Graph files: load Bifrost graph, file name prefix" << end$;
     $out << "    -s, --splits  \t Input Splits file: load an existing list of splits file" << end$;
     $out << end$;
     $out << "  Output arguments:" << end$;
@@ -40,13 +39,12 @@ void util::print_help() {
     $out << "    -p, --threads \t Number of parallel threads (default: auto)" << end$;
     $out << "    -v, --verbose \t Print information messages during execution" << end$;
     $out << "    -h, --help    \t Display an extended help page and quit" << end$;
-    $out << end$;
 }
 
 /**
  * This function prints an extended version of the help page.
  */
-void util::print_extended_help() {
+void help::print_extended_usage() {
     $out << " ___________________________________________________________________________" << end$;
     $out << end$;
     $out << "  Input arguments:" << end$;
@@ -56,7 +54,7 @@ void util::print_extended_help() {
     $out << "    -j, --index   \t Input Index file: load a k-mer index, e.g. counts table" << end$;
     $out << "                  \t (provide list -i to lookup names or extend the index)" << end$;
     $out << end$;
-    $out << "    -g, --graph   \t Input Graph file: load a Bifrost graph, filename prefix" << end$;
+    $out << "    -g, --graph   \t Input Graph files: load Bifrost graph, file name prefix" << end$;
     $out << "                  \t (requires compiler flag -DuseBF, please see makefile)" << end$;
     $out << end$;
     $out << "    -s, --splits  \t Input Splits file: load an existing list of splits file" << end$;
@@ -129,7 +127,6 @@ void util::print_extended_help() {
     $out << end$;
     $out << "    -h, --help    \t Display an extended help page and quit" << end$;
     $out << " ___________________________________________________________________________" << end$;
-    $out << end$;
 }
 
 /**
