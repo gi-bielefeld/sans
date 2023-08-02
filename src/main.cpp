@@ -124,11 +124,15 @@ int main(int argc, char* argv[]) {
     */
 
     // file definitions
+    // input
     string input;    // name of input file
     string graph;    // name of graph file
-    string splits;    // name of splits file
+    string splits;   // name of splits file
+    string raw_in;   // name of input color table file
+    // output
     string output;    // name of output file
     string newick;    // name of newick output file // Todo
+    string raw_out;   // name of output color table file
     string translate; // name of translate file
 
     // input
@@ -222,6 +226,11 @@ int main(int argc, char* argv[]) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             splits = argv[++i];    // Splits file: load an existing list of splits file
         }
+        else if (strcmp(argv[i], "-ri") == 0 || strcmp(argv[i], "--raw_in") == 0){
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            raw_in = argv[++i]; // Raw input: Load color table from file
+        }
+
         else if (strcmp(argv[i], "-o") == 0 || strcmp(argv[i], "--output") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             output = argv[++i];    // Output file: list of splits, sorted by weight desc.
@@ -229,6 +238,10 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--newick") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             newick = argv[++i];    // Output newick file
+        }
+        else if (strcmp(argv[i], "-ro") == 0 || strcmp(argv[i], "--raw_out") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]); // Output color table file
+            raw_out = argv[++i];
         }
         else if (strcmp(argv[i], "-k") == 0 || strcmp(argv[i], "--kmer") == 0) {            
             catch_missing_dependent_args(argv[i + 1], argv[i]);
@@ -447,8 +460,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name>" << endl;
+    if (output.empty() && newick.empty() && raw_out.empty()) {
+        cerr << "Error: missing output argument: --output <file_name> or --newick <file_name> or --raw_out <file_name>" << endl;
         return 1;
     }
     if (kmer > maxK && splits.empty()) {
@@ -867,9 +880,8 @@ int main(int argc, char* argv[]) {
     /**
      * ---> bifrost CDBG processing ---
      * - iterate all colored k-mers from a CDBG
-     * - compute the splits created by the CDBG k-mers given the graphs colore k-mer collection
+     * - compute the splits created by the CDBG k-mers given the graphs colored k-mer collection
      * (has to be executed after sequence processing)
-     * // Todo: Bug
      */ 
 
 double min_value = numeric_limits<double>::min(); // current minimal weight represented in the top list
@@ -913,7 +925,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 #endif
 
     /*
-    * [graph prossing]
+    * ---> graph prossing
     * - collect all colors and kmers into the color table
     * - weight the colors based on the weight function and the kmers that support them
     */
@@ -930,6 +942,35 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
     }
     graph::add_weights(mean, min_value, verbose);  // accumulate split weights
 
+
+    /* ---> Export color table
+    *
+    */
+    if (!raw_out.empty())
+    {
+        uint64_t pos = 0;
+        color_t color;
+        array<uint64_t, 2> occurrences;
+        ofstream file(raw_out);
+        ostream stream(file.rdbuf());
+
+        cout << graph::color_table.size() << endl;
+        for (auto& element : graph::color_table) // Iterate the color table
+        {
+            color = element.first;
+            stream << element.second[0] << '\t' << element.second[1];
+            for (uint64_t i = 0; i < num; ++i) 
+            {
+                if (color.test(pos)) {
+                    if (i < denom_names.size())
+                        stream << '\t' << denom_names[i];    // name of the file
+					}
+                color >>= 01u;
+            }
+            stream << endl;
+        }
+        file.close();
+    }
 
 
     /* [split processing]

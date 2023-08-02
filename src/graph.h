@@ -128,11 +128,6 @@ private:
     static vector<hash_map<kmerAmino_t, color_t>> kmer_tableAmino;
 
     /**
-     * This is a hash table mapping colors to weights [O(1)].
-     */
-    static hash_map<color_t, array<uint32_t,2>> color_table;
-
-    /**
      * This is a hash set used to filter k-mers for coverage (q > 1).
      */
     static vector<hash_set<kmer_t>> quality_set;
@@ -153,6 +148,11 @@ public:
 	*/
 	static multiset<pair<double, color_t>, greater<>> bootstrap(double mean(uint32_t&, uint32_t&));
 
+    /**
+    * This is a hash table mapping colors to weights [O(1)].
+    */
+    static hash_map<color_t, array<uint32_t,2>> color_table;
+    
     /**
      * This is an ordered tree collecting the splits [O(log n)].
      */
