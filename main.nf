@@ -3,8 +3,8 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + it },type : "file")
 
 process sans {
-  //container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:latest"
-  container "localhost/sans:latest"
+  container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:latest"
+  //container "localhost/sans:latest"
   publishDir params.outdir, mode: 'symlink'
   shell '/bin/sh', '-euo', 'pipefail'
 
