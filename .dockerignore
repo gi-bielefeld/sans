@@ -1,0 +1,5 @@
+Dockerfile
+example_data
+.gitlab-ci.yml
+main.nf
+.nextflow.config
