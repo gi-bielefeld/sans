@@ -1,6 +1,6 @@
 fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz", "*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"]
 
-inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + it },type : "file")
+inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + "/" + it },type : "file")
 
 process sans {
   container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:latest"
