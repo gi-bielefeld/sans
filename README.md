@@ -151,7 +151,9 @@ To generate a consensus tree from bootstrapped trees, use `-f tree -b 1000 -C`. 
    ```
 
    **Tree in newick format from assemblies**
-   `SANS -i list.txt -N sans.new -f strict`
+   ```
+   SANS -i list.txt -N sans.new -f strict
+   ```
    
    **Split network (and tree) from read data**
    ```
