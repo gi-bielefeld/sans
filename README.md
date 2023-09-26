@@ -37,7 +37,6 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 * [Requirements](#requirements)
 * [Compilation](#compilation)
 * [Usage](#usage)
-* [Details on filter option](#details-on-filter-option)
 * [Examples](#examples)
 * [Performance evaluation on predicted open reading frames](#performance-evaluation-on-predicted-open-reading-frames)
 * [Clustering / dereplication of metagenome assembled genomes (MAGs)](#clustering-dereplication-of-metagenome-assembled-genomes-mags)
@@ -68,176 +67,137 @@ By default, the installation creates:
 
 You may want to make the binary (*SANS*) accessible via your *PATH* variable.
 
-Optional: If Bifrost should be used, change the SANS makefile accordingly (easy to see how). Please note the installation instructions regarding the default maximum *k*-mer size of Bifrost in its README. If during the compilation, the Bifrost library files are not found, make sure that the corresponding folder is found as include path by the C++ compiler. You may have to add `-I/usr/local/include` (with the corresponding folder) to the compiler flags in the makefile. We also recommend to have a look at the [FAQs of Bifrost](https://github.com/pmelsted/bifrost#faq).
-
-In the *makefile*, two parameters are specified:
-
-* *-DmaxK*: Maximum k-mer length that can be chosen when running SANS.  Default: 32
-* *-DmaxN*: Maximum number of input files for SANS. Default: 64
-
-These values can simply be increased if necessary. To keep memory requirements small, do not choose these values unnecessarily large.
-
-**New:** Compile parameter *DmaxN* can be set automatically by using the *SANS-autoN.sh* (Unix) or *SANS-autoN.BAT* (Windows) scripts. The scripts can be used exactly as the main binary *SANS*. They run *SANS* with all provided parameters and add option *-M* to compare *DmaxN* and the actual number of input files.
-If SANS has been compiled with a value for *DmaxN* that is neither too small nor much too large, SANS is executed as usual.
-If *DmaxN* has been chosen too small or much too large, the scripts generate a new makefile (*makefile_auton*), re-compile *SANS* and re-run *SANS*.
-The comparison of *DmaxN* and the actual number of input files comes without extra computational cost.
+**Optional:** If Bifrost should be used, change the SANS makefile accordingly (easy to see how). Please note the installation instructions regarding the default maximum *k*-mer size of Bifrost in its README. If during the compilation, the Bifrost library files are not found, make sure that the corresponding folder is found as include path by the C++ compiler. You may have to add `-I/usr/local/include` (with the corresponding folder) to the compiler flags in the makefile. We also recommend to have a look at the [FAQs of Bifrost](https://github.com/pmelsted/bifrost#faq).
 
 
 
 ## Usage
 
-```
-SANS
-```
+Use `SANS --help` to obtain a detailed list of options.
 
-displays the command line interface:
-```
-Usage: SANS [PARAMETERS]
 
-  Input arguments:
+**Input files**
 
-    -i, --input   	 Input file: file of files format
-                  	 Either: list of files, one genome per line (space-separated for multifile genomes)
-                  	 Or: kmtricks input format (see https://github.com/tlemane/kmtricks)
+Specify your input by `-i <list>` where `<list>` is either a file-of-files or in kmtricks format. Each file can be in fasta, multiple fasta or fastq format.
+- **File-of-files:**
+  ```
+  genome_a.fa
+  genome_b.fa
+  ...
+  ```
+  Files can be in subfolders and/or compressed:
+  ```
+  dataset_1/genome_a.fa.gz
+  dataset_1/genome_b.fa.gz
+  ...
+  ```
+  One genome can also be composed of several files (the first one will be used as identifier in the output):
+  ```
+  reads_a_forward.fa reads_a_reverse.fa
+  genome_b_chr_1.fa genome_b_chr_2.fa
+  ...
+  ```
+- **kmtricks format:**
+  In this format, you can specify individual identifiers and, optionally, abundance thresholds (see "read data as input"):
+  ```
+  genome_A : reads_a_forward.fa ; reads_a_reverse.fa ! 2
+  genome_B : genome_b_chr_1.fa ; genome_b_chr_2.fa ! 1
+  ...
+  ```
 
-    -g, --graph   	 Graph file: load a Bifrost graph, file name prefix
-                  	 (requires compiler flag -DuseBF, please edit makefile)
+**Input paramters**
 
-    -s, --splits  	 Splits file: load an existing list of splits file
-                  	 (allows to filter -t/-f, other arguments are ignored)
+- genomes/assemblies as input: just use `-i <list>`
+- read data as input: to filter out *k*-mers of low abundance, either use `-q 2` (or higher thresholds) to specify a global threshold for all input files, or use the kmtricks file-of-files format to specify (individual) thresholds.
+- mix of assemblies and read data as input: use the kmtricks file-of-files format to specify individual thresholds.
+- coding sequences as input: add `-a` if input is provided as translated sequences, or add `-c` if translation is required. See usage information (`SANS --help`) for further details.
 
-    (either --input and/or --graph, or --splits must be provided)
 
-  Output arguments:
+**Output**
+- The output file, specified by `-o <split-file>`, lists all splits line by line, sorted by their weight in a tab-separated format where the first column is the split weight and the remaining entries are the identifiers of genomes split from the others.
+- For large data sets, the list of splits can become very long. We recommend to restrict the output for *n* genomes as input to the *10n* strongest splits in the output using `-t 10n`.
+- We recommend to filter the splits using `-f <filter>`. Then, the sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.
 
-    -o, --output  	 Output TSV file: list of splits, sorted by weight desc.
-
-    -N, --newick  	 Output Newick file
-                  	 (only applicable in combination with -f strict or n-tree)
-
-    (at least --output or --newick must be provided, or both)
-
-  Optional arguments:
-
-    -k, --kmer    	 Length of k-mers (default: 31, or 10 for --amino and --code)
-
-    -t, --top     	 Number of splits in the output list (default: all).
-                  	 Use -t <integer>n to limit relative to number of input files, or
-                  	 use -t <integer> to limit by absolute value.
-
-    -m, --mean    	 Mean weight function to handle asymmetric splits
-                  	 options: arith: arithmetic mean
-                  	          geom:  geometric mean
-                  	          geom2: geometric mean with pseudo-counts (default)
-
-    -f, --filter  	 Output (-o, -N) is a greedy maximum weight subset (see README)
-                  	 options: strict: compatible to a tree
-                  	          weakly: weakly compatible network
-                  	          n-tree: compatible to a union of n trees
-                  	                  (where n is an arbitrary number, e.g. 2-tree)
-
-    -x, --iupac   	 Extended IUPAC alphabet, resolve ambiguous bases or amino acids
-                  	 Specify a number to limit the k-mers per position between 
-                  	 1 (no ambiguity) and 4^k respectively 22^k (allows NNN...N)
-                  	 Without --iupac respective k-mers are ignored
-
-    -q, --qualify 	 Discard k-mers with lower coverage than a threshold
-
-    -n, --norev   	 Do not consider reverse complement k-mers
-
-    -a, --amino   	 Consider amino acids: --input provides amino acid sequences
-                  	 Implies --norev and a default k of 10
-
-    -c, --code    	 Translate DNA: --input provides coding sequences
-                  	 Implies --norev and a default k of 10
-                  	 optional: ID of the genetic code to be used
-                  	 Default: 1 (The Standard Code)
-                  	 Use 11 for Bacterial, Archaeal, and Plant Plastid Code
-                  	 (See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.)
-
-    -M, --maxN    	 Compare number of input genomes to compile paramter DmaxN
-                  	 Add path/to/makefile (default is makefile in current working directory).
-
-    -b, --bootstrap	 Perform bootstrapping with the specified number of replicates
- 
-    -C, --consensus      Apply final filter w.r.t. support values
-                         else: final filter w.r.t. split weights
-                         optional: specify separate filter (see --filter for available filters.)
-    -T --threads         Number of threads to create
-                         Default: As many as cores (including virtual)
-
-    -v, --verbose 	 Print information messages during execution
-
-    -h, --help    	 Display this help page and quit
-  
-```
-
-## Details on filter option
-
-The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.
-
-* `strict`: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree.
+If you want a **tree**, use `-f strict`. In this case, `-N <newick-file>` can be used to write the resulting tree into a newick file; instead or additionally to `-o <split-file>`.
+If you want a **network**, use one of the following filters:
 * `weakly`: a split is kept if it is weakly compatible to all previously filtered splits (see publication for definition of "weak compatibility").
-* `n-tree`: several sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... *n*-th set if possible (compatible).
+* `2-tree`: two sets of compatible splits (=trees) are maintained. A split is added to the first if possible (compatible); if not to the second if possible.
+  `3-tree`: three sets of compatible splits (=trees) are maintained. A split is added to the first if possible (compatible); if not to the second if possible; if not to the third if possible.
 
-<!--**Cleanliness:** The filtered set of splits is compared to the originally given (`--splits`) or computed (`--input`, `--graph`) set of splits to obtain a measure of how many incompatible splits have been filtered out. Consider a list of splits *S* that has been filtered to the sublist *F*, both sorted in descending order. To make the measure robust against low weighting splits and the choice of paramter `--top`, we truncate *S* to "just contain F": let *S'* be the shortest prefix of *S* that contains *F*. Then the **cleanliness** is the ratio of the length of *F* to the length of *S'*. The **weighted cleanliness** is the ratio of the corresponding sum of weights of splits in *F* and *S'*, resp. 
--->
+To visualize the splits, we recommend the tool [SplitsTree](https://uni-tuebingen.de/fakultaeten/mathematisch-naturwissenschaftliche-fakultaet/fachbereiche/informatik/lehrstuehle/algorithms-in-bioinformatics/software/splitstree). To open the SANS output in SplitsTree, use `scripts/sans2nexus.py <split-file> <list> > <nexus-file>`. In SplitsTree, after opening the `<nexus-file>`, select "Draw" > "EqualAngle" > "Apply". To produce a PDF using SplitsTree on the command line instead, use `scripts/sans2pdf.py <split-file> <list>`.
+
+
+**Further parameters**
+- To observe the progress of SANS during computation, use `-v` to switch to verbose mode.
+- You may want to try different values for the *k*-mer length using `-k <integer>`. On shorter sequences, e.g. virus data, use a smaller *k*, e.g., `-k 11`.
+- If your input contains 'N's or other ambiguous IUPAC characters, affected *k*-mers are skipped by default. Option `-x <small_integer>` can be used to replace these with the corresponding DNA or AA bases, considering all possibilities.
+- By default, all available threads are used for parallel processing. The number of threads can be limited by `-T <integer>`.
+
+
+**Bootstrapping**
+To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed *k*-mer content. To compare the originally determined splits to, e.g., 1000 bootstrap replicates, use `-b 1000`. An additional output file `<split-file>.bootstrap` containing the bootstrap support values will be created. To include them in the nexus file for visualization, use `scripts/sans2conf_nexus.py <split-file> <split-file>.bootstrap <list> > <nexus-file>`.
+
+To generate a consensus tree from bootstrapped trees, use `-f tree -b 1000 -C`. See usage information (`SANS --help`) for further options.
+
 
 
 ## Examples
 
-1. **Determine splits from assemblies or read files**
-   ```
-   SANS -i list.txt -o sans.splits -k 31
-   ```
-   The 31-mers (`-k 31`) of those fasta or fastq files listed in *list.txt* (`-i list.txt`) are extracted. Splits are determined and written to *sans.splits* (`-o sans.splits`).
 
-   To extract a tree (`-f strict`) in NEWICK format (`-N sans_greedytree.new`), use
+1. **Split network from assemblies**
    ```
-   SANS -i list.txt -k 31 -f strict -N sans_greedytree.new
+   SANS -i list.txt -o sans.splits -t 10n -f weakly
+   scripts/sans2nexus.py sans.splits list.txt > sans.nexus
    ```
-   or filter from a set of splits (`-s sans.splits`)
+
+   **Tree in newick format from assemblies**
+   `SANS -i list.txt -N sans.new -f strict`
+   
+   **Split network (and tree) from read data**
    ```
-   SANS -s sans.splits -f strict -N sans_greedytree.new
+   SANS -i list.txt -o sans.splits -t 10n -f weakly -q 2
+   scripts/sans2nexus.py sans.splits list.txt > sans.nexus
+   (SANS -i list.txt -s sans.splits -f strict -N sans.new)
    ```
+
 
 2. **Drosophila example data**
    ```
    # go to example directory
-   cd <SANS directory>
    cd example_data/drosophila
 
    # download data: whole genome (or coding sequences)
    ./download_WG.sh
    (./download_CDS.sh)
 
-   # run SANS greedy tree
-   ../../SANS -i WG/list.txt -o sans_greedytree_WG.splits -f strict -N sans_greedytree_WG.new -v
-   (../../SANS -i CDS/list.txt -o sans_greedytree_CDS.splits -f strict -N sans_greedytree_CDS.new -v -c)
-   
-   # compare to reference
-   ../../scripts/newick2sans.py Reference.new > Reference.splits
-   ../../scripts/comp.py sans_greedytree_WG.splits Reference.splits WG/list.txt > sans_greedytree_WG.comp
-   (../../scripts/comp.py sans_greedytree_CDS.splits Reference.splits CDS/list.txt > sans_greedytree_CDS.comp)
-   ```
+   # compute splits
+   ../../SANS -i WG_list.txt -o WG_weakly.splits -f weakly -v
+   (../../SANS -i CDS_list.txt -o CDS_weakly.splits -f weakly -v -c)
 
+   # generate PDF (if SplitsTree installed)
+   ../../scripts/sans2pdf.py WG_weakly.splits WG_list.txt
+      
+   # filter for tree
+   ../../SANS -i WG_list.txt -s WG_weakly.splits -N WG.new -f strict
+   (../../SANS -i CDS_list.txt -s CDS_weakly.splits -N CDS.new -f strict)
+
+   ```
+   
+   
 3. **Virus example data**
    ```
    # go to example directory
-   cd <SANS directory>
    cd example_data/prasinoviruses
 
    # download data
    ./download.sh
 
-   # run SANS
-   ../../SANS -i fa/list.txt -o sans.splits -k 11 -t 130 -v
+   # compute splits
+   ../../SANS -i list.txt -o weakly.splits -f weakly -k 11 -v 
    
-   # compare to references
-   ../../scripts/newick2sans.py Reference_Fig3.new > Reference_Fig3.splits
-   ../../scripts/comp.py sans.splits Reference_Fig3.splits fa/list.txt > fig3.comp
-   ../../scripts/newick2sans.py Reference_Fig4.new > Reference_Fig4.splits
-   ../../scripts/comp.py sans.splits Reference_Fig4.splits fa/list.txt > fig4.comp
+   # generate PDF (if SplitsTree installed)
+   ../../scripts/sans2nexus.py weakly.splits list.txt > weakly.nexus
+   ../../scripts/nexus2nexus2pdf.py weakly.nexus
    ```
 
 ## Performance evaluation on predicted open reading frames
