@@ -350,3 +350,20 @@ vector<string> util::split(string &s, string delimiter) {
 bool util::is_number(string& s) {
     return !s.empty() && find_if(s.begin(), s.end(), [](unsigned char c) { return !isdigit(c); }) == s.end();
 }
+
+
+
+bool util::path_exist(const string &filename) {
+	string folder="";
+	uint64_t found=filename.find_last_of("/\\");
+	if (found!=string::npos)
+    { 
+        folder=filename.substr(0,found+1);
+		struct stat buffer;
+		return (stat (folder.c_str(), &buffer) == 0);
+    } else {
+		return true;
+	}
+}
+
+

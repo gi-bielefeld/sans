@@ -9,6 +9,8 @@
 #include <cmath>
 #include <vector>
 #include <regex>
+#include <sys/stat.h>
+
 
 using namespace std;
 
@@ -137,6 +139,14 @@ public:
      * @return bool
      */
     static bool is_number(string &s);
+	
+	
+	  /**
+     * Checks if the path in the file string is an existing path.
+     * @param filename the string conting a path/to/file
+     * @return bool
+     */
+	static bool path_exist(const string &filename);
 
 protected:
 };
