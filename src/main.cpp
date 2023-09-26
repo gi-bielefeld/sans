@@ -250,14 +250,16 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-t") == 0 || strcmp(argv[i], "--top") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
-            catch_failed_stoi_cast(argv[i + 1], argv[i]);
-            i++;
-			if (strcmp(argv[i],"all") != 0){ // if user selects "-t all", do nothing
+			if (strcmp(argv[i+1],"all") != 0){ // if user selects "-t all", do nothing
+				catch_failed_stoi_cast(argv[i + 1], argv[i]);
+				i++;
 				string top_str = argv[i];
 				top = stoi(top_str); // Number of splits (default: all)
 				if (top_str[top_str.size() - 1] == 'n'){ // Dynamic split num (default: false)
 					dyn_top = true;
 				}
+			}else{
+				i++;				
 			}
         }
         else if (strcmp(argv[i], "-m") == 0 || strcmp(argv[i], "--mean") == 0) {
@@ -748,6 +750,9 @@ int main(int argc, char* argv[]) {
     if (dyn_top){
         top = top * num;
     }
+	if(verbose){
+		cout<<"Restricting output to "<<top<<" splits."<< endl;
+	}
 
 
     /**
