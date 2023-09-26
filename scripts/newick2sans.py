@@ -34,6 +34,8 @@ if len(sys.argv)>2:
     taxa=set()
     for line in (s.strip() for s in open(sys.argv[2])):
         # remove file extensions
+        if os.path.splitext(line)[1] in [".gz",".gzip",".zip"]:
+            line=os.path.basename(os.path.splitext(line)[0])
         if os.path.splitext(line)[1] in fileext:
             line=os.path.splitext(line)[0]
         taxa.add(line)

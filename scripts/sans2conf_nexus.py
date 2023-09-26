@@ -47,7 +47,9 @@ def readfile(filename,taxa,bootstrapvalues):
         split=[] #storing ids
         for f in split_orig:
             # remove file extensions
-            if os.path.splitext(f)[1] in fileext:
+           if os.path.splitext(f)[1] in [".gz",".gzip",".zip"]:
+                f=os.path.basename(os.path.splitext(f)[0])
+           if os.path.splitext(f)[1] in fileext:
                 f=os.path.basename(os.path.splitext(f)[0])
             if f not in taxa.keys():
                 eprint("WARNING: taxa from split not in taxa file and thus discarded: "+f)
@@ -72,6 +74,8 @@ def readtaxa(filename):
     i=1
     for line in (s.strip().split()[0] for s in open(filename)):
         # remove file extensions
+        if os.path.splitext(line)[1] in [".gz",".gzip",".zip"]:
+            line=os.path.basename(os.path.splitext(line)[0])
         if os.path.splitext(line)[1] in fileext:
             line=os.path.splitext(line)[0]
         taxa[os.path.basename(line)]=i

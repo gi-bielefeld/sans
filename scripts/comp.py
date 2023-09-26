@@ -32,7 +32,9 @@ def readtaxa(filename):
     taxa=set()
     for line in (s.strip().split()[0] for s in open(filename)):
         # remove file extensions
-        if os.path.splitext(line)[1] in fileext:
+       if os.path.splitext(line)[1] in [".gz",".gzip",".zip"]:
+            line=os.path.basename(os.path.splitext(line)[0])
+       if os.path.splitext(line)[1] in fileext:
             line=os.path.splitext(line)[0]
         taxa.add(line)
     return(taxa)
@@ -49,6 +51,8 @@ def readfile(filename,taxa,min_size):
         #store tax names if necessary
         for idx,f in enumerate(split):
             # remove file extensions
+            if os.path.splitext(f)[1] in [".gz",".gzip",".zip"]:
+                f=os.path.basename(os.path.splitext(f)[0])
             if os.path.splitext(f)[1] in fileext:
                 f=os.path.splitext(f)[0]
                 split[idx]=f

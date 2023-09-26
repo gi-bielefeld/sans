@@ -21,8 +21,10 @@ if len(sys.argv)<3:
 nex=sys.argv[1]+".nexus"
 pdf=nex+".pdf"
 
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
 # sans -> nexus
-os.system(" ".join(["./sans2nexus.py",sys.argv[1],sys.argv[2],">",nex]))
+os.system(" ".join([dir_path+"/sans2nexus.py",sys.argv[1],sys.argv[2],">",nex]))
 
 # prepare SplitsTree command
 f = open("splitstreecommands.tmp", "w")
@@ -31,7 +33,7 @@ print("UPDATE",file=f)
 print("UPDATE",file=f)
 print("UPDATE",file=f)
 print("EXPORTGRAPHICS format=PDF TEXTASSHAPES=YES file="+pdf+" REPLACE=yes",file=f)
-print("QUIT")
+print("QUIT",file=f)
 f.close()
 
 # nexus -> pdf
