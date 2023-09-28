@@ -76,6 +76,11 @@
                     "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.\n - strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree\n - weakly: a split is kept if it is weakly compatible to all previously filtered splits\n - n-tree: several sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).",
                     "description": "Output is a greedy maximum weight subset"
                 },
+                "visualization": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Visualize the output as pdf with Splitstree"
+                },
                 "verbose": {
                     "type": "boolean",
                     "hidden": true,
