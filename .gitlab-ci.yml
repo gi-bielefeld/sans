@@ -22,6 +22,6 @@ publish-docker-container-job:
       --destination "${CI_REGISTRY_IMAGE}:sans-latest"
     - /kaniko/executor
       --context "${CI_PROJECT_DIR}"
-      --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+      --dockerfile "${CI_PROJECT_DIR}/splitstree.Dockerfile"
       --destination "${CI_REGISTRY_IMAGE}:splitstree-sha-${CI_COMMIT_SHORT_SHA}"
       --destination "${CI_REGISTRY_IMAGE}:splitstree-latest"
