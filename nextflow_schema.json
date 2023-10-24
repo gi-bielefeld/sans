@@ -53,14 +53,14 @@
                     "help_text": "Use `<integer>n` to limit relative to number of input files\nUse `<integer>` to limit by absolute value"
                 },
                 "kmer": {
-                    "type": "number",
+                    "type": "integer",
                     "description": "Length of k-mers",
                     "default": 31,
                     "minimum": 12,
                     "maximum": 64
                 },
                 "qualify": {
-                    "type": "number",
+                    "type": "integer",
                     "description": "Discard k-mers with lower coverage than this threshold",
                     "minimum": 2,
                     "maximum": 100
