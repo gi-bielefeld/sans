@@ -47,7 +47,7 @@ $(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/tra
 $(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o
 	$(CC) -c $(SRCDIR)/graph.cpp -o $(BUILDDIR)/graph.o
 
-$(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h
+$(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h $(BUILDDIR)/util.o
 	$(CC) -c $(SRCDIR)/kmer.cpp -o $(BUILDDIR)/kmer.o
 
 $(BUILDDIR)/kmerAmino.o: makefile $(SRCDIR)/kmerAmino.cpp $(SRCDIR)/kmerAmino.h $(BUILDDIR)/util.o
@@ -59,7 +59,7 @@ $(BUILDDIR)/color.o: makefile $(SRCDIR)/color.cpp $(SRCDIR)/color.h
 $(BUILDDIR)/util.o: $(SRCDIR)/util.cpp $(SRCDIR)/util.h
 	$(CC) -c $(SRCDIR)/util.cpp -o $(BUILDDIR)/util.o
 
-$(BUILDDIR)/translator.o: $(SRCDIR)/translator.cpp $(SRCDIR)/translator.h $(SRCDIR)/gc.h
+$(BUILDDIR)/translator.o: $(SRCDIR)/translator.cpp $(SRCDIR)/translator.h $(SRCDIR)/gc.h $(BUILDDIR)/util.o
 	$(CC) -c $(SRCDIR)/translator.cpp -o $(BUILDDIR)/translator.o
 
 $(BUILDDIR)/cleanliness.o: $(SRCDIR)/cleanliness.cpp $(SRCDIR)/cleanliness.h

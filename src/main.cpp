@@ -65,6 +65,7 @@ int main(int argc, char* argv[]) {
         cout << "                  \t options: arith: arithmetic mean" << endl;
         cout << "                  \t          geom:  geometric mean" << endl;
         cout << "                  \t          geom2: geometric mean with pseudo-counts (default)" << endl;
+        cout << "                  \t          mash:  mash distance (experimental)" << endl;
         cout << endl;
         cout << "    -f, --filter  \t Output a greedy maximum weight subset" << endl;
         // cout << "                  \t additional output: (weighted) cleanliness, i.e., ratio of" << endl;
@@ -273,6 +274,9 @@ int main(int argc, char* argv[]) {
             }
             else if (arg == "geom2") {
                 mean = util::geometric_mean2;
+            }
+            else if (arg == "mash") {
+                mean = util::mash;
             }
             else {
                 cerr << "Error: unknown argument: --mean " << arg << endl;
@@ -750,7 +754,7 @@ int main(int argc, char* argv[]) {
     if (dyn_top){
         top = top * num;
     }
-	if(verbose){
+	if(top>-1 && verbose){
 		cout<<"Restricting output to "<<top<<" splits."<< endl;
 	}
 

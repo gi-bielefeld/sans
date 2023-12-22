@@ -38,27 +38,45 @@ public:
      *
      * @param x first value
      * @param y second value
+	 * @param n total number of k-mers
+	 * @param k k-mer size
      * @return arithmetic mean
      */
-    static double arithmetic_mean(uint32_t& x, uint32_t& y);
+    static double arithmetic_mean(uint32_t& x, uint32_t& y, uint64_t& n);
 
     /**
      * This function calculates the geometric mean of two values.
      *
      * @param x first value
      * @param y second value
+	 * @param n total number of k-mers
+	 * @param k k-mer size
      * @return geometric mean
      */
-    static double geometric_mean(uint32_t& x, uint32_t& y);
+    static double geometric_mean(uint32_t& x, uint32_t& y, uint64_t& n);
 
     /**
      * This function calculates the geometric mean with pseudo counts.
      *
      * @param x first value
      * @param y second value
+	 * @param n total number of k-mers
+	 * @param k k-mer size
      * @return geometric mean
      */
-    static double geometric_mean2(uint32_t& x, uint32_t& y);
+    static double geometric_mean2(uint32_t& x, uint32_t& y, uint64_t& n);
+
+    /**
+     * This function calculates a mash-like distance.
+     *
+     * @param x first value
+     * @param y second value
+	 * @param n total number of k-mers
+	 * @param k k-mer size
+     * @return distance
+     */
+    static double mash(uint32_t& x, uint32_t& y, uint64_t& n);
+
 
     /**
      * This function displays a duration in a human readable format.

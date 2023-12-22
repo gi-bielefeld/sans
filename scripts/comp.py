@@ -36,7 +36,7 @@ def readtaxa(filename):
             line=os.path.basename(os.path.splitext(line)[0])
        if os.path.splitext(line)[1] in fileext:
             line=os.path.splitext(line)[0]
-        taxa.add(line)
+       taxa.add(line)
     return(taxa)
 
 

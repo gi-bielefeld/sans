@@ -60,9 +60,11 @@ void util::check_n(uint64_t& n, string& path) {
  *
  * @param x first value
  * @param y second value
+ * @param n total number of k-mers
+ * @param k k-mer size
  * @return arithmetic mean
  */
-double util::arithmetic_mean(uint32_t& x, uint32_t& y) {
+double util::arithmetic_mean(uint32_t& x, uint32_t& y, uint64_t& n) {
     return x / 2.0 + y / 2.0;
 }
 
@@ -71,9 +73,11 @@ double util::arithmetic_mean(uint32_t& x, uint32_t& y) {
  *
  * @param x first value
  * @param y second value
+ * @param n total number of k-mers
+ * @param k k-mer size
  * @return geometric mean
  */
-double util::geometric_mean(uint32_t& x, uint32_t& y) {
+double util::geometric_mean(uint32_t& x, uint32_t& y, uint64_t& n) {
     return sqrt(x) * sqrt(y);
 }
 
@@ -82,10 +86,35 @@ double util::geometric_mean(uint32_t& x, uint32_t& y) {
  *
  * @param x first value
  * @param y second value
+ * @param n total number of k-mers
+ * @param k k-mer size
  * @return geometric mean
  */
-double util::geometric_mean2(uint32_t& x, uint32_t& y) {
+double util::geometric_mean2(uint32_t& x, uint32_t& y, uint64_t& n) {
     return sqrt(x+1) * sqrt(y+1);
+}
+
+/**
+ * This function calculates a mash-like distance.
+ *
+ * @param x first value
+ * @param y second value
+ * @param n total number of k-mers
+ * @param k k-mer size
+ * @return distance
+ */
+double util::mash(uint32_t& x, uint32_t& y, uint64_t& n) {
+	uint64_t w=n-x-y;
+// 	uint64_t t=(sqrt(x+w)*sqrt(y+w));
+	uint64_t t=std::min(x,y)+w;
+// 	uint64_t t=n;
+// 	cerr << geometric_mean2(x,y,n,k)<< " ("<< ((int)k) << ") " << (-1./k)*log(1.*w/t) << "." << endl;
+// 	cout << geometric_mean2(x,y,n) << "\t" << n << "\t" << x << "\t" << y << "\t" << w << "\t" << t << "\t" << log(1.*w/t) << endl;
+// 	double rx=(-1./((int)k))*log((1.*w)/(x+w));
+// 	double ry=(-1./((int)k))*log((1.*w)/(y+w));
+    return -log((1.*w)/t);
+// 	return sqrt(rx)*sqrt(ry);
+	
 }
 
 /**

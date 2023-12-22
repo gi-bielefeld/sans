@@ -1112,7 +1112,7 @@ void graph::clear_thread(uint64_t& T) {
  * @param kmer_color the split colors
  * @param min_value the minimal weight represented in the top list
  */
-void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value){
+void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&, uint64_t&, size2K_t&), string kmer_seq, color_t& kmer_color, double min_value){
     
     bool has_kmers = false; 
     for (auto table : kmer_table){if(!table.empty()){has_kmers = true; break;}} // Check if any entries exist
@@ -1160,7 +1160,7 @@ void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer
  * @param min_value the minimal weight represented in the top list
  * @param verbose print progess
  */
-void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
+void graph::add_weights(double mean(uint32_t&, uint32_t&, uint64_t&), double min_value, bool& verbose) {
 	
 	
 	
@@ -1222,8 +1222,14 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
  * @param mean weight function
  * @param min_value the minimal weight represented in the top list
  */
-void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_value)
+void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint64_t&), double min_value)
 {
+	
+	uint64_t max = 0; // table size
+    if (isAmino){for (auto table: kmer_tableAmino){max += table.size();}} // use the sum of amino table sizes
+    else {for (auto table: kmer_table){max+=table.size();}} // use the sum of base table sizes
+
+    
 	// Iterating over the map using Iterator till map end.
 	hash_map<color_t, array<uint32_t,2>>::iterator it = color_table.begin();
 	while (it != color_table.end())	{
@@ -1235,7 +1241,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
 		array<uint32_t,2> weights = it->second;
 		
 		//insert into split list
-		double new_mean = mean(weights[0], weights[1]);    // calculate the mean value
+		double new_mean = mean(weights[0], weights[1], max);    // calculate the mean value
 		if (new_mean >= min_value) {    // if it is greater than the min. value, add it to the top list
 			split_list.emplace(new_mean, colors);    // insert it at the correct position ordered by weight
 			if (split_list.size() > t) {
@@ -1256,7 +1262,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
  * @param mean weight function
  * @return the new list of splits of length at least t ordered by weight as usual
  */
-multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t&, uint32_t&)) {
+multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t&, uint32_t&, uint64_t&)) {
 
 	uint64_t max = 0;
 	
@@ -1299,7 +1305,7 @@ multiset<pair<double, color_t>, greater<>> graph::bootstrap(double mean(uint32_t
 		}
 		
 		//insert into new split list
-		double new_mean = mean(new_weights[0], new_weights[1]);    // calculate the new mean value
+		double new_mean = mean(new_weights[0], new_weights[1],max);    // calculate the new mean value
 		if (new_mean >= min_value) {    // if it is greater than the min. value, add it to the top list
 			sl.emplace(new_mean, colors);    // insert it at the correct position ordered by weight
 			if (sl.size() > t) {
