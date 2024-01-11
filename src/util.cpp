@@ -104,7 +104,9 @@ double util::geometric_mean2(uint32_t& x, uint32_t& y, uint32_t& w) {
  * @return distance
  */
 double util::mash(uint32_t& x, uint32_t& y, uint32_t& w) {
-    return -log((1.*w)/geometric_mean2(x+w,y+w,w));
+	uint32_t x2=x+w;
+	uint32_t y2=y+w;
+    return -log((1.*w)/geometric_mean2(x2,y2,w));
 //     return -log((1.*w)/min(x+w,y+w));
 }
 
