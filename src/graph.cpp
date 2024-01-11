@@ -1241,7 +1241,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
 		// Accessing the key
 		color_t colors = it->first;
 		
-		if (colors==0) continue;    // ignore empty splits
+// 		if (colors==0) continue;    // ignore empty splits
 		
 		// Accessing the value
 		array<uint32_t,2> weights = it->second;
