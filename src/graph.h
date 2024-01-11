@@ -151,7 +151,7 @@ public:
 	* @param mean weight function
 	* @return the new list of splits of length at least t ordered by weight as usual
 	*/
-	static multiset<pair<double, color_t>, greater<>> bootstrap(double mean(uint32_t&, uint32_t&, uint64_t&));
+	static multiset<pair<double, color_t>, greater<>> bootstrap(double mean(uint32_t&, uint32_t&, uint32_t&));
 
     /**
      * This is an ordered tree collecting the splits [O(log n)].
@@ -312,7 +312,7 @@ public:
 	* @param mean weight function
 	* @param min_value the minimal weight represented in the top list
 	*/
-	static void compile_split_list(double mean(uint32_t&, uint32_t&, uint64_t&), double min_value);
+	static void compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), double min_value);
 
     /**
      * This function iterates over the hash table and calculates the split weights.
@@ -321,7 +321,7 @@ public:
      * @param verbose print progress
      * @param min_value the minimal weight currently represented in the top list
      */
-    static void add_weights(double mean(uint32_t&, uint32_t&, uint64_t&), double min_value, bool& verbose);
+    static void add_weights(double mean(uint32_t&, uint32_t&, uint32_t&), double min_value, bool& verbose);
 
     /**
      * This function adds a single split (weight and colors) to the output list.
@@ -342,7 +342,7 @@ public:
      * @param kmer_color split colors
      * @param min_value the minimal weight currently represented in the top list
      */
-     static void add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&, uint64_t&, size2K_t&), string kmer_seq, color_t& kmer_color, double min_value);       
+     static void add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&, uint32_t&, size2K_t&), string kmer_seq, color_t& kmer_color, double min_value);       
 
     /**
      * This function clears color-related temporary files.
