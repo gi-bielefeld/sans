@@ -1141,7 +1141,7 @@ void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&, uint32_t&, s
     }            
     //Todo 
     bool pos = color::represent(kmer_color);  // invert the color set, if necessary
-    //if (kmer_color == 0) return; // ignore empty splits
+//     if (kmer_color == 0) return; // ignore empty splits
     // min_value = add_weight(kmer_color, mean, min_value, pos); // compute weight
 	array<uint32_t,2>& weight = color_table[kmer_color]; // get the weight and inverse weight for the color set
 	weight[pos]++; // update the weight or the inverse weight of the current color set
@@ -1230,7 +1230,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
     else {for (auto table: kmer_table){max+=table.size();}} // use the sum of base table sizes
 
     uint32_t w= color_table[0][1];
-	color_table.erase(0); // ignore in the while loop
+	color_table[0][1]=0; // ignore in the while loop
 	
 	cout << "\nw="<<w<<endl;
     
@@ -1240,8 +1240,6 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
 		
 		// Accessing the key
 		color_t colors = it->first;
-		
-// 		if (colors==0) continue;    // ignore empty splits
 		
 		// Accessing the value
 		array<uint32_t,2> weights = it->second;
@@ -1259,7 +1257,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
 		// iterator incremented to point next item
 		it++;
 	}
-	color_table[0]={0,w}; // put back original value
+	color_table[0][1]=w; // put back original value
 }
 
 
