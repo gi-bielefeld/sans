@@ -1230,6 +1230,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
     else {for (auto table: kmer_table){max+=table.size();}} // use the sum of base table sizes
 
     uint32_t w= color_table[0][1];
+	color_table[0][1]=0; // ignore in the while loop
 	
 	cout << "\nw="<<w<<endl;
     
@@ -1258,6 +1259,7 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&, uint32_t&), dou
 		// iterator incremented to point next item
 		it++;
 	}
+	color_table[0][1]=w; // put back original value
 }
 
 
