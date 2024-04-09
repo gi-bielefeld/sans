@@ -90,3 +90,27 @@ bool color::is_weakly_compatible(const color_t& c1, const color_t& c2, const col
     return (_::disjoint(c1, c2, c3) || _::disjoint(c1, n2, n3) || _::disjoint(n1, c2, n3) || _::disjoint(n1, n2, c3))
         && (_::disjoint(n1, n2, n3) || _::disjoint(n1, c2, c3) || _::disjoint(c1, n2, c3) || _::disjoint(c1, c2, n3));
 }
+
+/**
+* This function tests whether a given color set is the complete set of colors.
+* 
+* @param c color set to test
+* @return true, if color set equals all colors
+*/
+bool color::is_complete(const color_t& c){
+	return (~c & mask)==0b0u;
+}
+
+
+string color::to_string(color_t c){
+	string s="";
+	char chr;
+	for (size1N_t i = 0; i < n; ++i) {
+		unshift(c,chr);
+		s+=chr;
+	}
+	for (size1N_t i = 0; i < n; ++i) {
+		shift(c,s[i]);
+	}
+	return s;	
+}

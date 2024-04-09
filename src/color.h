@@ -87,6 +87,18 @@ class color {
      * @return true, if weakly compatible
      */
     static bool is_weakly_compatible(const color_t& c1, const color_t& c2, const color_t& c3);
+	
+	
+	/**
+	 * This function tests whether a given color set is the complete set of colors.
+	 * 
+	 * @param c color set to test
+	 * @return true, if color set equals all colors
+	 */
+	static bool is_complete(const color_t& c);
+	
+	
+	static string to_string(color_t c);
 
  protected:
 

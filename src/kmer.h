@@ -80,5 +80,15 @@ class kmer {
      * @return 1 if inverted, 0 otherwise
      */
     static bool reverse_represent(kmer_t& kmer);
+	
+		
+	/**
+	* This function converts a bit-represented k-mer into a string.
+	* WARNING: k-mer will be empty afterwards!
+	*
+	* @param kmer k-mer to convert
+	*/
+	static string kmer_to_string(kmer_t& kmer);
+
 
 };

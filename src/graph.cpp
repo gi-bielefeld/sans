@@ -82,6 +82,11 @@ multimap_<double, color_t> graph::split_list;
 */
 vector<char> graph::allowedChars;
 
+
+// Counter for ancestral nodes
+int graph::ancestors;
+hash_map<color_t, int> graph::ancestor_table;
+
 /**
  * This function qualifies a k-mer and places it into the hash table.
  */
@@ -130,6 +135,7 @@ struct node* newSet(color_t taxa, double weight, vector<node*> subsets) {
 void graph::init(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, uint64_t& thread_count) {
     t = top_size;
     isAmino = amino;
+	ancestors = 0;
     if(!isAmino){
 
         // Automatic table count
@@ -1208,10 +1214,12 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             // process
             color_t& color = *color_ref;
             bool pos = color::represent(color);    // invert the color set, if necessary
-            if (color == 0) continue;    // ignore empty splits
+            if (! (color == 0)){// continue;    // ignore empty splits
             // add_weight(color, mean, min_value, pos);
-			array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-			weight[pos]++; // update the weight or the inverse weight of the current color set
+				array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+				weight[pos]++; // update the weight or the inverse weight of the current color set
+			}
+ 			if(pos){color::complement(color);}
 		}
     }
 //    compile_split_list(mean,min_value); done in main.cpp
@@ -1384,7 +1392,9 @@ loop:
     }
     if (map) {
         node* root = build_tree(tree);
-        return print_tree(root, map, support_values, bootstrap_no) + ";\n";
+//         return print_tree(root, map, support_values, bootstrap_no) + ";\n";
+//TODO: output ancestors
+        return print_tree_with_ancestors(root, map, support_values, bootstrap_no) + ";\n";
     } else {
         return "";
     }
@@ -1663,3 +1673,139 @@ string graph::print_tree(node* root, std::function<string(const uint64_t&)> map,
 }
 
 
+/**
+ * This function returns a newick string generated from the given tree structure (set).
+ * Internal nodes are labeled with IDs and per ID, ancestral k-mers are determined.
+ *
+ * @param root root of the tree/set structure
+ * @param map function that maps an integer to the original id, or null
+ * (@param support_values a hash map storing the absolut support values for each color set)
+ * (@param bootstrap_no the number of bootstrap replicates for computing the per centage support)
+ * @return newick string
+ */
+string graph::print_tree_with_ancestors(node* root, std::function<string(const uint64_t&)> map) {
+	return print_tree_with_ancestors(root, map,nullptr,0);
+}
+
+string graph::print_tree_with_ancestors(node* root, std::function<string(const uint64_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no) {
+    vector<node*> subsets = root->subsets;
+    color_t taxa = root->taxa;
+
+    if (subsets.empty() && taxa.popcnt() == 1){    // leaf set
+       return map(taxa.tzcnt()) + ":" + to_string(root->weight);
+    }
+    else {
+        string s = "(";
+        for (node* subset : subsets) {
+            s += print_tree_with_ancestors(subset, map, support_values, bootstrap_no);
+            if (subset != subsets.back()) { s += ","; }
+        }
+        s += ")";
+		if(support_values!=nullptr){
+			cerr << "Error: Output of bootstrap values in newick format in combination with ancetral k-mer output currently not supported." << endl;
+			exit(1);
+		}
+		//color set -> ancestor ID
+		// parent edge
+		ancestor_table[root->taxa]=ancestors; 
+		// child edges
+		for (node* subset : subsets) {
+			color_t c=subset->taxa;
+			color::complement(c);
+			ancestor_table[c]=ancestors;
+			color::complement(c);
+		}
+		// internal labels
+		s += "A_" + to_string(graph::ancestors++);
+		s += ":";
+        s += to_string(root->weight);
+        return s;
+    }
+}
+
+
+void graph::ancestral_reconstruction(){
+/*
+ For each split {A|B}, assign k-mers unique to genome set A to all (internal) nodes below the LCA of A, and assign k-mers unique to genome set B to all nodes below the LCA of B.
+Assign all k-mers that are contained in all genomes to all internal nodes.
+How? Go through pan matrix and write k-mer to according file.
+*/
+
+
+	// DEBUG
+// 	cout << to_string(ancestor_table.size())<< endl << endl << flush;
+// 		hash_map<color_t,int>::iterator col_it=ancestor_table.begin();
+// 		while(col_it!=ancestor_table.end()){
+// 			//col_it subset of color?
+// 			cout << color::to_string(col_it.key()) << ": " << to_string(col_it.value()) << endl << flush;
+// 			col_it++;
+// 		}
+
+	// output file streams
+	vector<ofstream> ofstreams;
+	ofstreams.reserve(ancestors);
+	for(int i = 0; i < graph::ancestors; i++){
+		string filename="A_"+to_string(i)+".kmers";
+		ofstreams.emplace_back(ofstream(filename));
+		ofstreams[i]<<"> A_" << to_string(i) << endl;
+	}
+		
+	// iterate the k-mer table(s)
+	// The iterators for the tables
+	hash_map<kmer_t, color_t>::iterator base_it;
+	hash_map<kmerAmino_t, color_t>::iterator amino_it;
+	// Iterate the tables
+	for (int i = 0; i < graph::table_count; i++) // Iterate all tables
+	{
+		if (!isAmino){base_it = kmer_table[i].begin();} // base table iterator
+		else {amino_it = kmer_tableAmino[i].begin();} // amino table iterator
+
+		while (true) { // process k-mers
+			// update the iterator
+			color_t* color_ref; // reference of the current color
+			kmer_t kmer;
+			kmerAmino_t kmerAmino;
+			if (isAmino) { // if the amino table is used, update the amino iterator
+				if (amino_it == kmer_tableAmino[i].end()){break;} // stop iterating if done
+				else{kmerAmino = amino_it->first; color_ref = &amino_it.value(); ++amino_it;} // iterate the amino table
+			}
+			else { // if the base tables is used update the base iterator
+				// Todo: Get the target hash map index from the kmer bits
+				if (base_it == kmer_table[i].end()){break;} // stop itearating if done
+				else {kmer = base_it.key(); color_ref = &base_it.value(); ++base_it;} // iterate the base table
+			}
+			color_t& color = *color_ref;
+			//skip k-mers that only apear in one genome
+			if(color.popcnt()==1){continue;}
+			//skip k-mers that do not belong to any filtered split
+			if(ancestor_table.find(color) == ancestor_table.end()){continue;}
+			// get k-mer string and append N for keeping k-mers in Fasta file separated
+			string kmerstr=(isAmino?(kmerAmino::kmer_to_string(kmerAmino)):(kmer::kmer_to_string(kmer)))+"N";
+			// core k-mers
+			if(color::is_complete(color)){
+				for(int i = 0; i < graph::ancestors; i++){
+					ofstreams[i]<<kmerstr<< endl;
+				}
+				continue;
+			}
+			//which subsets are affected? -> iterate the color->ancestor map
+			hash_map<color_t,int>::iterator col_it=ancestor_table.begin();
+			while(col_it!=ancestor_table.end()){
+				color_t sub=col_it.key();
+				//col_it subset of color?
+				if((sub & color) == sub){
+// 					ofstreams[col_it.value()] << to_string(ancestor_table[color]) << ": " << kmerstr << endl << flush;
+					ofstreams[col_it.value()] << kmerstr << endl << flush;
+				}
+				col_it++;
+			}
+		}
+	}
+	for(int i = 0; i < graph::ancestors; i++){
+		ofstreams[i].close();
+	}
+
+
+
+	
+}

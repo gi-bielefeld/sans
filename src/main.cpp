@@ -1092,6 +1092,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			cout << "\33[2K\r" << "Filtering splits..." << flush;
 		}
 		apply_filter(filter,newick, map, graph::split_list,verbose);
+		graph::ancestral_reconstruction();
 		
 	}else{
 		

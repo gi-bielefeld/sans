@@ -56,4 +56,21 @@ class kmerAmino {
      * @param c right character
      */
     static void shift_right(kmerAmino_t& kmer, char& c);
+	
+	/**
+	* This function unshifts a k-mer returning the character on the right.
+	*
+	* @param kmer bit sequence
+	* @param chr right character
+	*/
+	static void unshift(kmerAmino_t& kmer, char& chr);
+	
+	/**
+	* This function converts a bit-represented k-mer into a string.
+	* WARNING: k-mer will be empty afterwards!
+	*
+	* @param kmer k-mer to convert
+	*/
+	static string kmer_to_string(kmerAmino_t& kmer);
+
 };

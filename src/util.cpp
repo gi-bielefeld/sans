@@ -143,7 +143,7 @@ uint64_t util::char_to_bits(const char& c) {
  * @param b bit sequence
  * @return character
  */
-char util::bits_to_char(uint64_t& b) {
+char util::bits_to_char(const uint64_t& b) {
     switch (b) {
         case 0b00u:
             return 'A';
@@ -166,7 +166,7 @@ char util::bits_to_char(uint64_t& b) {
  * @param c character
  * @return bit sequence
  */
-uint64_t util::amino_char_to_bits(char& c) {
+uint64_t util::amino_char_to_bits(const char& c) {
 
     switch (c) {
         case 'A':
@@ -235,7 +235,7 @@ uint64_t util::amino_char_to_bits(char& c) {
  * @param b bit sequence
  * @return character
  */
-char util::amino_bits_to_char(uint64_t& b) {
+char util::amino_bits_to_char(const uint64_t& b) {
     switch (b) {
         case 0b00000u:
             return 'A';
@@ -364,5 +364,4 @@ bool util::path_exist(const string &filename) {
 		return true;
 	}
 }
-
 

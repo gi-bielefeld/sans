@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <limits>
 #include <algorithm>
 #include <functional>
@@ -155,7 +156,11 @@ private:
      */
     static vector<hash_map<kmer_t, uint64_t>> quality_map;
     static vector<hash_map<kmerAmino_t, uint64_t>> quality_mapAmino;
-
+	
+	// Counter for ancestral nodes
+	static int ancestors;
+	static hash_map<color_t, int> ancestor_table;
+	
 public:
 
 	/**
@@ -411,6 +416,7 @@ public:
     static string filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
 	
 	
+	static void ancestral_reconstruction();
 
 
 protected:
@@ -505,6 +511,11 @@ protected:
     static string print_tree(node* root, std::function<string(const uint64_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no);
     static string print_tree(node* root, std::function<string(const uint64_t&)> map);
 
+    static string print_tree_with_ancestors(node* root, std::function<string(const uint64_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no);
+    static string print_tree_with_ancestors(node* root, std::function<string(const uint64_t&)> map);
+
+	
+	
     /**
      * This function checks if the character at the given position is allowed.
      * @param pos position in str
