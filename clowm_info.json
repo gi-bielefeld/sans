@@ -1,0 +1,12 @@
+{
+  "inputParameters": [
+    "inputdir"
+  ],
+  "outputParameters": [
+    "outdir"
+  ],
+  "dois": [
+    "10.1093/bioinformatics/btab444",
+    "10.1186/s13015-020-00164-3"
+  ]
+}

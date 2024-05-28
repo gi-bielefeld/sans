@@ -3,7 +3,7 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + "/" + it },type : "file")
 
 process sans {
-  container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:sans-latest"
+  container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:latest"
   publishDir params.outdir, mode: 'symlink'
   debug false
 
@@ -21,7 +21,7 @@ process sans {
 }
 
 process splitstree {
-  container "gitlab.ub.uni-bielefeld.de:4567/gi/sans:splitstree-latest"
+  container "gitlab.ub.uni-bielefeld.de:4567/gi/sans/splitstree:latest"
   publishDir params.outdir, mode: 'symlink'
   debug false
 
