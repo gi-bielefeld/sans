@@ -1004,6 +1004,7 @@ int main(int argc, char* argv[]) {
         // Thread safe implementation of getting the index of the next input to preocess
         uint64_t index = 0;
         std::mutex index_mutex;
+        std::mutex sync_mutex;
         auto index_lambda = [&] () { std::lock_guard<mutex> lg(index_mutex); return index++;};
 
         auto lambda = [&] (uint64_t T, vector<uint16_t> genome_ids, vector<uint16_t> file_ids){ // This lambda expression wraps the sequence-kmer hashing
@@ -1024,7 +1025,8 @@ int main(int argc, char* argv[]) {
 					if (q_table.size()>0) {
 						cout <<" q="<<q_table[genome_ids[i]];
 					}
-					cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
+                    $SYNC( sync_mutex, $log $_ << " (genome " << genome_ids[i]+1 << "/" << denom_file_count << _$ );
+					// cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
 					if(genome_ids.size()>gen_files.size()){
 						cout << "; file " << i+1 << "/" << genome_ids.size();
 					}
