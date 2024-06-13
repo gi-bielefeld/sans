@@ -37,7 +37,7 @@ Makro definitions for advanced output options
 #define _$     "\33[0m" << std::flush
 #define _end$  "\33[0m" << std::endl
 #define _end$$ "\33[0m" << std::endl, exit(1)
-#define $SYNC(mtx, STREAM) mtx.lock(), STREAM, mtx.unlock()
+#define $SYNC(STREAM) sync_mutex.lock(), STREAM, sync_mutex.unlock()
 
 
 /**
