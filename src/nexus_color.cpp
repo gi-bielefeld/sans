@@ -1,20 +1,12 @@
 #include "nexus_color.h"
 
-struct rgb_color {
-    int r, g, b;
 
-    bool is_white(){ return ((r == 255) && (g == 255) && (b == 255));}
-    bool is_default(){ return ((r == -1) && (g == -1) && (b == -1));} // none color default
-    bool is_equal(rgb_color color){
-        return ((r == color.r) && (g == color.g) && (b == color.b));
-    }
+unordered_map<string, string> nexus_color::tax_grp_map; // map containing taxname -> group
+unordered_map<string, rgb_color> nexus_color::grp_clr_map; // map conatining group -> color
+unordered_map<int, rgb_color> nexus_color::no_clr_map; // map containing number -> color to color vertices
+int nexus_color::no_grps; // number of groups given
 
-    void set_white(){ r = g = b = 255;}
-    void set_black(){ r = g = b = 0;}
-    void set_default(){ r = g = b = -1;}
 
-    void print(){ cout << r << " " << g << " " << b;}
-};
 
 
 bool nexus_color::program_in_path(const string& programName) {
@@ -369,13 +361,49 @@ void nexus_color::open_in_splitstree(const string& nexus_file, const string& pdf
 }
 
 
+void nexus_color::prepare_marking(const string& tax_grp_file, const string& grp_clr_file){
+	
+
+    // Reading and saving taxa -> grp mapping
+    create_maps(tax_grp_map, tax_grp_file, grp_clr_map);
+
+    // (Reading &) Saving grp -> col mapping
+    reading_grp_clr_file(grp_clr_file, grp_clr_map, no_grps);
+
+	// check colors
+	for (auto grp_clr : grp_clr_map) { // add node for each group
+		rgb_color clr = grp_clr.second; // get color of group
+		if (clr.is_default()){ // if no color given change the shape to rectangle (s=r)
+			cerr << "Invalid/No color given for group " << grp_clr.first << ". Using white rectangle\n";
+		}
+	}
+}
+
+string nexus_color::get_grp(string id){
+	return tax_grp_map[id];
+}
+
+string nexus_color::get_mark(string id){
+// 	'"<mark shape="circle" width="100" height="100" fill="red" stroke="none">"'
+	
+	string mark="<mark shape=\"circle\" width=\"50\" height=\"50\" fill=\"";
+	rgb_color clr = grp_clr_map[tax_grp_map[id]];
+	mark+=clr.toString();
+	if(clr.is_white()){
+		mark += "\" stroke=\"black\">";
+	}else{
+		mark += "\" stroke=\"none\">";
+	}
+	return mark;
+}
+
+
 void nexus_color::color_nexus(const string& nexus_file, const string& tax_grp_file, const string& grp_clr_file){
 
     bool translate = false;
     bool vertices = false;
     bool vlabels = false;
     int no_vertices = 0; // number of all vertices in network
-    int no_grps; // number of groups given
     int size = 10; // size of colored vertex
     int textsize = 12; // size of label text
     double max_x = 0; // max x value of graph nodes
@@ -386,9 +414,9 @@ void nexus_color::color_nexus(const string& nexus_file, const string& tax_grp_fi
     ostringstream legend; // to save info for legend later
     string line = "";
 
-    unordered_map<string, string> tax_grp_map; // map containing taxname -> group
-    unordered_map<string, rgb_color> grp_clr_map; // map conatining group -> color
-    unordered_map<int, rgb_color> no_clr_map; // map containing number -> color to color vertices
+//     unordered_map<string, string> tax_grp_map; // map containing taxname -> group
+//     unordered_map<string, rgb_color> grp_clr_map; // map conatining group -> color
+//     unordered_map<int, rgb_color> no_clr_map; // map containing number -> color to color vertices
 
     // Reading and saving taxa -> grp mapping
     create_maps(tax_grp_map, tax_grp_file, grp_clr_map);

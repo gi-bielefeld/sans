@@ -1377,7 +1377,29 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 				string taxa = nexus_color::remove_extensions(denom_names[i]); // cutting off file extension
 				stream_nexus << "\n[" << i+1 << "] '" << taxa << "'";
 			}
-			stream_nexus << "\n;\nEND; [TAXA]\n";
+			stream_nexus << "\n;";
+			if(c_nexus_wanted){
+				if(verbose) cout << "Adding color..." << endl << flush;
+				stream_nexus << "DISPLAYLABELS\n";
+				// output color marks per taxon
+				nexus_color::prepare_marking(groups, coloring);
+				hash_set<string> drawn;
+				for(int i; i < denom_file_count; ++i){
+					string taxa = nexus_color::remove_extensions(denom_names[i]); // cutting off file extension
+					stream_nexus << "\n[" << i+1 << "] '";
+					stream_nexus << nexus_color::get_mark(taxa);
+					// first occurrence gets a label
+					string grp=nexus_color::get_grp(taxa);
+					if(drawn.find(grp)==drawn.end()){
+						stream_nexus << " <size \"50\">"<<taxa << "</size>'\n";
+						drawn.emplace(grp);
+					}else{
+						stream_nexus << "'\n";
+					}
+				}
+				stream_nexus << ";\n";
+			}
+			stream_nexus << "\nEND; [TAXA]\n";
 			if(bootstrap_no>0){ // confidence values
 				stream_nexus << "\nBEGIN Splits;\nDIMENSIONS ntax=" << denom_file_count << " nsplits=" << graph::split_list.size() << ";\nFORMAT CONFIDENCES=YES;\nMATRIX";
 			} else {
@@ -1463,9 +1485,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			// naming modified nexus output file
 			//string modded_file = nexus_color::modify_filename(nexus, "labeled_");
 			// scale weights to 0-1
-			nexus_color::scale_nexus(nexus, verbose, nexus_wanted);
+// 			nexus_color::scale_nexus(nexus, verbose, nexus_wanted);
 
-			if(c_nexus_wanted){
+/*			if(c_nexus_wanted){
 				// use scaled file to open, mod and save in SplitsTree
 				//nexus_color::open_in_splitstree(nexus, pdf, verbose, true, modded_file);
 				nexus_color::open_in_splitstree(nexus, pdf, verbose, true, nexus);
@@ -1477,7 +1499,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 					//nexus_color::open_in_splitstree(modded_file, pdf, verbose, false);
 					nexus_color::open_in_splitstree(nexus, pdf, verbose, false);
 				}
-			} else if(pdf_wanted){
+			} else */if(pdf_wanted){
 				//nexus_color::open_in_splitstree(nexus, pdf, verbose); // not saving (via SplitsTree) network to file
 				nexus_color::open_in_splitstree(nexus, pdf, verbose, true, nexus);
 			}
