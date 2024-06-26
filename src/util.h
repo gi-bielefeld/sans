@@ -10,7 +10,7 @@
 #include <vector>
 #include <regex>
 #include <sys/stat.h>
-// #include <mutex>
+#include <mutex>
 
 using namespace std;
 
@@ -19,26 +19,35 @@ using namespace std;
 Makro definitions for advanced output options
 (Transcribed from kc)
 */
-#define $out  std::cout
+/*
 #define $log  std::cerr
-
 #define $err  std::cerr << "\33[38;5;131m"
 #define $warn std::cerr << "\33[38;5;137m"
 #define $note std::cerr << "\33[38;5;132m"
 
 #define $link std::cerr << "\33[38;5;67m"
 #define $lite std::cerr << "\33[38;5;244m"
-#define $_              << "\33[2K\r"
 
-#define  $                 std::flush
 #define  end$              std::endl
 #define  end$$             std::endl, exit(0)
-
-#define _$     "\33[0m" << std::flush
 #define _end$  "\33[0m" << std::endl
 #define _end$$ "\33[0m" << std::endl, exit(1)
-#define $SYNC(STREAM) sync_mutex.lock(), STREAM, sync_mutex.unlock()
 
+*/
+
+
+/**
+Minimal output synchronization routine
+**/
+#define $out  std::cout
+#define  $                 std::flush
+#define $_              << "\33[2K\r"
+#define _$     "\33[0m" << std::flush
+
+// This declaration allows to initialize the sync_mutex outside of 
+// this header file. The instantiation is to be found in util.cpp 
+extern std::mutex sync_mutex;
+#define $SYNC(STREAM)  sync_mutex.lock(), STREAM, sync_mutex.unlock()
 
 /**
  * This class contains some helpful utility functions.

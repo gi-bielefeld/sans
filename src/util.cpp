@@ -1,6 +1,8 @@
 #include "util.h"
 
 
+std::mutex sync_mutex;
+
 /**
  * This function compares the number of input genomes (n) to the compile parameter DmaxN (maxN).
  * Exits (code 3) if they disagree (too much) and a re-compilation is necessary (n>maxN) or recommended (n much smaller maxN).

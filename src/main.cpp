@@ -195,7 +195,6 @@ int main(int argc, char* argv[]) {
     // qol
     bool verbose = false;    // print messages during execution
 	chrono::high_resolution_clock::time_point end;
-    std::mutex sync_mutex; // This mutex is used to syncronize parallel output (see util.h)
 
     // simple nexus, colored nexus, pdf
     bool nexus_wanted = false;
@@ -1025,7 +1024,7 @@ int main(int argc, char* argv[]) {
 					if (q_table.size()>0) {
 						cout <<" q="<<q_table[genome_ids[i]];
 					}
-                    $SYNC($log $_ << " (genome " << genome_ids[i]+1 << "/" << denom_file_count << _$ );
+                    $SYNC($out << " (genome " << genome_ids[i]+1 << "/" << denom_file_count << _$ );
 					// cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
 					if(genome_ids.size()>gen_files.size()){
 						cout << "; file " << i+1 << "/" << genome_ids.size();
