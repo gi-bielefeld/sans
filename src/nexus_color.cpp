@@ -388,10 +388,13 @@ string nexus_color::get_mark(string id){
 	
 	string mark="<mark shape=\"circle\" width=\"50\" height=\"50\" fill=\"";
 	rgb_color clr = grp_clr_map[tax_grp_map[id]];
-	mark+=clr.toString();
-	if(clr.is_white()){
+	if(clr.is_default()){
+		clr.set_white();
+		mark+=clr.toString();
 		mark += "\" stroke=\"black\">";
+		cerr << "Warning: No group assigned to " << id << endl;
 	}else{
+		mark+=clr.toString();
 		mark += "\" stroke=\"none\">";
 	}
 	return mark;

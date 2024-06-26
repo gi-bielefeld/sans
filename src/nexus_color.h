@@ -16,7 +16,7 @@ using namespace std;
 #define SRC_NEXUS_COLOR_H
 
 struct rgb_color {
-    int r, g, b;
+    int r=-1, g=-1, b=-1;
 
     bool is_white(){ return ((r == 255) && (g == 255) && (b == 255));}
     bool is_default(){ return ((r == -1) && (g == -1) && (b == -1));} // none color default

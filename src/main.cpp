@@ -1390,8 +1390,10 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 					stream_nexus << nexus_color::get_mark(taxa);
 					// first occurrence gets a label
 					string grp=nexus_color::get_grp(taxa);
-					if(drawn.find(grp)==drawn.end()){
+					if(grp==""){
 						stream_nexus << " <size \"50\">"<<taxa << "</size>'\n";
+					}else if(drawn.find(grp)==drawn.end()){
+						stream_nexus << " <size \"50\"><i><b>"<<grp << "</b></i></size>'\n";
 						drawn.emplace(grp);
 					}else{
 						stream_nexus << "'\n";
