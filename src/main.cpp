@@ -1017,19 +1017,18 @@ int main(int argc, char* argv[]) {
 
 				char c_name[(file_name).length()]; // Create char array for c compatibilty
 				strcpy(c_name, (file_name).c_str()); // Transcire to char array
-
 				igzstream file(c_name, ios::in);    // input file stream
-				if (verbose) {     // print progress
-// 					cout << "\33[2K\r" << file_name;
+
+                // print progress
+				if (verbose) {    
 					if (q_table.size()>0) {
-						cout <<" q="<<q_table[genome_ids[i]];
+						$SYNC($out <<" q="<<q_table[genome_ids[i]] << end$);
 					}
-                    $SYNC($out << " (genome " << genome_ids[i]+1 << "/" << denom_file_count << _$ );
-					// cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
+                    $SYNC($out << " (genome " << genome_ids[i]+1 << "/" << denom_file_count << _$ ); // Guarded wrapper for multithreaded output
 					if(genome_ids.size()>gen_files.size()){
-						cout << "; file " << i+1 << "/" << genome_ids.size();
+						$SYNC($out << "; file " << i+1 << "/" << genome_ids.size() << end$ );
 					}
-					cout << ")" << endl;
+					$SYNC($out << ")" << end$ );
 				}
 				count::deleteCount();
 
@@ -1076,7 +1075,7 @@ int main(int argc, char* argv[]) {
 					}
 				}
 				if (verbose && count::getCount() > 0) {
-					cerr << count::getCount()<< " triplets could not be translated."<< endl;
+					$SYNC($err << count::getCount()<< " triplets could not be translated."<< _$);
 				}
 				if (window > 1) {
 					iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)

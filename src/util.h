@@ -21,7 +21,6 @@ Makro definitions for advanced output options
 */
 /*
 #define $log  std::cerr
-#define $err  std::cerr << "\33[38;5;131m"
 #define $warn std::cerr << "\33[38;5;137m"
 #define $note std::cerr << "\33[38;5;132m"
 
@@ -40,6 +39,8 @@ Makro definitions for advanced output options
 Minimal output synchronization routine
 **/
 #define $out  std::cout
+#define end$  std::endl
+#define $err  std::cerr << "\33[38;5;131m"
 #define  $                 std::flush
 #define $_              << "\33[2K\r"
 #define _$     "\33[0m" << std::flush
