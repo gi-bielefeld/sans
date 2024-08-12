@@ -623,13 +623,6 @@ void graph::fill_blacklist(string& str, bool& reverse) {
     uint_fast8_t left;  // The character that is shifted out 
     uint_fast8_t right; // The binary code of the character that is shifted in
 
-    #if maxK > 32
-    if (!isAmino){
-        for (int i =0; i < 2* kmer::k; i++){rc_bin += period[i];}
-        rc_bin %= table_count;
-    }
-    #endif
-
     kmerAmino_t kmerAmino=0;    // create a new empty bit sequence for the k-mer
 
     uint64_t begin = 0;
