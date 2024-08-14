@@ -1148,6 +1148,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		if (verbose) {
 			cout<< "\33[2K\r" << "Processed " << max << " unitigs (100%)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
 		}
+		denom_file_count = denom_names.size();
 	}
 
 
