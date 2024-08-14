@@ -1297,12 +1297,8 @@ void graph::clear_thread(uint64_t& T) {
  * @param kmer_color the split colors
  * @param min_value the minimal weight represented in the top list
  */
-void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value){
+void graph::add_cdbg_colored_kmer(string kmer_seq, const uint16_t& kmer_color){
     
-    bool has_kmers = false; 
-    for (auto table : kmer_table){if(!table.empty()){has_kmers = true; break;}} // Check if any entries exist
-
-    if (has_kmers){ // check if the kmer is already stored
         kmer_t kmer; // create a kmer to search in the set of tables
 
         for (int pos=0; pos < kmer_seq.length(); ++pos) // collect the bases from the k-mer sequence.
@@ -1312,24 +1308,9 @@ void graph::add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer
 
 	    bool reversed = kmer::reverse_represent(kmer);
 
-        if (search_kmer(kmer)){ // Check if additional colors are stored for this kmer
-            // Get the colors stored for this kmer
-            color_t hashed_color = get_color(kmer, reversed); // the currently stored colores of the kmer
-            for (uint64_t pos=0; pos < maxN; pos++){ // transcribe hashed colores to the cdbg color set
-                    if(hashed_color.test(pos) && !kmer_color.test(pos)){ // test if the color is set in the stored color set
-                        kmer_color.set(pos);
-                    }
-           }
-           // Remove the kmer from the hash table
-           remove_kmer(kmer, reversed); // remove the kmer from the table
-	   }
-    }            
-    //Todo 
-    bool pos = color::represent(kmer_color);  // invert the color set, if necessary
-    if (kmer_color == 0) return; // ignore empty splits
-    // min_value = add_weight(kmer_color, mean, min_value, pos); // compute weight
-	array<uint32_t,2>& weight = color_table[kmer_color]; // get the weight and inverse weight for the color set
-	weight[pos]++; // update the weight or the inverse weight of the current color set
+		uint_fast32_t bin = compute_bin(kmer);
+		hash_kmer(bin, kmer, kmer_color);    // update the k-mer with the current color
+
 }
 
 /*

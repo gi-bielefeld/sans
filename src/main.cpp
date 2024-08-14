@@ -1122,42 +1122,35 @@ int main(int argc, char* argv[]) {
 
 double min_value = numeric_limits<double>::min(); // current minimal weight represented in the top list
 #ifdef useBF
-    if (!graph.empty()) {
-        if (verbose) {
-            cout << "SANS::main(): Processing unitigs..." << flush;
-        }
-        uint64_t cur = 0, progress;
-        uint64_t max = cdbg.size();
-
-        for (auto& unitig : cdbg) {
-            if (verbose) {
-                cout << "\33[2K\r" << "Processed " << cur << " unitigs (" << 100*cur/max << "%) " << flush;
-            }   cur++;
-
-            auto num_kmers = unitig.size - kmer::k + 1; // the number of kmers in this unitig
-            auto uc_kmers = new UnitigColors[num_kmers]; // storage for unitig colored kmers
-            auto unitig_map = UnitigMapBase(0, 1, kmer::k, true);
-
-            auto sequence = unitig.mappedSequenceToString(); // the mapped unitig sequence
-            
-	    auto *colors = unitig.getData()->getUnitigColors(unitig); // the k-mer-position-per-color of this unitig
-            auto it = colors->begin(unitig);
-            auto end = colors->end();
-            for (it ; it != end; ++it) { // iterate the unitig and collect the colors and corresponding k-mer starts
-                uc_kmers[it.getKmerPosition()].add(unitig_map, it.getColorID());
-	    
-	    }
-            
-            for (unsigned int i = 0; i != num_kmers; ++i){ // iterate the k-mers
-                string kmer_sequence = sequence.substr(i, kmer::k); // the k-mer sequence
-                color_t color = 0;
-                for (auto uc_it=uc_kmers[i].begin(unitig_map); uc_it != uc_kmers[i].end(); ++uc_it){ // iterate the unitig colors
-                    color.set(name_table[cdbg.getColorName(uc_it.getColorID())]); // set the k-mer color
+     if (!graph.empty()) {
+		if (verbose){
+            cout << "SANS::main(): Processing unitigs..." << endl;
 		}
-                graph::add_cdbg_colored_kmer(mean, kmer_sequence, color, min_value);
-	   }
-        }
-    }
+		
+		uint64_t cur = 0, prog = 0, next;
+		uint64_t max = cdbg.size();
+
+		for (auto& unitig : cdbg) {
+			if (verbose) {
+				next = 100 * cur / max;
+				if (prog < next)  cout << "\33[2K\r" << "Processed " << cur << " unitigs (" << next << "%) " << flush;
+				prog = next; cur++;
+			}
+			auto sequence = unitig.mappedSequenceToString();
+			auto* matrix = unitig.getData()->getUnitigColors(unitig);
+
+			for (auto it = matrix->begin(unitig); it != matrix->end(); ++it) {
+				auto kmer_sequence = sequence.substr(it.getKmerPosition(), kmer);
+				const uint16_t& color = name_table[cdbg.getColorName(it.getColorID())]; // set the k-mer color
+				graph::add_cdbg_colored_kmer(kmer_sequence, color);
+			}
+		}
+		if (verbose) {
+			cout<< "\33[2K\r" << "Processed " << max << " unitigs (100%)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
+		}
+	}
+
+
 #endif
 
 	if(verbose & ((!input.empty() && splits.empty()) || !graph.empty())){

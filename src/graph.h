@@ -416,7 +416,7 @@ public:
      * @param kmer_color split colors
      * @param min_value the minimal weight currently represented in the top list
      */
-     static void add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value);       
+     static void add_cdbg_colored_kmer(string kmer_seq, const uint16_t& kmer_color);       
 
     /**
      * This function clears color-related temporary files.
