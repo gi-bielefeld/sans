@@ -1,60 +1,55 @@
 
+# SANS *ambages*: Usage
+
 [comment]: <> (Add the new SANS logo here)
-<br>
-<img src="resource/logo.png" alt="Description of the image">
-
-***
+[comment]: <br>
+ <img src="https://gitlab.ub.uni-bielefeld.de/gi/sans/-/blob/clowm-integration-extensions/docs/resource/logo.png" alt="New SANS LOGO">
 
 <br>
-The <b><i> SANS ambages </i></b> software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
+
+The ***SANS ambages*** software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
 the tool <i>Splits Tree </i>. 
-The software comes with an extensive set of parameters and features, allowing for applicability in a wide range of scenarios.
-For a simplistic run however, it is sufficient to provide the the input 
-and output location of the target data. 
+The software comes with an extensive set of parameters and features, allowing for applicability to a wide range of scenarios.
+In the following, we provide a set of explanations and examples of how to configure and stage a SANS workflow in the CloWM environment. 
+
+[comment]: <> (F.K. Added-3 break-spacing between sections ) 
 <br>
 <br>
-
-- A minimal example for such a scenario is illustrated in the   [`Quickstart Guide`](#QickstartChap) . 
-
 <br>
 
-- Additional parameters are explained in detail in the
-[Parameter Collection](#ParamChap).
-
-<br>
-
-- Convinced by SANS? An installation guide for your system is provided in the
-['Installation Guide'](#InstalChap).
-
-<br>
-
+# Contents
 ***
-
-<br>
 <br>
 
- # [`Quickstart Guide`](#QickstartChap)
+[**Quickstart Guide**](#quickstart-guide)
 
-- <b>  [`Uploading Data`](#UploadSec) </b>
+- [Input Data](#input-data)
+- Preparing the Workflow
+- Executing the Workflow
+- Accessing Results
 
-- <b> Preparing the Workflow </b>
+### Parameter Tweeking
+- Adjusting k-mer Length
+- Trees and Networks
+- Graph Generation
+- Amino Acid Data
+- Filtering Singletons
 
-- <b> Executing the Workflow</b>
+### Convinced by SANS? An Installation Guide 
+- Downloading SANS
+- Installing
 
-- <b> Accessing the Results </b>
+<br><br><br>
 
-
+# Quickstart Guide
+***
 <br>
+
+This is a super importand sentence
+
+<br><br><br>
+## Input Data
 <br>
-
-
-##  [Uploading Data](#UploadSec)
-
-
-<br>
-<br>
-
-
 
 ## Preparing the Job
 
