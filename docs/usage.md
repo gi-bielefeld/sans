@@ -3,7 +3,7 @@
 
 [comment]: <> (Add the new SANS logo here)
 [comment]: <br>
- <img src="docs/resource/logo.png" alt="New SANS LOGO">
+ <img src="/docs/resource/logo.png" alt="New SANS LOGO">
 <br>
 
 The ***SANS ambages*** software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
