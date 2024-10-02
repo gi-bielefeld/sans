@@ -1,9 +1,11 @@
 
 # SANS *ambages*: Usage
 
-[comment]: <> (Add the new SANS logo here)
-[comment]: <br>
- <img src="/docs/resource/logo.png" alt="New SANS LOGO">
+[comment]: <> (Add the new SANS logo here:: PID=1302)
+
+![SANS LOGO](https://gitlab.ub.uni-bielefeld.de/gi/sans/-/blob/clowm-integration-extensions/docs/resource/logo.png)
+
+![SANS LOGO](https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Flogo.png/raw?ref=clowm-integration-extensions)
 <br>
 
 The ***SANS ambages*** software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
@@ -43,8 +45,7 @@ In the following, we provide a set of explanations and examples of how to config
 # Quickstart Guide
 ***
 <br>
-
-This is a super importand sentence
+This 
 
 <br><br><br>
 ## Input Data
