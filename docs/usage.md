@@ -1,5 +1,7 @@
 
 [comment]: <> (Author: Fabian Kolesch)
+[comment]: <> (Format: 3 breaks between sections, 2 breaks between paragraphs) 
+[comment]: <> (IMG max size: 62%; Slide text size: 38%)
 
 <p align = center>
 <img src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Flogo.png/raw?ref=clowm-integration-extensions" width="50%">
@@ -12,7 +14,6 @@ the tool <i>Splits Tree </i>.
 The software comes with an extensive set of parameters and features, allowing for applicability to a wide range of scenarios.
 In the following, we provide a set of explanations and examples of how to configure and stage a SANS workflow, using the CloWM environment. 
 
-[comment]: <> (Format: 3 break between sections, 2 br between paragraphs) 
 <br>
 <br>
 <br>
@@ -65,14 +66,17 @@ To achieve this we will take a look at how to [create buckets](#1-creating-bucke
 ### 1 Creating Buckets  
 
 <br>
-<p align=center>
-<img alt="QS_Preparing_Data: 1_1" src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Fquickstart%2F1_1.png/raw?ref=clowm-integration-extensions" width="50%">
+<p align="center">
+<img alt="QS_Preparing_Data: 1_1" src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Fquickstart%2F1_1.png/raw?ref=clowm-integration-extensions" width="38%">
 </p>
 
 <br>
 
+<center>
+<p style="width:62%">
 Look for the to the `Files` tab at the top left of your browser and select `My Data Buckets`.
-
+</p>
+</center>
 <br>
 <br>
 
