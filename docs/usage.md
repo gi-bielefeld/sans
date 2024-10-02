@@ -68,6 +68,9 @@ To achieve this we will take a look at how to [create buckets](#1-creating-bucke
 <p align=center>
 <img alt="QS_Preparing_Data: 1_1" src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Fquickstart%2F1_1.png/raw?ref=clowm-integration-extensions" width="50%">
 </p>
+
+<br>
+
 Look for the to the `Files` tab at the top left of your browser and select `My Data Buckets`.
 
 <br>
