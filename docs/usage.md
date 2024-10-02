@@ -11,7 +11,7 @@
 The ***SANS ambages*** software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
 the tool <i>Splits Tree </i>. 
 The software comes with an extensive set of parameters and features, allowing for applicability to a wide range of scenarios.
-In the following, we provide a set of explanations and examples of how to configure and stage a SANS workflow in the CloWM environment. 
+In the following, we provide a set of explanations and examples of how to configure and stage a SANS workflow, using the CloWM environment. 
 
 [comment]: <> (F.K. Added-3 break-spacing between sections ) 
 <br>
@@ -24,12 +24,12 @@ In the following, we provide a set of explanations and examples of how to config
 
 [**Quickstart Guide**](#quickstart-guide)
 
-- [Input Data](#input-data)
+- [Preparing the Data](#preparing-the-data)
 - Preparing the Workflow
-- Executing the Workflow
 - Accessing Results
 
 ### Parameter Tweeking
+
 - Adjusting k-mer Length
 - Trees and Networks
 - Graph Generation
@@ -37,25 +37,38 @@ In the following, we provide a set of explanations and examples of how to config
 - Filtering Singletons
 
 ### Convinced by SANS? An Installation Guide 
+
 - Downloading SANS
 - Installing
 
-<br><br><br>
+<br><br>
 
-# Quickstart Guide
-***
-<br>
-This 
+## Quickstart Guide
 
-<br><br><br>
-## Input Data
 <br>
+
+Great! You've made it to the SANS quickstart guide!
+
+In this section we would like to give a minimal example of the SANS *ambages* workflow to help inexperienced users get started without requireing any prior knowledge of the software or the CloWM environment. 
+
+The three steps below will show you how to upload data from your local system, run a minimalist workflow and download the computed phylogeny.
+
+<br>
+
+### Preparing the Data
+
+![QS_Preparing_Data: 1_Goto_Data](https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2FQuickstart%2F1_Preparing_Data%2F1_Goto_Data.png/raw?ref=clowm-integration-extensions)
+
+Starting out, look for the to the `Files` tab at the top left of your browser and select `My Data Buckets`.
+
+<br>
+<br>
+
+![QS_Preparing_Data: 1_Goto_Data](https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2FQuickstart%2F1_Preparing_Data%2F_Goto_Data.png/raw?ref=clowm-integration-extensions)
 
 ## Preparing the Job
 
 
-
-## Executing 
 
 
 
