@@ -1,7 +1,10 @@
 
 [comment]: <> (Author: Fabian Kolesch)
 
-![SANS LOGO](https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Flogo.png/raw?ref=clowm-integration-extensions)
+<p align = center>
+<img src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Flogo.png/raw?ref=clowm-integration-extensions" width="50%">
+</p>
+
 <br>
 
 The ***SANS ambages*** software provides an easy way of phylogenomic reconstruction, including a pipeline for immediate output rendering via 
@@ -62,9 +65,9 @@ To achieve this we will take a look at how to [create buckets](#1-creating-bucke
 ### 1 Creating Buckets  
 
 <br>
-
-![QS_Preparing_Data: 1_1](https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Fquickstart%2F1_1.png/raw?ref=clowm-integration-extensions)
-
+<p align=center>
+<img alt="QS_Preparing_Data: 1_1" src="https://gitlab.ub.uni-bielefeld.de/api/v4/projects/1302/repository/files/docs%2Fresource%2Fquickstart%2F1_1.png/raw?ref=clowm-integration-extensions" width="50%">
+</p>
 Look for the to the `Files` tab at the top left of your browser and select `My Data Buckets`.
 
 <br>
