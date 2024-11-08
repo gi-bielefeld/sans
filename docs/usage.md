@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 
 [comment]: <> (Author: Fabian Kolesch)
 [comment]: <> (This document contains the html usage guide for SANS in the CloWM environment)
