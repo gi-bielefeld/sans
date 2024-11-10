@@ -370,6 +370,9 @@ int main(int argc, char* argv[]) {
             if (filter == "strict" || filter == "tree") {
                 // compatible to a tree
             }
+            else if (filter == "gdac") {
+                // compatible to a tree using a divide and conquer approach
+            }
             else if (filter == "weakly") {
                 // weakly compatible network
             }
@@ -591,7 +594,7 @@ int main(int argc, char* argv[]) {
         cerr << "Solution: Modify -DmaxK in makefile, run make, run SANS." << endl;
         return 1;
     }
-    if (!newick.empty() && filter != "strict" && filter.find("tree") == -1 && consensus_filter.empty()) {
+    if (!newick.empty() && filter != "strict" && filter != "gdac" && filter.find("tree") == -1 && consensus_filter.empty()) {
         cerr << "Error: Newick output only applicable in combination with -f strict or n-tree." << endl;
         return 1;
     }
@@ -1544,6 +1547,17 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 				} else {
 					graph::filter_n_tree(stoi(filter.substr(0, filter.find("tree"))), split_list, verbose);
 				}
+			// new divide and conquer filter
+			} else if (filter == "gdac") {
+			    if (!newick.empty()) {
+			        ofstream file(newick);    // output file stream
+			        ostream stream(file.rdbuf());
+			        stream << graph::filter_gdac(map, split_list, support_values, bootstrap_no, verbose); // filter and output
+			        file.close();
+			    } else {
+			        // no newick output wanted
+			        graph::filter_gdac(split_list, verbose);
+			    }
 			}
 		}	
 

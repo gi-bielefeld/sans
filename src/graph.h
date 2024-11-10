@@ -119,7 +119,12 @@ private:
 	* Look-up set for k-mers that are ignored, i.e., not stored, counted etc.
 	*/
 	static hash_set<kmer_t> blacklist;
-	static hash_set<kmerAmino_t> blacklist_amino;	
+	static hash_set<kmerAmino_t> blacklist_amino;
+
+    /**
+     * hash table mapping colors to their split weight (reverse mapping of split_list)
+     */
+    static hash_map<color_t, double> split_list_colors;
 	
     /**
      * This int indicates the number of tables to use for hashing
@@ -350,7 +355,7 @@ public:
     static void add_minimizers(uint64_t& T, string& str, uint16_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
 
 	/**
-	* This function calculates the weight for all splits and puts them into the split_ölist
+	* This function calculates the weight for all splits and puts them into the split_list
 	* @param mean weight function
 	* @param min_value the minimal weight represented in the top list
 	*/
@@ -471,8 +476,28 @@ public:
      * @param verbose print progress
      */
     static string filter_n_tree(uint64_t n, std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
-	
-	
+
+    /**
+     * This function filters the splitset using a greedy divide and conquer approach.
+     * NOTE: This will currently force the filtered splits to be a compatible tree.
+     *
+     * @param split_list list of splits to be filtered
+     * @param verbose print progress
+     */
+    static void filter_gdac(multimap_<double, color_t>& split_list, bool& verbose);
+
+    /**
+     * This function filters the splitset using a greedy divide and conquer approach and returns the filtered split set as a string in newick notation.
+     * NOTE: This will currently force the filtered splits to be a compatible tree.
+     *
+     * @param map function that maps an integer to the original id, or null
+     * @param split_list list of splits to be filtered
+     * @param support_values a hash map storing the absolut support values for each color set
+     * @param bootstrap_no the number of bootstrap replicates for computing the percentage support
+     * @param verbose print progress
+     */
+    static string filter_gdac(std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
+
 
 
 protected:
@@ -576,4 +601,53 @@ protected:
      * @return true if allowed, false otherwise
      */
     static bool isAllowedChar(uint64_t pos, string &str);
+
+    /**
+     * This helper function recursively filters the split set using a greedy divide and conquer approach
+     * and returns the filtered split.
+     * NOTE: This will currently force the filtered splits to be a compatible tree.
+     *
+     * For actual filter usage, please use the wrapper function graph::filter_gdac instead!
+     *
+     * @param split_list list of splits to be filtered
+     * @param split_map a mapping for each split in the split list set to its weight
+     * @param color_table the color table corresponding to the supplied split list
+     * @param mask a bitmask that defines the range (i.e. which '1' bits can exist) of the colors
+     * @param verbose print progress
+     */
+    static multimap_<double, color_t> helper_filter_gdac(multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, bool& verbose);
+    static multimap_<double, color_t> helper_filter_gdac1(multimap_<double, color_t>& split_list, bool& verbose);
+
+
+    /**
+     * This function calculated the highest weighted split 'X | Y' of set A where the weight is
+     * calculated as the following formula:
+     *
+     * weight(X | Y cup B) + weight(Y | X cup B)
+     *
+     * given weights of splits for the set 'A cup B'
+     * @param whole_mask the bitmask for the splits of A cup B
+     * @param a_mask the bitmask for the splits of A
+     * @param split_list the *gdac filtered* split_list of set A
+     * @param split_map the split map (color -> weight of color) of set A cup B
+     * @param verbose will print more error information, if true.
+     * @return the best suited split in the supplied split_list for usage with
+     * graph::helper_filter_gdac
+     */
+    static pair<double, color_t> query_gdac_split_weight(const color_t& whole_mask, const color_t& a_mask, const multimap_<double, color_t>& split_list, const hash_map<color_t, double>& split_map, const bool& verbose);
+
+
+    /**
+      * This function calculates the weight for all splits based on the supplied color table and
+      * puts them into the given split_list and split_map.
+      *
+      * The split_map allows for efficient weight queries for given splits.
+      * To get high scoring splits, use the ordered split_list set instead!
+      * @param mean weight function
+      * @param min_value the minimal weight represented in the top list
+      * @param color_table the custom color table to be used for the split calculation
+      * @param split_list the output parameter for the splits to be placed into
+      * @param split_map the output parameter for the 'color_t -> double' split mapping
+      */
+    static void compile_split_list(double mean(uint32_t&, uint32_t&), double min_value, hash_map<color_t, array<uint32_t, 2>>& color_table, multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const color_t& mask);
 };

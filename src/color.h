@@ -62,12 +62,32 @@ class color {
     static void complement(color_t& color);
 
     /**
+     * This function constructs the bit complement of a given color set with respect to a custom
+     * mask.
+     *
+     * @param color the bit sequence to invert
+     * @param mask the mask to be used to erase all other '1' bits
+     */
+    static void complement(color_t& color, const color_t& mask);
+
+    /**
      * This function constructs the representative of a given color set.
      *
      * @param color bit sequence
      * @return 1 if inverted, 0 otherwise
      */
     static bool represent(color_t& color);
+
+    /**
+     * This function constructs the representative of a given color set respective to the supplied mask.
+     *
+     * @param color bit sequence
+     * @param mask the custom mask to be used to erase all other '1' bits
+     * @param size the number of '1' bits inside the given mask. Will be calculated if not present
+     * @return 1 if inverted, 0 otherwise
+     */
+    static bool represent(color_t& color, const color_t& mask, const size1N_t& size);
+    static bool represent(color_t& color, const color_t& mask);
 
     /**
      * This function tests if two splits of colors are compatible.
@@ -96,6 +116,15 @@ class color {
 	 * @return true, if color set equals all colors
 	 */
 	static bool is_complete(const color_t& c);
+
+    /**
+     * This function tests whether a given color set is the complete set of colors given a custom mask.
+     *
+     * @param c color set to test
+     * @param mask the custom mask to be used to erase all other '1' bits
+     * @return true, if color set equals all colors
+     */
+    static bool is_complete(const color_t& c, const color_t& mask);
 	
 	/**
 	 * This function tests whether a given color set is only a single color.

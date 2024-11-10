@@ -7,7 +7,12 @@ from os.path import basename
 # from cStringIO import StringIO
 import logging
 
-from Bio.Alphabet import generic_dna
+# add biopython support post 1.78, as documented in the biopython Alphabet package documentation
+# https://biopython.org/wiki/Alphabet
+try:
+    from Bio.Alphabet import generic_dna
+except ImportError:
+    generic_dna = "DNA"
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 from Bio import SeqIO
