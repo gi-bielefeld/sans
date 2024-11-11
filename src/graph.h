@@ -40,7 +40,61 @@ template <typename K, typename V>
 template <typename K, typename V>
   using multimap_ = set<pair<K,V>, compare<K,V>>;
 
+// NOTE: ATTEMPT AT USING SHARED POINTERS AS KEYS TO REDUCE THE COLOR COPIES FOR SUBSEQUENT RECURSIONS.
+// THIS DID NOT WORK, AS I WAS NOT ABLE TO GET A VALID HASH FUNCTION FROM THE color_t byte header file that works with dereferenced shared pointers :(
 
+// // multimap_ version that uses shared pointers to enable efficient computation of the gdac filter
+// template <typename K, typename V>
+//   struct shared_ptr_compare {
+//   constexpr bool operator()(const pair<K,std::shared_ptr<V>>& x, const pair<K,std::shared_ptr<V>>& y) const noexcept {
+//     return x.first > y.first || x.first == y.first && *(x.second) < *(y.second);
+//   }
+// };
+// template <typename K, typename V>
+//   using multimap_shared = set<pair<K,std::shared_ptr<V>>, shared_ptr_compare<K,V>>;
+//
+// // hash_map version that uses shared pointers as keys and values
+// template <typename K, typename V>
+//     // using hash_map = unordered_map<K,V>;
+//     using hash_map_shared = tsl::sparse_pg_map<K, std::shared_ptr<V>>;
+
+
+
+
+//
+// // structs for custom shared pointer keys in the hash_map
+// struct hash_shared_pointer {
+//
+//     size1N_t operator()(std::shared_ptr<color_t>& color_ptr) const {
+//       // hash the actual value instead of the pointer :)
+//       return std::hash<color_t>()(*color_ptr);
+//     }
+// };
+//
+// struct equal_shared_pointer {
+//   // enables heterogenous lookups, see tessil::sparse-map github
+//   //https://github.com/Tessil/sparse-map?tab=readme-ov-file#heterogeneous-lookups
+//   //using is_transparent = void;
+//   bool operator()(const std::shared_ptr<color_t>& x, const std::shared_ptr<color_t>& y) const {
+//     // compare the actual value instead of the pointer :)
+//     return *x == *y;
+//   }
+//   bool operator()(const color_t& x, const std::shared_ptr<color_t>& y) const  {
+//     // compare the actual value instead of the pointer :)
+//     return x == *y;
+//   }
+//   bool operator()(const std::shared_ptr<color_t>& x, const color_t& y) const{
+//     // compare the actual value instead of the pointer :)
+//     return *x == y;
+//   }
+// };
+//
+// // hash_map version that uses shared pointers as keys with equality and hashing defined on the actual values of the pointer instead of the pointer itself
+// // Also allows for heterogeneous lookups with both the pointer and the value of the keys itself :)
+// template <typename K, typename V>
+//   //using hash_map_shared = tsl::sparse_pg_map<std::shared_ptr<K>, V, hash_shared_pointer, equal_shared_pointer>;
+//   using hash_map_shared = unordered_map<std::shared_ptr<K>, V, hash_shared_pointer, equal_shared_pointer>;
+//
 
 #include "kmer.h"
 #include "kmerAmino.h"
@@ -498,8 +552,57 @@ public:
      */
     static string filter_gdac(std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
 
+  /**
+   * This function calculated the highest weighted cut point split 'X | Y' of set A where the
+   * weight is calculated as the following formula:
+   *
+   * weight(X | Y cup B) + weight(Y | X cup B)
+   *
+   * given weights of splits for the set 'A cup B'
+   * @param whole_mask the bitmask for the splits of A cup B
+   * @param a_mask the bitmask for the splits of A
+   * @param split_map_A the *gdac filtered* split_map of set A
+   * @param whole_split_map the split map (color -> weight of color) of set A cup B
+   * @param verbose will print more error information, if true.
+   * @return the best suited cut point split in the supplied split_list for usage with
+   * graph::helper_filter_gdac
+   */
+  static pair<double, color_t> query_gdac_cut_split( color_t& whole_mask,  color_t& a_mask,  hash_map<color_t, double>& split_map_A,  hash_map<color_t, double>& whole_split_map,  bool& verbose);
+
+  /**
+    * This function calculates the weight for all splits based on the supplied color table and
+    * puts them into the given split_map. All colors keys are saved as shared pointers to save
+    * memory.
+    *
+    * The split_map allows for efficient weight queries for given splits.
+    * To get high scoring splits, use the ordered split_list set from compile_split_list instead!
+    * @param mean weight function
+    * @param color_table the custom color table to be used for the split calculation
+    * @param mask the mask specifying all genomes that are processed in this split map
+    * @param split_map the output parameter for the 'std::shared_ptr<color_t> -> double' split mapping
+    * @param best_split the output parameter for the highest weighted split of all generated splits
+    */
+  static void compile_split_map(double mean(uint32_t&, uint32_t&), hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, hash_map<color_t, double>& split_map, pair<double, color_t>& best_split);
 
 
+  /**
+     * This helper function recursively filters the split set using a greedy divide and conquer approach
+     * and returns the filtered split.
+     * NOTE: This will currently force the filtered splits to be a compatible tree.
+     *
+     * For actual filter usage, please use the wrapper function graph::filter_gdac instead!
+     *
+     * @param best_split
+     * @param split_list list of splits to be filtered
+     * @param split_map a mapping for each split in the split list set to its weight
+     * @param color_table the color table corresponding to the supplied split list
+     * @param mask a bitmask that defines the range (i.e. which '1' bits can exist) of the colors
+     * @param verbose print progress
+     */
+  static hash_map<color_t, double> helper_filter_gdac(pair<double, color_t>& best_split, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, color_t& mask, bool verbose);
+  //static multimap_shared<double, color_t> helper_filter_gdac2(multimap_shared<double, color_t>& split_list, hash_map_shared<color_t, split_entry_shared_c>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, bool& verbose);
+  //static multimap_<double, color_t> helper_filter_gdac2(multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, bool& verbose);
+  //static multimap_<double, color_t> helper_filter_gdac1(multimap_<double, color_t>& split_list, bool& verbose);
 protected:
 
     /**
@@ -602,52 +705,5 @@ protected:
      */
     static bool isAllowedChar(uint64_t pos, string &str);
 
-    /**
-     * This helper function recursively filters the split set using a greedy divide and conquer approach
-     * and returns the filtered split.
-     * NOTE: This will currently force the filtered splits to be a compatible tree.
-     *
-     * For actual filter usage, please use the wrapper function graph::filter_gdac instead!
-     *
-     * @param split_list list of splits to be filtered
-     * @param split_map a mapping for each split in the split list set to its weight
-     * @param color_table the color table corresponding to the supplied split list
-     * @param mask a bitmask that defines the range (i.e. which '1' bits can exist) of the colors
-     * @param verbose print progress
-     */
-    static multimap_<double, color_t> helper_filter_gdac(multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, bool& verbose);
-    static multimap_<double, color_t> helper_filter_gdac1(multimap_<double, color_t>& split_list, bool& verbose);
 
-
-    /**
-     * This function calculated the highest weighted split 'X | Y' of set A where the weight is
-     * calculated as the following formula:
-     *
-     * weight(X | Y cup B) + weight(Y | X cup B)
-     *
-     * given weights of splits for the set 'A cup B'
-     * @param whole_mask the bitmask for the splits of A cup B
-     * @param a_mask the bitmask for the splits of A
-     * @param split_list the *gdac filtered* split_list of set A
-     * @param split_map the split map (color -> weight of color) of set A cup B
-     * @param verbose will print more error information, if true.
-     * @return the best suited split in the supplied split_list for usage with
-     * graph::helper_filter_gdac
-     */
-    static pair<double, color_t> query_gdac_split_weight(const color_t& whole_mask, const color_t& a_mask, const multimap_<double, color_t>& split_list, const hash_map<color_t, double>& split_map, const bool& verbose);
-
-
-    /**
-      * This function calculates the weight for all splits based on the supplied color table and
-      * puts them into the given split_list and split_map.
-      *
-      * The split_map allows for efficient weight queries for given splits.
-      * To get high scoring splits, use the ordered split_list set instead!
-      * @param mean weight function
-      * @param min_value the minimal weight represented in the top list
-      * @param color_table the custom color table to be used for the split calculation
-      * @param split_list the output parameter for the splits to be placed into
-      * @param split_map the output parameter for the 'color_t -> double' split mapping
-      */
-    static void compile_split_list(double mean(uint32_t&, uint32_t&), double min_value, hash_map<color_t, array<uint32_t, 2>>& color_table, multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const color_t& mask);
 };

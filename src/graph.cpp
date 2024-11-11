@@ -1501,104 +1501,114 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
 
 /**
  * This function calculates the weight for all splits based on the supplied color table and
- * puts them into the given split_list and split_map.
+ * puts them into the given split_map. All colors keys are saved as shared pointers to save
+ * memory.
+ * Note that this function does not allow for top list support !!
  *
- * NOTE: only meant to be used for the gdac filter, use the compile_split_list with just the mean
- * function and min_value as parameters in all other cases!
- *
- * The split_map allows for efficient weight queries for given splits.
- * To get high scoring splits, use the ordered split_list set instead!
+* The split_map allows for efficient weight queries for given splits.
+ * To get high scoring splits, use the ordered split_list set from compile_split_list instead!
  * @param mean weight function
- * @param min_value the minimal weight represented in the top list
  * @param color_table the custom color table to be used for the split calculation
- * @param split_list the output parameter for the splits to be placed into
- * @param split_map the output parameter for the 'color_t -> double' split mapping
+ * @param mask the mask specifying all genomes that are processed in this split map
+ * @param split_map the output parameter for the 'std::shared_ptr<color_t> -> double' split mapping
+ * @param best_split the output parameter for the highest weighted split of all generated splits
  */
-void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_value, hash_map<color_t, array<uint32_t, 2>>& color_table, multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const color_t & mask)
-{
+void graph::compile_split_map(double mean(uint32_t&, uint32_t&), hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, hash_map<color_t, double>& split_map, pair<double, color_t>& best_split) {
+    //best_split.first = -1; // make sure the best split is not set beforehand
     for (const auto& it : color_table) {
         // get the current color entry
         color_t color = it.first;
         array<uint32_t,2> occs = it.second;
 
         // check if the color needs to be flipped to be the represent (fewer 1 bits)
-        color::represent(color, mask);
-
+        // NOTE: This should never happen to begin with, but is included for the sake of defensive
+        // programming, if this function is called with bad defined color_table inputs :)
+        if (color::represent(color, mask)) {
+            cerr << "WARNING: A representative color was actually not the representative while generating the split map. Self fixing error...";
+            // make a new shared pointer to the color, as i cannot be inside of the color_table
+            assert(color_table.find(color) == color_table.end());
+            // this shared pointer has to be created before erasing the old pointer in order to
+            // ensure that the reference count is at least 1. Otherwise, the actual value might be deleted
+            //shared_ptr<color_t> new_shared_color = make_shared<color_t>(color);
+            color_table.erase(color);
+            color_table.emplace(color, occs);
+            cerr << "done!" << endl;
+        }
 
         // insert new split into the split list
         double new_mean = mean(occs[0], occs[1]);    // calculate the mean value
-        if (new_mean >= min_value) {    // if it is greater than the min. value, add it to the top list
-            // test if the complement or the color itself of the split is already in the list/map
-            // NOTE: This can happen, because the gdac filter generates 2 new color tables in each
-            // recursion which can include complementary color pairs if their mask has exactly twice
-            // as many 1 bits as the colors themselves!
-            auto map_change_it = split_map.find(color);
+        // test if the complement or the color itself of the split is already in the list/map
+        // NOTE: This can happen, because the gdac filter generates 2 new color tables in each
+        // recursion which can include complementary color pairs if their mask has exactly twice
+        // as many 1 bits as the colors themselves!
+        auto map_change_it = split_map.find(color);
+        if (map_change_it != split_map.end()) {
+            // replace the old weight with the new mean (weight) if it is larger
+            if (map_change_it->second < new_mean) {
+                assert(map_change_it->first == color); // todo remove
+                // update the weight inside the split map
+                map_change_it.value() = new_mean;
+                cerr << "ERROR: Collected already existing split in compile_split_map, its weight was smaller. Updated its weight with the higher value" << endl;
+            } else if (map_change_it->second < new_mean) {
+                cerr << "ERROR: Collected already existing split in compile_split_map, but its weight was equal. No updates needed." << endl;
+            } else {
+                cerr << "ERROR: Collected already existing split in compile_split_map, but its weight was greater. No updates needed." << endl;
+            }
+
+            // update the best split if the current weight is higher
+            if (best_split.first < new_mean) {
+                best_split.first = new_mean;
+                best_split.second = map_change_it->first;
+            }
+            // skip as the color already exists. NOTE: THIS SHOULD NEVER BE THE CASE!!
+            continue;
+        } else { // check if complement split is already present
+            color_t complement = color;
+            color::complement(complement, mask);
+            map_change_it = split_map.find(complement);
             if (map_change_it != split_map.end()) {
-                // replace the old weight with the new mean (weight) if it is larger
                 if (map_change_it->second < new_mean) {
-                    // update the split weight in the list
-                    auto list_change_it = split_list.find({map_change_it->second, color});
-                    assert(list_change_it->second == color); // todo remove hopefully
-                    assert(list_change_it != split_list.end()); // must be found as the map and list are synced!
-                    split_list.erase(list_change_it);
-                    split_list.emplace(new_mean, color);
-
+                    assert(map_change_it->first == color); // todo remove
                     // update the weight inside the split map
-                    // NOTE: must be done after updating the list, as otherwise the old weight
-                    // cannot be used to query the split inside the split list!!
                     map_change_it.value() = new_mean;
-                    cerr << "collected already existing split in compile_split_list, its weight was smaller" << endl;
+                    cerr << "ERROR: Collected already existing complement split in compile_split_map, its weight was smaller. Updated its weight with the higher value" << endl;
+                } else if (map_change_it->second < new_mean) {
+                    cerr << "ERROR: Collected already existing complement split in compile_split_map, but its weight was equal. No updates needed." << endl;
                 } else {
-                    cerr << "collected already existing split in compile_split_list, but its weight was larger" << endl;
+                    cerr << "ERROR: Collected already existing complement split in compile_split_map, but its weight was greater. No updates needed." << endl;
                 }
-                // skip if the old weight isn't smaller
+
+                // update the best split if the current weight is higher
+                if (best_split.first < new_mean) {
+                    best_split.first = new_mean;
+                    best_split.second = map_change_it->first;
+                }
+                // skip as the color already exists. NOTE: THIS SHOULD NEVER BE THE CASE!!
                 continue;
-            } else { // check if complement split is already present
-                color_t complement = color;
-                color::complement(complement, mask);
-                map_change_it = split_map.find(complement);
-                if (map_change_it != split_map.end()) {
-                    if (map_change_it->second < new_mean) {
-                        // update the split weight in the list
-                        auto list_change_it = split_list.find({map_change_it->second, complement});
-                        assert(list_change_it->second == complement); // todo remove hopefully
-                        assert(list_change_it != split_list.end()); // must be found as the map and list are synced!
-                        split_list.erase(list_change_it);
-                        split_list.emplace(new_mean, complement);
-
-                        // update the weight inside the split map
-                        // NOTE: must be done after updating the list, as otherwise the old weight
-                        // cannot be used to query the split inside the split list!!
-                        map_change_it.value() = new_mean;
-                        cerr << "collected already existing complement of split in compile_split_list, its weight was smaller" << endl;
-                    } else {
-                        cerr << "collected already existing complement of split in compile_split_list, but its weight was larger" << endl;
-                    }
-                    continue;
-                }
-            }
-            // split color (or its complement) is not in the list -> add the new split
-            split_list.emplace(new_mean, color);    // insert it at the correct position ordered by weight
-            // CHECK IF COLOR IN TABLE OCCURS MULTIPLE TIMES
-            auto pls_dont_exist = split_map.find(color);
-            if (pls_dont_exist != split_map.end()) {
-                cerr << "color was already present while iterating over color table in compile_split_list: " << endl;
-            }
-            split_map[color] = new_mean;
-
-            // remove the smallest weighted split if the top list limit was exeeded
-            if (split_list.size() > t) {
-                auto to_remove = --split_list.end();
-                split_list.erase(to_remove);    // if the top list exceeds its limit, erase the last entry
-                split_map.erase(to_remove->second);
-                min_value = split_list.rbegin()->first;    // update the min. value for the next iteration (only necessary of t is exceeded, otherwise min_value does not play a role.
             }
         }
+        // split color (or its complement) is not in the list -> add the new split
+        // CHECK IF COLOR IN TABLE OCCURS MULTIPLE TIMES
+        auto pls_dont_exist = split_map.find(color);
+        if (pls_dont_exist != split_map.end()) {
+            cerr << "color was already present while iterating over color table in compile_split_list: " << endl;
+        }
+        // NOTE: the iterator is used again to ensure all shared pointers only point to ONE color (to safe memory)
+        split_map.emplace(it.first, new_mean);
+
+        // update the best split if the current weight is higher
+        if (best_split.first < new_mean) {
+            best_split.first = new_mean;
+            best_split.second = it.first;
+        }
+
+        // remove the smallest weighted split if the top list limit was exceeded
+        // NOT SUPPORTED WITH THE MAP VERSION FOR OBVIOUS REASONS...
     }
-    if (split_list.size() > split_map.size()) {
-        cerr << "split list size was greater than its split map after split compilation." << split_list.size() << " (list) vs. " << split_map.size() << " (map)" << endl;
-    } else if (split_map.size() > split_list.size()) {
-        cerr << "split list size was smaller than its split map after split compilation." << split_list.size() << " (list) vs. " << split_map.size() << " (map)" << endl;
+    if (color_table.size() > split_map.size()) {
+        cerr << "ERROR: Color table size was greater than its split map after split compilation." << color_table.size() << " (color table) vs. " << split_map.size() << " (split map)" << endl;
+    } else if (color_table.size() > split_map.size()) {
+        cerr << "ERROR: Color table size was smaller than its split map after split compilation." << color_table.size() << " (color table) vs. " << split_map.size() << " (split map)" << endl;
     }
 }
 
@@ -1928,24 +1938,55 @@ void graph::filter_gdac(multimap_<double, color_t>& split_list, bool& verbose) {
 
 
 string graph::filter_gdac(std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose) {
-    // compute the color to weight split mapping
+
     if (split_list.empty()) {
+        // if the list is empty, there is nothing to do
+        cerr << "ERROR: Tried to use the gdac filter on an initially empty split set." << endl;
         return ""; // TODO: replace with user-friendly error message to console
     }
+
+    // convert the input split list set to use shared pointers in order to save memory for the colors
+    // as most of the colors are not chaning through the recursion! Just their weights change ;)
+
+    // compute the split map that maps from the shared colors to the entries of the split list set
+
+    //shared_multimap_<double, color_t> shared_split_list;
+    //shared_hash_map<color_t, double> split_shared_map;
+
+    //multimap_shared<double, color_t> shared_split_list;
+
+    // compute the color to weight split mapping that points with shared color pointers to safe memory on subsequent recursions
     hash_map<color_t, double> split_map;
+    auto best_split = *split_list.begin();
     for (const auto& it : split_list) {
+        //auto split_list_entry = make_pair(it.first, make_shared<color_t>(map_entry));
+        //shared_split_list.emplace(split_list_entry);
         split_map.emplace(it.second, it.first);
     }
 
+    // compute the color to weight split mapping that points to the split list shared pointers
+    //hash_map<color_t, double> split_map;
+
+    //shared_hash_map<color_t, double> split_map;
+    //for (const auto& it : split_list) {
+    //    split_map.emplace(it.second, it.first);
+    //}
+
     // compute the input color mask
-    color_t mask = split_list.begin()->second;
-    color_t other_color = mask;
+    color_t other_color = best_split.second;
     color::complement(other_color);
-    mask = mask | other_color;
+    color_t mask = mask | other_color;
 
     // apply the recursive filtering method
-    auto filtered_splits = helper_filter_gdac(split_list, split_map, color_table, mask, verbose);
-    split_list = filtered_splits;
+    auto filtered_splits_map = helper_filter_gdac(best_split, split_map, color_table, mask, verbose);
+
+    // convert the hashmap back to an ordered set such that SANS can output it correctly :)
+    split_list.clear();
+    for (const auto& it : filtered_splits_map) {
+        split_list.emplace(it.second, it.first);
+    }
+
+    //split_list = filtered_splits;
     // construct the newick string if necessary
     if (map) {
         // build the tree
@@ -2092,72 +2133,84 @@ string graph::filter_gdac(std::function<string(const uint16_t&)> map, multimap_<
     // // }
 }
 
-multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>& split_list, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, const color_t& mask, bool& verbose) {
+hash_map<color_t, double> graph::helper_filter_gdac(pair<double, color_t>& best_split, hash_map<color_t, double>& split_map, const hash_map<color_t, array<uint32_t, 2>>& color_table, color_t& mask, bool verbose) {
     // split list contains splits of genome set T
     // get the highest weighted split of the current split set
-    auto whole_split_set_iter = split_list.begin();
+    auto whole_split_set_iter = split_map.begin();
 
     // DEBUG BREAKPOINT ENTRY...
-    if (split_list.size() == 637) {
+    if (split_map.size() == 637) {
         cerr << "reached breakpoint 1b2b3b" << endl;
     }
 
     // ==== SPLIT LIST SIZE BASE CASES ====
-    if (split_list.size() <= 1) { // empty or lists with only one split cannot be filtered any further
-        return split_list;
-    } else if (split_list.size() == 2) {
+    if (split_map.size() <= 1) { // empty or lists with only one split cannot be filtered any further
+        return split_map;
+    } else if (split_map.size() == 2) {
         // check if the two splits of the list are each others complement, i.e. redundant
-        color_t best_color = whole_split_set_iter->second;
-        color_t inverted_best = whole_split_set_iter->second;
+        //color_t best_color = whole_split_set_iter->first;
+        color_t inverted_best = whole_split_set_iter->first;
+        double best_weight = whole_split_set_iter->second;
         color::complement(inverted_best, mask);
         ++whole_split_set_iter;
-        if (whole_split_set_iter->second == inverted_best) {
+        if (whole_split_set_iter->first == inverted_best) {
             // both splits can be reduced to the best split, as it holds the same information as both
             // i.e. 1. split = 'A | B' and 2. split 'B | A' => simplify to just 'A | B'
-            cerr << "apparently the new case can happen yay" << endl;
-            split_list.erase(whole_split_set_iter);
-            split_map.erase(whole_split_set_iter->second);
+            if (best_weight < whole_split_set_iter->second) {
+                // delete first split as its weight is smaller than the weight of its other identical color split
+                split_map.erase(split_map.begin());
+            } else {
+                split_map.erase(whole_split_set_iter);
+            }
+            if (verbose) {
+                cerr << "ERROR: simplified split set of size two, as both splits had complementary colors" << endl;
+            }
             // no further refinement possible, as only one split is left (see first base case)
-            return split_list;
+            return split_map;
         } else {
             // reset the split set iterator to point to its the start, i.e highest split
-            whole_split_set_iter = split_list.begin();
-            cerr << "resetting the pointer for the base case was necessary!" << endl;
+            whole_split_set_iter = split_map.begin();
         }
     }
 
-    assert(whole_split_set_iter == split_list.begin()); // should always be the case
+    assert(whole_split_set_iter == split_map.begin()); // should always be the case, see above
 
     // ==== END SPLIT LIST SIZE BASE CASES ====
 
     // filtered result splits for the currently handled genomes
-    auto filtered_splits = multimap_<double, color_t>();
+    auto filtered_splits = hash_map<color_t, double>();
 
     // ==== RETRIEVAL OF SUITABLE BEST SPLIT ====
 
     // test if highest split is empty or complete
-    color_t best_color_A = whole_split_set_iter->second;
-    double best_weight_AB = whole_split_set_iter->first;
+    color_t best_color_A = best_split.second;
+    double best_weight_AB = best_split.first;
     if (color::is_complete(best_color_A, mask) || best_color_A == 0b0u) {
-        // return filtered_splits; // return empty set as split contains no information?
+        // NOTE: This is done just for the sake of defensive programming and should never be executed!
+
         // try next best split until it's not complete or empty (i.e. actual has additional info)
         ++whole_split_set_iter; // can never be the end as the list has at least 2 splits
         // (see split_list.size() <= 1 base case)
-        while (whole_split_set_iter != split_list.end() && (color::is_complete(best_color_A, mask) || best_color_A == 0b0u)) {
-            best_color_A = whole_split_set_iter->second;
-            best_weight_AB = whole_split_set_iter->first;
+        best_weight_AB = -1; // ensure that the value is updated
+        while (whole_split_set_iter != split_map.end() && (color::is_complete(best_color_A, mask) || best_color_A == 0b0u)) {
+            if (whole_split_set_iter->second > best_weight_AB) {
+                best_color_A = whole_split_set_iter->first;
+                best_weight_AB = whole_split_set_iter->second;
+            }
             ++whole_split_set_iter;
         }
+        assert(best_weight_AB != -1);
         if (color::is_complete(best_color_A, mask) || best_color_A == 0b0u) {
             // the split set cannot be refined any further if no suitable best split is available
             if (verbose) {
-                cerr << "could not find a best split that is not empty/complete" << endl;
+                cerr << "ERROR: could not find a best split that is not empty/complete. This is not allowed to happen" << endl;
             }
-            return split_list;
+            exit(EXIT_FAILURE);
+            //return split_map;
         }
     }
 
-    // ==== END RETRIEVAL OF SUITABLE BEST SPLIT ====
+    // ==== END RETRIEVAL OF SUITABLE BEST SPLIT IF ====
 
     // ==== DIVIDE STEP ====
 
@@ -2181,7 +2234,7 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         if (verbose) {
             cout << "the size of A and B was 1, skipping further refinement as both are leaves." << endl;
         }
-        filtered_splits.emplace(std::make_pair(best_weight_AB, best_color_A));
+        filtered_splits.emplace(best_color_A,best_weight_AB);
         return filtered_splits;
     }
 
@@ -2220,7 +2273,15 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
                 it_b.value()[1] += c_b_occs[1];
             } else {
                 // add the new color to the table
+                // NOTE: the corresponding color has to be searched in the color table to get a new shared pointer.
+                //auto color_it = color_table.find(c_b_color);
+                //if (color_it != color_table.end()) {
                 color_table_B.emplace(c_b_color, c_b_occs);
+                //} else {
+                // create shared pointer to the local variable if the color does not exist in the color_table
+                // (can happen as the masking with one of the best split halves can introduce new colors)
+                //color_table_B.emplace(make_shared<color_t>(c_b_color), c_b_occs);
+                //}
             }
         }
 
@@ -2228,7 +2289,7 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         // should never be reached, just for safety reasons / defensive programming.
         // assert would also be feasible here!
         if (verbose) {
-            cerr << "the number of 1 bits of the represent A of split (A, B) was greater than B, which is not allowed to happen" << endl;
+            cerr << "ERROR: the number of 1 bits of the represent A of split (A, B) was greater than B, which is not allowed to happen" << endl;
         }
     } else {
         // both A and B do not represent leaves, i.e. we need to infer a cut point in both sets
@@ -2236,7 +2297,7 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
 
         // collect the new isolated splits of sets A and B from the 'A cup B' color table
         for (const auto& it : color_table) {
-        //if (a_size != 1) { // only process A if it is not a leaf
+            //if (a_size != 1) { // only process A if it is not a leaf
             // erase all '1' bits that don't correspond to the A part
             color_t c_a_color = it.first & best_color_A;
             // check if new A color can be represented with fewer '1' bits
@@ -2258,7 +2319,6 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
                     color_table_A.emplace(c_a_color, c_a_occs);
                 }
             }
-            //}
             // vice versa for the B part
             // erase all '1' bits that don't correspond to the B part
             color_t c_b_color = it.first & best_color_B;
@@ -2343,51 +2403,60 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
             color_table_B.emplace(c_b_color, c_b_occs);
         }
     }*/ // todo remove, as it was refactored above to be more efficient if one of the sets is a leaf
-
     // TODO: add verbose output for the split compilation if verbose param is true
     // calculate the new split lists from the corresponding color tables
-    auto a_split_list = multimap_<double, color_t>();
-    auto a_split_map {hash_map<color_t, double>()};
-    auto b_split_list = multimap_<double, color_t>();
-    auto b_split_map {hash_map<color_t, double>()};
+    // auto a_split_list = multimap_<double, color_t>();
+    auto a_split_map = hash_map<color_t, double>();
+    pair<double, color_t> best_color_in_a_split_map;
+    // auto b_split_list = multimap_<double, color_t>();
+    auto b_split_map = hash_map<color_t, double>();
+    pair<double, color_t> best_color_in_b_split_map;
 
     // compile the new split lists from the previously collected color tables
     if (a_size != 1) { // check if the a split list has to be calculated
-        if (a_size == 2) {
-            cerr << "compile split list breakpoint reached" << endl;
-        }
         // a was not a leaf -> we need the new isolated A split list!
-        compile_split_list(util::geometric_mean2, numeric_limits<double>::min(), color_table_A, a_split_list, a_split_map, best_color_A);
+        graph::compile_split_map(util::geometric_mean2, color_table_A, best_color_A, a_split_map, best_color_in_a_split_map);
     }
     // NOTE: B can never be a leaf on its own, because then A would not have been the representative
     // color of the 'A | B' split
     // therefore the isolated B split set has to always be calculated, as the case of A and B being
     // leaves was already handled in the leaf base case!
-    compile_split_list(util::geometric_mean2, numeric_limits<double>::min(), color_table_B, b_split_list, b_split_map, best_color_B);
+    graph::compile_split_map(util::geometric_mean2, color_table_B, best_color_B, b_split_map, best_color_in_b_split_map);
 
     // auto a_split_map_size = a_split_map.size();
     // auto b_split_map_size = b_split_map.size();
 
+    // auto same_size_a = 0; TODO REMOVE
+    // auto same_size_b = 0;
+    // for (const auto& it : split_map) {
+    //     if (b_split_map.find(it.first) != b_split_map.end()) {
+    //         ++same_size_b;
+    //     }
+    //     if (a_split_map.find(it.first) != a_split_map.end()) {
+    //         ++same_size_a;
+    //     }
+    // }
+
 
     // ==== RECURSION ====
     // filter both split lists of the best split "A | B" recursively
-    auto filtered_a_splits {helper_filter_gdac(a_split_list, a_split_map, color_table_A, best_color_A, verbose)};
-    auto filtered_b_splits {helper_filter_gdac(b_split_list, b_split_map, color_table_B, best_color_B, verbose)};
+    auto filtered_a_splits = helper_filter_gdac(best_color_in_a_split_map, a_split_map, color_table_A, best_color_A, verbose);
+    auto filtered_b_splits = helper_filter_gdac(best_color_in_b_split_map, b_split_map, color_table_B, best_color_B, verbose);
 
     // ==== CONQUER / COMBINE STEP ====
 
     // ---- CUT INFERENCE ----
     // infer the most suited split in A to 'cut' in half / remove
     pair<double, color_t> a_x_vs_y_split;
-    if (a_size != 1) {
-        a_x_vs_y_split = {query_gdac_split_weight(mask, best_color_A, filtered_a_splits, split_map, verbose)};
+    if (a_size != 1 && !filtered_a_splits.empty()) {
+        a_x_vs_y_split =  graph::query_gdac_cut_split(mask, best_color_A, filtered_a_splits, split_map, verbose);
     } else {
         a_x_vs_y_split = {};
     }
     // vice versa for the best split in B to cut
     pair<double, color_t> b_x_vs_y_split;
-    if (b_size != 1) {
-        b_x_vs_y_split = {query_gdac_split_weight(mask, best_color_B, filtered_b_splits, split_map, verbose)};
+    if (b_size != 1 && !filtered_b_splits.empty()) {
+        b_x_vs_y_split = graph::query_gdac_cut_split(mask, best_color_B, filtered_b_splits, split_map, verbose);
     } else {
         b_x_vs_y_split = {};
     }
@@ -2475,21 +2544,12 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
     // edge case: both set A and B did not yield a suitable cut position, i.e. cannot be refined any further
     // -> return the input list from the previous recursion step
     if ((a_x_vs_y_split.second == 0b0u /*|| best_color_A == 0b0u*/) && (b_x_vs_y_split.second == 0b0u /*|| best_color_B == 0b0u*/)) {
-        // todo remove both comments below
-        // what to do here O.o both yield no best split ..
-        // alternative idea: maybe use second-best split at the start until one gets a split that's not 1xN | 0xN ?
-        if (a_x_vs_y_split.second != best_color_A && b_x_vs_y_split.second != best_color_B) {
-            cerr << "okay that can happen i guess :( both" << endl;
-            if (split_list.size() == 2) {
-                cerr << "but its okay, because the input split list had length 2" << endl;
-            }
+        if (verbose) {
+            cerr << "cannot refine the split data any further, as the cuts for the filtered A and B parts were empty. returning unfiltered list" << endl;
         }
-        cerr << "cannot refine the split data any further, as the cuts for the filtered A and B parts were empty. returning unfiltered list" << endl;
         // return the input list without any additional filtering in this recursion step
-        return split_list;
-        //return split_list; // copies entire list... not very elegant :(
+        return split_map;
     }
-
     /*
     if (a_x_vs_y_split.second == 0b0u || best_color_A == 0b0u) {
         // no suitable cut was found for the A set, but a cut for set B was found
@@ -2513,7 +2573,10 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
 
     // add the best split 'A | B' to the splits list
     // Note: A is always the representative color by construction!
-    filtered_splits.emplace(best_weight_AB, best_color_A);
+    // get the original value of best_color_A to make a new shared pointer (saving memory)
+    //auto best_color_A_it = split_map.find(best_color_A);
+    //assert (best_color_A_it != split_map.end());
+    filtered_splits.emplace(best_color_A, best_weight_AB);
 
     // use refined A set, if a cut split was found in A (i.e. 'A^x | A^y' is not empty)
     if (a_x_vs_y_split.second != 0b0u && best_color_A != 0b0u) {
@@ -2522,23 +2585,26 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         auto a_cut_it {a_split_map.find(a_x_vs_y_split.second)}; // retrieve the original weight of the split
         if (a_cut_it == a_split_map.end()) {
             // if it could not be found, try its complement
-            a_cut_it = {a_split_map.find((~a_x_vs_y_split.second & best_color_A))};
+            a_cut_it = a_split_map.find(~(a_x_vs_y_split.second) & best_color_A);
         }
         assert(a_cut_it != a_split_map.end()); // the key has to exist as it is generated from this map
         // use the original weight of the color to erase the pair from the split list
-        auto found_a_remove {filtered_a_splits.find({a_cut_it->second, a_cut_it->first})};
+        auto found_a_remove {filtered_a_splits.find(a_cut_it->first)};
         if (found_a_remove != filtered_a_splits.end()) {
-            assert (found_a_remove->second == a_cut_it->first); // todo remove hopefully
+            assert (found_a_remove->first == a_cut_it->first); // todo remove hopefully
         }
-        auto num_removed = filtered_a_splits.erase(make_pair(a_cut_it->second, a_cut_it->first));
+        auto num_removed = filtered_a_splits.erase(a_cut_it->first);
         a_split_map.erase(a_cut_it);
         // TODO bring back assert(num_removed == 1);
         if (num_removed != 1 && verbose) {
             cerr << "did not remove the A cut split, as it was not part of the filtered A splits." << endl;
         }
         // add the updated split list of set A to the output
-        // NOTE: Insert and move_iterator is more efficient here, because the pair values already exist and can be cheaply moved
-        filtered_splits.insert(std::make_move_iterator(filtered_a_splits.begin()), std::make_move_iterator(filtered_a_splits.end()));
+        // NOTE: Insert and move_iterator would be more efficient here, because the pair values already exist and can be cheaply moved, but it is not defined for the tsl hashmap :(
+        for (auto& it : filtered_a_splits) {
+            filtered_splits.emplace(it.first, it.second);
+        }
+        //filtered_splits.insert(std::make_move_iterator(filtered_a_splits.begin()), std::make_move_iterator(filtered_a_splits.end()));
 
         // Add the cut splits individually as 'X | other' splits of set 'A cup B' to the filtered output
         // NOTE: no representative check once found has to be done as these are directly queried from
@@ -2548,7 +2614,7 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         auto ax_in_AB_it {split_map.find(a_x_vs_y_split.second)};
         if (ax_in_AB_it != split_map.end()) {
             // Ax was the representative of 'Ax | (A cup B) \ Ax'
-            filtered_splits.emplace(ax_in_AB_it->second, ax_in_AB_it->first);
+            filtered_splits.emplace(ax_in_AB_it->first, ax_in_AB_it->second);
         } else {
             // (A cup B) \ Ax must be the representative of 'Ax | (A cup B) \ Ax'
             // construct via complement
@@ -2557,7 +2623,8 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
             auto other_without_ax_it {split_map.find(other_without_ax_color)};
             // has to be a key, as otherwise the split would not be valid
             assert(other_without_ax_it != split_map.end());
-            filtered_splits.emplace(other_without_ax_it->second, other_without_ax_it->first);
+            filtered_splits.emplace(other_without_ax_it->first, other_without_ax_it->second);
+            //filtered_splits.emplace(other_without_ax_it->second, other_without_ax_it->first);
         }
         // @ 'Ay | (A cup B) \ Ay'
         color_t a_y_vs_x_color {a_x_vs_y_split.second};
@@ -2565,7 +2632,8 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         auto ay_in_AB_it {split_map.find(a_y_vs_x_color)};
         if (ay_in_AB_it != split_map.end()) {
             // Ay was the representative of 'Ay | (A cup B) \ Ay'
-            filtered_splits.emplace(ay_in_AB_it->second, ay_in_AB_it->first);
+            filtered_splits.emplace(ay_in_AB_it->first, ay_in_AB_it->second);
+            //filtered_splits.emplace(ay_in_AB_it->second, ay_in_AB_it->first);
         } else {
             // (A cup B) \ Ay must be the representative of 'Ay | (A cup B) \ Ay'
             // construct via complement
@@ -2574,7 +2642,8 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
             auto other_without_ay_it {split_map.find(other_without_ay_color)};
             // has to be a key, as otherwise the split would not be valid
             assert(other_without_ay_it != split_map.end());
-            filtered_splits.emplace(other_without_ay_it->second, other_without_ay_it->first);
+            filtered_splits.emplace(other_without_ay_it->first, other_without_ay_it->second);
+            //filtered_splits.emplace(other_without_ay_it->second, other_without_ay_it->first);
         }
     }
 
@@ -2583,24 +2652,32 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         auto b_cut_it {b_split_map.find(b_x_vs_y_split.second)}; // retrieve the original weight of the split
         if (b_cut_it == b_split_map.end()) {
             // if it could not be found, try its complement
-            b_cut_it = {b_split_map.find((~b_x_vs_y_split.second & best_color_B))};
+            b_cut_it = b_split_map.find(~b_x_vs_y_split.second & best_color_B);
         }
         assert(b_cut_it != b_split_map.end()); // the key has to exist as it is generated from this map
         // use the original weight of the color to erase the pair from the split list
-        auto num_removed = filtered_b_splits.erase(make_pair(b_cut_it->second, b_cut_it->first));
+        //auto num_removed = filtered_b_splits.erase(make_pair(b_cut_it->second, b_cut_it->first));
+        auto num_removed = filtered_b_splits.erase(b_cut_it->first);
         if (num_removed != 1 && verbose) {
             cerr << "did not remove the B cut split, as it was not part of the filtered B splits." << endl;
         }
         // assert(num_removed == 1);
         // add the updated split list of set A to the output
         // NOTE: Insert and move_iterator is more efficient here, because the pair values already exist and can be cheaply moved
-        filtered_splits.insert(std::make_move_iterator(filtered_b_splits.begin()), std::make_move_iterator(filtered_b_splits.end()));
+
+         for (auto& it : filtered_b_splits) {
+             filtered_splits.emplace(it.first, it.second);
+        }
+
+        // NOT WORKING WITH TSL:SPARSE_MAPS
+        //filtered_splits.emplace(std::make_move_iterator(filtered_b_splits.begin()), std::make_move_iterator(filtered_b_splits.end()));
 
         // @ 'Bx | (A cup B) \ Bx'
         auto bx_in_AB_it {split_map.find(b_x_vs_y_split.second)};
         if (bx_in_AB_it != split_map.end()) {
             // Bx was the representative of 'Bx | (A cup B) \ Bx'
-            filtered_splits.emplace(bx_in_AB_it->second, bx_in_AB_it->first);
+            filtered_splits.emplace(bx_in_AB_it->first, bx_in_AB_it->second);
+            //filtered_splits.emplace(bx_in_AB_it->second, bx_in_AB_it->first);
         } else {
             // (A cup B) \ Bx must be the representative of 'Bx | (A cup B) \ Bx'
             // construct via complement
@@ -2609,7 +2686,8 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
             auto other_without_bx_it {split_map.find(other_without_bx_color)};
             // has to be a key, as otherwise the split would not be valid
             assert(other_without_bx_it != split_map.end());
-            filtered_splits.emplace(other_without_bx_it->second, other_without_bx_it->first);
+            filtered_splits.emplace(other_without_bx_it->first, other_without_bx_it->second);
+            //filtered_splits.emplace(other_without_bx_it->second, other_without_bx_it->first);
         }
         // @ 'By | (A cup B) \ By'
         color_t b_y_vs_x_color {b_x_vs_y_split.second};
@@ -2617,7 +2695,8 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
         auto by_in_AB_it {split_map.find(b_y_vs_x_color)};
         if (by_in_AB_it != split_map.end()) {
             // Ay was the representative of 'Ay | (A cup B) \ Ay'
-            filtered_splits.emplace(by_in_AB_it->second, by_in_AB_it->first);
+            filtered_splits.emplace(by_in_AB_it->first, by_in_AB_it->second);
+            //filtered_splits.emplace(by_in_AB_it->second, by_in_AB_it->first);
         } else {
             // (A cup B) \ By must be the representative of 'By | (A cup B) \ By'
             // construct via complement
@@ -2626,28 +2705,44 @@ multimap_<double, color_t> graph::helper_filter_gdac(multimap_<double, color_t>&
             auto other_without_by_it {split_map.find(other_without_by_color)};
             // has to be a key, as otherwise the split would not be valid
             assert(other_without_by_it != split_map.end());
-            filtered_splits.emplace(other_without_by_it->second, other_without_by_it->first);
+            filtered_splits.emplace(other_without_by_it->first, other_without_by_it->second);
+            //filtered_splits.emplace(other_without_by_it->second, other_without_by_it->first);
         }
     }
     // return the finished (i.e. refined) split set for set 'A cup B'
     return filtered_splits;
 }
 
-pair<double, color_t> graph::query_gdac_split_weight(const color_t& whole_mask, const color_t& a_mask, const multimap_<double, color_t>& split_list_A, const hash_map<color_t, double>& split_map, const bool& verbose) {
+/**
+ * This function calculated the highest weighted cut point split 'X | Y' of set A where the
+ * weight is calculated as the following formula:
+ *
+ * weight(X | Y cup B) + weight(Y | X cup B)
+ *
+ * given weights of splits for the set 'A cup B'
+ * @param whole_mask the bitmask for the splits of A cup B
+ * @param a_mask the bitmask for the splits of A
+ * @param split_map_A the *gdac filtered* split_map of set A
+ * @param whole_split_map the split map (color -> weight of color) of set A cup B
+ * @param verbose will print more error information, if true.
+ * @return the best suited cut point split in the supplied split_list for usage with
+ * graph::helper_filter_gdac
+ */
+pair<double, color_t> graph::query_gdac_cut_split( color_t& whole_mask,  color_t& a_mask,  hash_map<color_t, double>& split_map_A,  hash_map<color_t, double>& whole_split_map,  bool& verbose){
     // get the number of '1' bits of the a_mask for usage with color::represent
     auto num_a_colors {a_mask.popcnt()};
     // infer the most suited split in A to 'cut' in half / remove
     double max_weight_a {numeric_limits<double>::min()};
     color_t best_X_vs_Y_color {};
     // iterate over all 'X | Y' splits inside the filtered splits of set A
-    for (const auto& it : split_list_A) {
+    for (const auto& it : split_map_A) {
         // query weight of 'X | Y cup B' split
-        const color_t x_color {it.second};
+        const color_t x_color {it.first};
         // check if X is the color representation with less '1' bits (i.e. it is the representative
         // key for the split)
-        auto it_x {split_map.find(x_color)};
+        auto it_x {whole_split_map.find(x_color)};
         double weight_x_vs_yb {};
-        if (it_x != split_map.end()) {
+        if (it_x != whole_split_map.end()) {
             // X was the representative color, i.e. 'Y cup B' does not need to be calculated
             weight_x_vs_yb = it_x->second;
         } else {
@@ -2656,18 +2751,18 @@ pair<double, color_t> graph::query_gdac_split_weight(const color_t& whole_mask, 
             // NOTE: complement of X with respect to the mask of 'A cup B' must be 'Y cup B'
             // as 'X | Y cup B' is a valid split of the set 'A cup B'
             color::complement(y_cup_b_color, whole_mask);
-            auto it_yb {split_map.find(y_cup_b_color)};
-            if (it_yb != split_map.end()) {
+            auto it_yb {whole_split_map.find(y_cup_b_color)};
+            if (it_yb != whole_split_map.end()) {
                 // should always be true for valid split maps!
                 weight_x_vs_yb = it_yb->second;
             } else {
                 if (verbose) {
                     // only for the sake of defensive programming... should never be reached
-                    /*cerr << "ERROR: could not find x";
+                    /*cerr << "ERROR: could not find a weight for X | Y cup B";
                     for (size_t i = color::n; i-- > 0;) {
                         cerr << ((y_cup_b_color >> i) & 1);
                     }
-                    cerr << " color (or its inverse) in the given splits! Skipping this color" << endl ;*/
+                    cerr << " color in the previous splits! Skipping this color" << endl ;*/
                 }
                 continue;
                 //return {};
@@ -2679,9 +2774,9 @@ pair<double, color_t> graph::query_gdac_split_weight(const color_t& whole_mask, 
         color::complement(y_color, a_mask);
         // check if Y is the color representation with less '1' bits (i.e. it is the representative
         // key for the split)
-        auto it_y {split_map.find(y_color)};
+        auto it_y {whole_split_map.find(y_color)};
         double weight_y_vs_xb {};
-        if (it_y != split_map.end()) {
+        if (it_y != whole_split_map.end()) {
             // Y was the representative color, i.e. 'X cup B' does not need to be calculated
             weight_y_vs_xb = it_y->second;
         } else {
@@ -2690,27 +2785,27 @@ pair<double, color_t> graph::query_gdac_split_weight(const color_t& whole_mask, 
             // NOTE: complement of Y with respect to the mask of 'A cup B' must be 'X cup B'
             // as 'Y | X cup B' is a valid split of the set 'A cup B'
             color::complement(x_cup_b_color, whole_mask);
-            auto it_xb {split_map.find(x_cup_b_color)};
-            if (it_xb != split_map.end()) {
+            auto it_xb {whole_split_map.find(x_cup_b_color)};
+            if (it_xb != whole_split_map.end()) {
                 // should always be true for valid split maps!
                 weight_y_vs_xb = it_xb->second;
             } else {
                 // only for the sake of defensive programming... should never be reached
                 if (verbose) {
-                    /*cerr << "ERROR: could not find y";
+                    /*cerr << "ERROR: could not find a weight for Y | X cup B";
                     for (size_t i = color::n; i-- > 0;) {
                         cerr << ((x_cup_b_color >> i) & 1);
                     }
-                    cerr << " color (or its inverse) in the given splits! Skipping this color" << endl ;*/
+                    cerr << " color in the given splits! Skipping this color" << endl ;*/
                 }
                 continue;
             }
         }
         // update the new weight if it is higher than the old max weight
-        weight_x_vs_yb += weight_y_vs_xb;
+        //weight_x_vs_yb += weight_y_vs_xb;
         // alternative weight calculation using the geometric mean with pseudocounts.
         // This is not used, as it did not yield different results but is ever so slightly less efficient..
-        // weight_x_vs_yb = sqrt(weight_x_vs_yb + 1) * sqrt(weight_y_vs_xb + 1);
+        weight_x_vs_yb = weight_x_vs_yb + weight_y_vs_xb;
         if (weight_x_vs_yb > max_weight_a) {
             max_weight_a = weight_x_vs_yb;
             best_X_vs_Y_color = x_color;
@@ -2718,6 +2813,10 @@ pair<double, color_t> graph::query_gdac_split_weight(const color_t& whole_mask, 
             color::represent(best_X_vs_Y_color, a_mask, num_a_colors);
         }
     }
+    // retrieve the shared pointer to make a new one pointing to the same color :)
+    //auto best_color_it = split_map_A.find(best_X_vs_Y_color);
+    //assert (best_color_it != split_map_A.end());
+
     return make_pair(max_weight_a, best_X_vs_Y_color);
 }
 
