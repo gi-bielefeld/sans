@@ -40,6 +40,6 @@ pages:
   - echo 'Nothing to do...'
   artifacts:
     paths:
-    - docs/public
+    - public
   only:
-  - clowm-integration-extensions 
+  - clowm-integration-extensions
