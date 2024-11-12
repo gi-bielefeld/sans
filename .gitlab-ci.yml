@@ -38,7 +38,8 @@ pages:
   stage: deploy
   script:
   - echo 'Nothing to do...'
-  paths:
-  - docs/public
+  artifacts:
+    paths:
+    - docs/public
   only:
   - clowm-integration-extensions 
