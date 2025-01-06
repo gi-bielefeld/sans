@@ -10,6 +10,9 @@ of genomes are interpreted as a phylogenetic split indicating the closeness of t
 genomes and their separation from the other genomes. The resulting splits can be
 visualized as a phylogenetic tree or network.
 
+SANS can be easily installed locally (with extended functionality) from our [git repository](https://github.com/gi-bielefeld/sans).
+
+
 * Reference-free
 * Alignment-free
 * Input: assembled genomes / reads, or coding sequences / amino acid sequences
@@ -55,8 +58,8 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 
 * The sparse-map library is licensed under the [MIT license](https://github.com/Tessil/sparse-map/blob/master/LICENSE).
 * The Bifrost library is licensed under the [BSD-2 license](https://github.com/pmelsted/bifrost/blob/master/LICENSE).
-* SANS uses gzstream, licensed under the [LGPL license](https://gitlab.ub.uni-bielefeld.de/gi/sans/blob/master/src/gz/COPYING.LIB)
-* SANS is licensed under the [GNU general public license](https://gitlab.ub.uni-bielefeld.de/gi/sans/blob/master/LICENSE).
+* SANS uses gzstream, licensed under the [LGPL license](/src/gz/COPYING.LIB).
+* SANS is licensed under the [GNU general public license](/LICENSE).
 
 <img src="https://piwik.cebitec.uni-bielefeld.de/matomo.php?idsite=12&rec=1&action_name=VisitGitLab&url=https://gitlab.ub.uni-bielefeld.de/gi/sans" style="border:0;" alt="" />
 
