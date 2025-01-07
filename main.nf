@@ -12,9 +12,9 @@ process sans {
   label 'highmemMedium'
 
   input:
+    path label
+    path fof
     path inputFiles
-    file label
-    file fof
   output:
     path 'splits.tsv'
     path 'genomeList.txt'
@@ -54,9 +54,9 @@ workflow {
   opt_fof = file(params.file_of_files, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
-    sans(unzip.output,opt_label,opt_fof)
+    sans(opt_label,opt_fof,unzip.output)
   } else {
-    sans(inputChannel.collect(),opt_label,opt_fof)
+    sans(opt_label,opt_fof,inputChannel.collect())
   }
 }
 
