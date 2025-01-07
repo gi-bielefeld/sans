@@ -1,8 +1,6 @@
 Dockerfile
-splitstree.Dockerfile
 example_data
-.gitlab-ci.yml
 main.nf
 nextflow.config
 nextflow_schema.json
-clowm_info.json
+clowm
