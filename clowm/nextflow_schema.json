@@ -14,11 +14,11 @@
             "description": "Required input and output arguments",
             "default": "",
             "properties": {
-                "inputdir": {
+                "input": {
                     "type": "string",
-                    "format": "directory-path",
+                    "format": "path",
                     "fa_icon": "fas fa-sign-in-alt",
-                    "description": "Input directory containing all fasta or fastq files"
+                    "description": "Either: Input directory containing all fasta or fastq files\nOr: Zip-File containing all fasta or fastq files (no folders)"
                 },
                 "outdir": {
                     "type": "string",
