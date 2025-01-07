@@ -27,7 +27,7 @@ process sans {
   #if [ ${params.label} ]; then
   #  touch ${params.label}
   #fi
-  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $opt" : '' }
+  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' }
   """
 }
 
