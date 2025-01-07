@@ -106,7 +106,7 @@
                 "kmer": {
                     "type": "integer",
                     "description": "k-mer length",
-                    "help_text": "You may want to try different values for the k-mer length. On shorter sequences, e.g. virus data, use a smaller k, e.g., -k 11"
+                    "help_text": "You may want to try different values for the k-mer length. On shorter sequences, e.g. virus data, use a smaller k, e.g., -k 11",
                     "default": 31,
                     "minimum": 9,
                     "maximum": 64
