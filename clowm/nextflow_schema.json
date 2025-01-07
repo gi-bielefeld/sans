@@ -28,7 +28,7 @@
                 }
             },
             "required": [
-                "inputdir",
+                "input",
                 "outdir"
             ]
         },
