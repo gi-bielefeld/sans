@@ -2,6 +2,9 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 
 inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + "/" + it },type : "file")
 
+params.label = "$projectDir/clowm/NO_FILE"
+
+
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
   publishDir params.outdir, mode: 'symlink'
@@ -10,6 +13,7 @@ process sans {
 
   input:
     path inputFiles
+    file label
   output:
     tuple path("splits.*"), path("genomeList.txt")
 
@@ -20,10 +24,14 @@ process sans {
   if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
     /usr/bin/Xvfb &
   fi
-  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ params.label ? "--label ${ params.label }" : "" }
+  #if [ ${params.label} ]; then
+  #  touch ${params.label}
+  #fi
+  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $opt" : '' }
   """
 }
 
 workflow {
-  sans(inputChannel.collect())
+  opt_label = file(params.label, checkIfExists:true)
+  sans(inputChannel.collect(),opt_label)
 }
