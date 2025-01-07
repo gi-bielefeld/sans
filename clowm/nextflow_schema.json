@@ -1,0 +1,145 @@
+
+
+
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://gitlab.ub.uni-bielefeld.de/gi/sans/-/raw/master/nextflow_schema.json",
+    "title": "Nextflow pipeline parameters",
+    "description": "This pipeline uses Nextflow and processes some kind of data. The JSON Schema was built using the nf-core pipeline schema builder.",
+    "type": "object",
+    "definitions": {
+        "input_output": {
+            "title": "Input / Output",
+            "type": "object",
+            "description": "Required input and output arguments",
+            "default": "",
+            "properties": {
+                "inputdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-sign-in-alt",
+                    "description": "Input directory containing all fasta or fastq files"
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "fa_icon": "fas fa-sign-out-alt",
+                    "description": "Output directory where output is written to"
+                }
+            },
+            "required": [
+                "inputdir",
+                "outdir"
+            ]
+        },
+        "optional_input_arguments": {
+            "title": "Optional input arguments",
+            "type": "object",
+            "description": "Specify input",
+            "default": "",
+            "properties": {
+                "qualify": {
+                    "type": "integer",
+                    "description": "Discard k-mers with lower abundance than this threshold",
+                    "minimum": 2,
+                    "maximum": 100,
+                    "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\nk-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all k-mers that occur less than 2 times per genome."
+                },
+                "amino": {
+                    "type": "boolean",
+                    "description": "input provides amino acid sequences"
+                },
+                "code": {
+                    "type": "integer",
+                    "description": "input provides coding sequences, ID of the genetic code for translation",
+                    "default": 1
+                }
+            },
+            "fa_icon": "fas fa-terminal"
+        },
+        "optional_output_arguments": {
+            "title": "Optional output arguments",
+            "type": "object",
+            "description": "",
+            "default": "",
+            "properties": {
+                "filter": {
+                    "type": "string",
+                    "enum": [
+                        "strict",
+                        "weakly",
+                        "2-tree",
+                        "3-tree"
+                    ],
+                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.\n - strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree\n - weakly: a split is kept if it is weakly compatible to all previously filtered splits\n - n-tree: several sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).",
+                    "description": "Filter the output splits (greedy maximum weight subset)",
+                    "default": "weakly"
+                },
+                "top": {
+                    "type": "string",
+                    "pattern": "^\\d+[n]?$",
+                    "description": "Number of splits in the output list",
+                    "help_text": "For large data sets, the list of splits can become very long. We recommend to restrict the output for n genomes as input to the 10n strongest splits in the output using -t 10n. Use an integer (without n) to limit by an absolute value.",
+                    "default": "10n"
+                },
+                "pdf": {
+                    "type": "boolean",
+                    "description": "Output network as PDF file with Splitstree 4",
+                    "default": true
+                },
+                "label": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Color taxa according to given groups",
+                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label <groups.tsv> to provide a mapping of some or all genome identifiers to arbitrary group names."
+                }
+            }
+        },
+        "further_optional_parameters": {
+            "title": "Further optional Parameters",
+            "type": "object",
+            "description": "Optional Parameters",
+            "default": "",
+            "properties": {
+                "kmer": {
+                    "type": "integer",
+                    "description": "k-mer length",
+                    "default": 31,
+                    "minimum": 9,
+                    "maximum": 64
+                },
+                "verbose": {
+                    "type": "boolean",
+                    "hidden": true,
+                    "default": true,
+                    "description": "Print information messages during execution"
+                },
+                "mean": {
+                    "type": "string",
+                    "default": "geom2",
+                    "enum": [
+                        "arith",
+                        "geom",
+                        "geom2"
+                    ],
+                    "description": "Mean weight function to handle asymmetric splits",
+                    "hidden": true
+                }
+            }
+        }
+    },
+    "allOf": [
+        {
+            "$ref": "#/definitions/input_output"
+        },
+        {
+            "$ref": "#/definitions/optional_input_arguments"
+        },
+        {
+            "$ref": "#/definitions/optional_output_arguments"
+        },
+        {
+            "$ref": "#/definitions/further_optional_parameters"
+        }
+    ]
+}

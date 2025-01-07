@@ -6,40 +6,24 @@ process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
   publishDir params.outdir, mode: 'symlink'
   debug false
+  label 'highmemMedium'
 
   input:
     path inputFiles
   output:
-    tuple path("splits.tsv"), path("genomeList.txt")
+    tuple path("splits.*"), path("genomeList.txt")
 
   script:
   """
   touch $inputFiles
   echo "$inputFiles" | tr " " "\n" > genomeList.txt
-  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "-v" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" }
-  """
-}
-
-process splitstree {
-  container "ghcr.io/gi-bielefeld/sans:latest"
-  publishDir params.outdir, mode: 'symlink'
-  debug false
-
-  input:
-    path inputFiles
-  output:
-    path "splits.tsv.nexus*"
-  
-  script:
-  """
-  /usr/bin/Xvfb &
-  sans2pdf.py ${inputFiles[0]} ${inputFiles[1]}
+  if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
+    /usr/bin/Xvfb &
+  fi
+  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "-v" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" }
   """
 }
 
 workflow {
   sans(inputChannel.collect())
-  if ( params.visualization ) {
-    splitstree(sans.out)
-  }
 }
