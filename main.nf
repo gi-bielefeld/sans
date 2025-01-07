@@ -12,7 +12,7 @@ process sans {
   label 'highmemMedium'
 
   input:
-    tuple path label, path fof
+    tuple path(label), path(fof)
     path inputFiles
   output:
     path 'splits.tsv'
