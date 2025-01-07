@@ -45,7 +45,7 @@
                     "maximum": 10,
                     "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\nk-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all k-mers that occur less than 2 times per genome."
                 },
-                "file-of-files": {
+                "file_of_files": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Specify input in more detail",

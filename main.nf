@@ -3,7 +3,7 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 inputChannel=Channel.fromPath(fileEndingList.collect { params.inputdir + "/" + it },type : "file")
 
 params.label = "$projectDir/clowm/NO_FILE"
-params.file-of-files = "$projectDir/clowm/NO_FILE"
+params.file_of_files = "$projectDir/clowm/NO_FILE"
 
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
@@ -36,6 +36,6 @@ process sans {
 
 workflow {
   opt_label = file(params.label, checkIfExists:true)
-  opt_fof = file(params.file-of-files, checkIfExists:true)
+  opt_fof = file(params.file_of_files, checkIfExists:true)
   sans(inputChannel.collect(),opt_label,opt_fof)
 }
