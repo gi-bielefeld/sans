@@ -45,6 +45,11 @@
                     "maximum": 10,
                     "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\nk-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all k-mers that occur less than 2 times per genome."
                 },
+                "file-of-files": {
+                    "type": "file-path",
+                    "description": "Specify input in more detail",
+                    "help_text": "For each input genome, you can define an identifyer, specify multiple input files (gzipped or not), and optionally specify a minimum abundance threshold (overwriting the global qualify-value:\n <Identifier> : <File1> ; ... ; <FileN> ! <MinAbundance>\n\nExample:\nTaxon1 : assembled_genome.fasta ! 1\nTaxon2 : reads_fw.fastq.gz ; reads_rv.fastq.gz ! 3"
+                },
                 "amino": {
                     "type": "boolean",
                     "description": "input provides amino acid sequences",
