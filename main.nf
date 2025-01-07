@@ -12,8 +12,7 @@ process sans {
   label 'highmemMedium'
 
   input:
-    path label
-    path fof
+    tuple path label, path fof
     path inputFiles
   output:
     path 'splits.tsv'
@@ -54,9 +53,9 @@ workflow {
   opt_fof = file(params.file_of_files, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
-    sans(opt_label,opt_fof,unzip.output)
+    sans([opt_label,opt_fof],unzip.output)
   } else {
-    sans(opt_label,opt_fof,inputChannel.collect())
+    sans([opt_label,opt_fof],inputChannel.collect())
   }
 }
 
