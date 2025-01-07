@@ -50,6 +50,7 @@ void kmer::shift(kmer_t& kmer, char& c_right) {
  * @param chr right character
  */
 void kmer::unshift(kmer_t& kmer, char& chr) {
+	chr=util::bits_to_char(kmer & 0b11u);    // return the rightmost character
     kmer >>= 02u;    // shift all current bits to the right by two positions
 }
 
@@ -70,7 +71,7 @@ void kmer::reverse_complement(kmer_t& kmer) {
 }
 
 /**
- * This function constructs the r.c. representative of a given k-mer.
+ * This function constructs the canonical k-mer of a given k-mer.
  *
  * @param kmer bit sequence
  * @return 1 if inverted, 0 otherwise
@@ -86,5 +87,20 @@ bool kmer::reverse_represent(kmer_t& kmer) {
     // return the lexicographically smaller
     if  (kmer < rcmp) return false;    // not reversed
     else kmer = rcmp; return true;    // reversed
+}
+
+
+/**
+ * This function converts a bit-represented k-mer into a string.
+ * WARNING: k-mer will be empty afterwards!
+ *
+ * @param kmer k-mer to convert
+ */
+string kmer::kmer_to_string(kmer_t& kmer) {
+    string kmer_string(kmer::k, 'N');    // reserve enough space for characters
+	for (size2K_t i = 0; i != kmer::k; ++i){
+		kmer::unshift(kmer, kmer_string[kmer::k-i-1]);
+	}
+    return kmer_string;
 }
 

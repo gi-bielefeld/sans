@@ -1,4 +1,5 @@
 #include "kmerAmino.h"
+#include "util.h"
 
 /**
  * This is the length of a k-mer.
@@ -45,4 +46,30 @@ void kmerAmino::shift_right(kmerAmino_t& kmer, char& chr) {
     kmer <<= 05u;    // shift all current bits to the left by five positions
     kmer |= right;    // encode the new character within the rightmost five bits
     kmer &= mask;    // set all bits to zero that exceed the k-mer length
+}
+
+/**
+ * This function unshifts a k-mer returning the character on the right.
+ *
+ * @param kmer bit sequence
+ * @param chr right character
+ */
+void kmerAmino::unshift(kmerAmino_t& kmer, char& chr) {
+	chr=util::amino_bits_to_char(kmer & 0b11111u);    // return the rightmost character
+    kmer >>= 05u;    // shift all current bits to the right by two positions
+}
+
+
+/**
+ * This function converts a bit-represented k-mer into a string.
+ * WARNING: k-mer will be empty afterwards!
+ *
+ * @param kmer k-mer to convert
+ */
+string kmerAmino::kmer_to_string(kmerAmino_t& kmer) {
+    string kmer_string(kmerAmino::k, 'N');    // reserve enough space for characters
+	for (size5K_t i = 0; i != kmerAmino::k; ++i){
+		kmerAmino::unshift(kmer, kmer_string[kmerAmino::k-i-1]);
+	}
+    return kmer_string;
 }

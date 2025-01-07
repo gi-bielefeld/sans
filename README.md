@@ -31,8 +31,6 @@ SANS can be easily installed locally (with extended functionality) from our [git
 * In case of problems, contact us (see below).
 
 
-
-
 ## Contact
 
 For any question, feedback, or problem, please feel free to file an issue on this Git repository or write an email and we will get back to you as soon as possible.
@@ -61,7 +59,9 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 * SANS uses gzstream, licensed under the [LGPL license](https://github.com/gi-bielefeld/sans/blob/master/src/gz/COPYING.LIB).
 * SANS is licensed under the [GNU general public license](https://github.com/gi-bielefeld/sans/blob/master/LICENSE).
 
-<img src="https://piwik.cebitec.uni-bielefeld.de/matomo.php?idsite=12&rec=1&action_name=VisitGitLab&url=https://gitlab.ub.uni-bielefeld.de/gi/sans" style="border:0;" alt="" />
+## Privacy
+
+We use the open source software Matomo for web analysis in order to collect anonymized usage statistics for this repository. Please refer to our [Privacy Notice](/PrivacyNotice.pdf) for details.
 
 
-
+<img src="https://piwik.cebitec.uni-bielefeld.de/matomo.php?idsite=12&rec=1&action_name=VisitGitHub&url=https://github.com/gi-bielefeld/sans" style="border:0;" alt="" />

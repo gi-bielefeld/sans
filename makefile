@@ -3,10 +3,10 @@ CC = g++ -O3 -march=native -DmaxK=64 -DmaxN=64 -std=c++14
 XX = -lpthread -lz
 
 ## IF DEBUG
-# CC = g++ -g -march=native -DmaxK=33 -DmaxN=64 -std=c++14
+# CC = g++ -g -march=native -DmaxK=32 -DmaxN=64 -std=c++14
 
 ## IF BIFROST LIBRARY SHOULD BE USED
-# CC = g++ -O3 -march=native -DmaxK=64 -DmaxN=64 -DuseBF -std=c++14
+# CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -DuseBF -std=c++14
 # XX = -lbifrost -lpthread -lz
 
 # GZ STREAM LIB
@@ -36,18 +36,18 @@ ifeq ("$(wildcard $(TD))", "")
     RM = @echo ""
 endif
 
-ALL: makefile start SANS done
+all: makefile start SANS done
 
 SANS: makefile $(BUILDDIR)/main.o
-	$(CC) -o SANS $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(XX)
+	$(CC) -o SANS $(BUILDDIR)/nexus_color.o $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(XX)
 
-$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o
+$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o
 	$(CC) -c $(SRCDIR)/main.cpp -o $(BUILDDIR)/main.o
 
 $(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o
 	$(CC) -c $(SRCDIR)/graph.cpp -o $(BUILDDIR)/graph.o
 
-$(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h
+$(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h $(BUILDDIR)/util.o
 	$(CC) -c $(SRCDIR)/kmer.cpp -o $(BUILDDIR)/kmer.o
 
 $(BUILDDIR)/kmerAmino.o: makefile $(SRCDIR)/kmerAmino.cpp $(SRCDIR)/kmerAmino.h $(BUILDDIR)/util.o
@@ -55,6 +55,9 @@ $(BUILDDIR)/kmerAmino.o: makefile $(SRCDIR)/kmerAmino.cpp $(SRCDIR)/kmerAmino.h 
 
 $(BUILDDIR)/color.o: makefile $(SRCDIR)/color.cpp $(SRCDIR)/color.h
 	$(CC) -c $(SRCDIR)/color.cpp -o $(BUILDDIR)/color.o
+	
+$(BUILDDIR)/nexus_color.o: makefile $(SRCDIR)/nexus_color.cpp $(SRCDIR)/nexus_color.h
+	$(CC) -c $(SRCDIR)/nexus_color.cpp -o $(BUILDDIR)/nexus_color.o
 
 $(BUILDDIR)/util.o: $(SRCDIR)/util.cpp $(SRCDIR)/util.h
 	$(CC) -c $(SRCDIR)/util.cpp -o $(BUILDDIR)/util.o
@@ -96,6 +99,3 @@ done:
 # Remove build files
 clean:
 	$(RM)
-
-
-

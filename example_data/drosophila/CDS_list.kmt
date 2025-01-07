@@ -1,0 +1,11 @@
+dana : fa/predicted/dana-all-predicted-r1.06.fasta
+dere : fa/predicted/dere-all-predicted-r1.05.fasta
+dmoj : fa/predicted/dmoj-all-predicted-r1.04.fasta
+dper : fa/predicted/dper-all-predicted-r1.3.fasta
+dpse : fa/predicted/dpse-all-predicted-r3.04.fasta
+dsec : fa/predicted/dsec-all-predicted-r1.3.fasta
+dvir : fa/predicted/dvir-all-predicted-r1.07.fasta
+dwil : fa/predicted/dwil-all-predicted-r1.05.fasta
+dyak : fa/predicted/dyak-all-predicted-r1.05.fasta
+dmel : fa/predicted/dmel-all-predicted-r6.51.fasta
+dgri : fa/predicted/dgri-all-predicted-r1.05.fasta

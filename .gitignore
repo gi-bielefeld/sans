@@ -1,0 +1,12 @@
+# object files
+obj/
+# the binary
+SANS
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+# python
+scripts/__pycache__/

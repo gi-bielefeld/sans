@@ -30,6 +30,18 @@ template <typename T>
     // using hash_set = unordered_set<T>;
     using hash_set = tsl::sparse_pg_set<T>;
 
+//stable sorting of split weights
+template <typename K, typename V>
+  struct compare: public function<bool(pair<K,V>, pair<K,V>)> {
+      constexpr bool operator()(const pair<K,V>& x, const pair<K,V>& y) const noexcept {
+          return x.first > y.first || x.first == y.first && x.second < y.second;
+      }
+  };
+template <typename K, typename V>
+  using multimap_ = set<pair<K,V>, compare<K,V>>;
+
+
+
 #include "kmer.h"
 #include "kmerAmino.h"
 
@@ -64,7 +76,11 @@ struct spinlock {
       while (lock_.load(std::memory_order_relaxed)) {
         // Issue X86 PAUSE or ARM YIELD instruction to reduce contention between
         // hyper-threads
-        __builtin_ia32_pause();
+        #if defined(__i386__) || defined(__x86_64__)
+          __builtin_ia32_pause();
+        #else
+          std::this_thread::yield();
+        #endif
       }
     }
   }
@@ -103,6 +119,12 @@ private:
 
     static bool isAmino;
     
+	/**
+	* Look-up set for k-mers that are ignored, i.e., not stored, counted etc.
+	*/
+	static hash_set<kmer_t> blacklist;
+	static hash_set<kmerAmino_t> blacklist_amino;	
+	
     /**
      * This int indicates the number of tables to use for hashing
      */
@@ -138,11 +160,18 @@ private:
     static vector<hash_set<kmer_t>> quality_set;
     static vector<hash_set<kmerAmino_t>> quality_setAmino;
 
+	static vector<hash_map<kmer_t, uint16_t>> singleton_kmer_table;
+	static vector<hash_map<kmerAmino_t, uint16_t>> singleton_kmer_tableAmino;
+	static uint64_t singleton_counters[];
+	static spinlock singleton_counters_locks[];
+
+	
+	
     /**
      * This is a hash map used to filter k-mers for coverage (q > 2).
      */
-    static vector<hash_map<kmer_t, uint64_t>> quality_map;
-    static vector<hash_map<kmerAmino_t, uint64_t>> quality_mapAmino;
+    static vector<hash_map<kmer_t, uint16_t>> quality_map;
+    static vector<hash_map<kmerAmino_t, uint16_t>> quality_mapAmino;
 
 public:
 
@@ -151,12 +180,12 @@ public:
 	* @param mean weight function
 	* @return the new list of splits of length at least t ordered by weight as usual
 	*/
-	static multiset<pair<double, color_t>, greater<>> bootstrap(double mean(uint32_t&, uint32_t&));
+	static multimap_<double, color_t> bootstrap(double mean(uint32_t&, uint32_t&));
 
     /**
      * This is an ordered tree collecting the splits [O(log n)].
      */
-    static multiset<pair<double, color_t>, greater<>> split_list;
+    static multimap_<double, color_t> split_list;
 
     /**
     * These are the allowed chars.
@@ -170,10 +199,12 @@ public:
      * @param isAmino use amino processing
      * @param q_table coverage threshold
 	 * @param quality global q or maximum among all q values
+	 * @param blacklist k-mers to be ignored
+	 * @param blacklist_amino amino k-mers to be ignored
      * @param bins hash_tables to use for parallel processing
      * @param thread_count the number of threads used for processing
      */
-    static void init(uint64_t& top_size, bool isAmino, vector<int>& q_table, int& quality, uint64_t& thread_count);
+    static void init(uint64_t& top_size, bool isAmino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count);
 
 
 
@@ -217,7 +248,7 @@ public:
      *  @param kmer  The k-mer to store
      *  @param color The color to store 
      */
-    static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint64_t& color);
+    static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color);
 
     /**
      * This function hashes an amino k-mer and stores it in the correstponding hash table
@@ -225,7 +256,7 @@ public:
      *  @param kmer The kmer to store
      *  @param color The color to store 
      */
-    static void hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint64_t& color);
+    static void hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color);
 
     /**
      * This function searches the bit-wise corresponding hash table for the given kmer
@@ -267,6 +298,21 @@ public:
      */
     static void remove_kmer_amino(const kmerAmino_t& kmer);
 
+	/**
+	* This function extracts k-mers from a sequence and adds them to the black list.
+	*/
+	static void fill_blacklist(string& str, bool& reverse);
+	
+	/**
+	* This function tells how many k-mers are in the black list.
+	*/
+	static uint64_t size_blacklist();
+	
+	/**
+	 * This function activates using the blacklist while inserting kmers.
+	 */
+	static void activate_blacklist();
+	
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
      *
@@ -274,7 +320,7 @@ public:
      * @param color color flag
      * @param reverse merge complements
      */
-    static void add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse);
+    static void add_kmers(uint64_t& T, string& str, uint16_t& color, bool& reverse);
 
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
@@ -284,7 +330,7 @@ public:
      * @param reverse merge complements
      * @param m number of k-mers to minimize
      */
-    static void add_minimizers(uint64_t& T, string& str, uint64_t& color, bool& reverse, uint64_t& m);
+    static void add_minimizers(uint64_t& T, string& str, uint16_t& color, bool& reverse, uint64_t& m);
 
     /**
      * This function extracts k-mers from a sequence and adds them to the hash table.
@@ -294,7 +340,7 @@ public:
      * @param reverse merge complements
      * @param max_iupac allowed number of ambiguous k-mers per position
      */
-    static void add_kmers(uint64_t& T, string& str, uint64_t& color, bool& reverse, uint64_t& max_iupac);
+    static void add_kmers(uint64_t& T, string& str, uint16_t& color, bool& reverse, uint64_t& max_iupac);
 
     /**
      * This function extracts k-mer minimizers from a sequence and adds them to the hash table.
@@ -305,7 +351,7 @@ public:
      * @param m number of k-mers to minimize
      * @param max_iupac allowed number of ambiguous k-mers per position
      */
-    static void add_minimizers(uint64_t& T, string& str, uint64_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
+    static void add_minimizers(uint64_t& T, string& str, uint16_t& color, bool& reverse, uint64_t& m, uint64_t& max_iupac);
 
 	/**
 	* This function calculates the weight for all splits and puts them into the split_ölist
@@ -314,7 +360,28 @@ public:
 	*/
 	static void compile_split_list(double mean(uint32_t&, uint32_t&), double min_value);
 
-    /**
+	/**
+	* This function determines the core k-mers, i.e., all k-mers present in all genomes.
+	* Core k-mers are output to given file in fasta format, one k-mer per entry
+	* @param file output file stream
+	* @param verbose print progess
+	*/
+	static void output_core(ostream& file, bool& verbose);
+	
+	
+	/**
+	* Get the number of k-mers in all tables.
+	* @return number of k-mers in all tables.
+	*/
+	static uint64_t number_kmers();
+	
+	/**
+	* Get the number of k-mers in all singleton tables.
+	* @return number of k-mers in all singleton tables.
+	*/
+	static uint64_t number_singleton_kmers();
+
+	/**
      * This function iterates over the hash table and calculates the split weights.
      *
      * @param mean weight function
@@ -322,6 +389,17 @@ public:
      * @param min_value the minimal weight currently represented in the top list
      */
     static void add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
+	
+	
+	/**
+	* This function iterates over the singleton tables and adds the split weights.
+	* 
+	* @param mean weight function
+	* @param min_value the minimal weight represented in the top list
+	* @param verbose print progess
+	*/
+	static void add_singleton_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose);
+
 
     /**
      * This function adds a single split (weight and colors) to the output list.
@@ -331,7 +409,7 @@ public:
 	 * (@param split_list list of splits to add the split to)
      */
     static void add_split(double& weight, color_t& color);
-	static void add_split(double& weight, color_t& color, multiset<pair<double, color_t>, greater<>>& split_list);
+	static void add_split(double& weight, color_t& color, multimap_<double, color_t>& split_list);
 
 
     /**
@@ -342,7 +420,7 @@ public:
      * @param kmer_color split colors
      * @param min_value the minimal weight currently represented in the top list
      */
-     static void add_cdbg_colored_kmer(double mean(uint32_t&, uint32_t&), string kmer_seq, color_t& kmer_color, double min_value);       
+     static void add_cdbg_colored_kmer(string kmer_seq, const uint16_t& kmer_color);       
 
     /**
      * This function clears color-related temporary files.
@@ -356,7 +434,7 @@ public:
      * @param verbose print progress
      * @return the new minimal weight represented in the top list
      */
-    static void filter_strict(multiset<pair<double, color_t>, greater<>>& split_list, bool& verbose);
+    static void filter_strict(multimap_<double, color_t>& split_list, bool& verbose);
 
     /**
      * This function filters a greedy maximum weight tree compatible subset and returns a newick string.
@@ -367,7 +445,7 @@ public:
 	 * @param bootstrap_no the number of bootstrap replicates for computing the per centage support
      * @param verbose print progress
      */
-	static string filter_strict(std::function<string(const uint64_t&)> map, multiset<pair<double, color_t>, greater<>>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
+	static string filter_strict(std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
 
     /**
      * This function filters a greedy maximum weight weakly compatible subset.
@@ -375,7 +453,7 @@ public:
      * @param split_list list of splits to be filtered
      * @param verbose print progress
      */
-    static void filter_weakly(multiset<pair<double, color_t>, greater<>>& split_list, bool& verbose);
+    static void filter_weakly(multimap_<double, color_t>& split_list, bool& verbose);
 
     /**
      * This function filters a greedy maximum weight n-tree compatible subset.
@@ -384,7 +462,7 @@ public:
      * @param split_list list of splits to be filtered
      * @param verbose print progress
      */
-    static void filter_n_tree(uint64_t n, multiset<pair<double, color_t>, greater<>>& split_list, bool& verbose);
+    static void filter_n_tree(uint64_t n, multimap_<double, color_t>& split_list, bool& verbose);
 
     /**
      * This function filters a greedy maximum weight n-tree compatible subset and returns a string with all trees in newick format.
@@ -396,7 +474,7 @@ public:
 	 * @param bootstrap_no the number of bootstrap replicates for computing the per centage support
      * @param verbose print progress
      */
-    static string filter_n_tree(uint64_t n, std::function<string(const uint64_t&)> map, multiset<pair<double, color_t>, greater<>>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
+    static string filter_n_tree(uint64_t n, std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
 	
 	
 
@@ -409,7 +487,8 @@ protected:
      * @param kmer bit sequence
      * @param color color flag
      */
-    static function<void(uint64_t& T, uint_fast32_t& bin, const kmer_t&, uint64_t&)> emplace_kmer;
+    static function<void(const uint64_t& T, uint_fast32_t& bin, const kmer_t&, const uint16_t&)> emplace_kmer;
+    static function<void(const uint64_t& T, uint_fast32_t& bin, const kmer_t&, const uint16_t&)> emplace_kmer_tmp;
 
     /**
      * This function qualifies a k-mer and places it into the hash table.
@@ -417,7 +496,8 @@ protected:
      * @param kmer bit sequence
      * @param color color flag
      */
-    static function<void(uint64_t& T, uint_fast32_t& bin, const kmerAmino_t&, uint64_t&)> emplace_kmer_amino;
+    static function<void(const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t&, const uint16_t&)> emplace_kmer_amino;
+    static function<void(const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t&, const uint16_t&)> emplace_kmer_amino_tmp;
 
     /**
      * This function tests if a split is compatible with an existing set of splits.
@@ -490,8 +570,8 @@ protected:
 	 * (@param bootstrap_no the number of bootstrap replicates for computing the per centage support)
      * @return newick string
      */
-    static string print_tree(node* root, std::function<string(const uint64_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no);
-    static string print_tree(node* root, std::function<string(const uint64_t&)> map);
+    static string print_tree(node* root, std::function<string(const uint16_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no);
+    static string print_tree(node* root, std::function<string(const uint16_t&)> map);
 
     /**
      * This function checks if the character at the given position is allowed.

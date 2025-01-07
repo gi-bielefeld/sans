@@ -51,10 +51,10 @@ def readfile(filename,taxa,bootstrapvalues):
                 f=os.path.basename(os.path.splitext(f)[0])
            if os.path.splitext(f)[1] in fileext:
                 f=os.path.basename(os.path.splitext(f)[0])
-            if f not in taxa.keys():
+           if f not in taxa.keys():
                 eprint("WARNING: taxa from split not in taxa file and thus discarded: "+f)
 #                exit(1)
-            else:
+           else:
                 split.append(taxa[f])
         if len(split)==len(taxa) or len(split)==0:
             continue

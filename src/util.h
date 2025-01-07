@@ -30,7 +30,7 @@ public:
 	* @param n number of input genomes
 	* @return nothing
 	*/ 
-	static void check_n(uint64_t& n, string &path);
+	static void check_n(uint64_t& n, string &path, const uint64_t& max_N);
 
 
     /**
@@ -83,7 +83,7 @@ public:
      * @param b bit sequence
      * @return character
      */
-    static char bits_to_char(uint64_t& b);
+    static char bits_to_char(const uint64_t& b);
 
     /**
      * This function encodes a single character to five bits.
@@ -91,7 +91,7 @@ public:
      * @param c character
      * @return bit sequence
      */
-    static uint64_t amino_char_to_bits(char& c);
+    static uint64_t amino_char_to_bits(const char& c);
 
     /**
      * This function decodes five bits to a single character.
@@ -99,7 +99,7 @@ public:
      * @param b bit sequence
      * @return character
      */
-    static char amino_bits_to_char(uint64_t& b);
+    static char amino_bits_to_char(const uint64_t& b);
 
     /**
      * Trims leading whitespaces from the string.
@@ -148,6 +148,7 @@ public:
      */
 	static bool path_exist(const string &filename);
 
+	
 protected:
 };
 

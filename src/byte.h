@@ -1,3 +1,5 @@
+#include <cstdint>
+
 #if !defined(CLASS_NAME) // must be defined in the including header
     #error "CLASS_NAME is not defined (byte.h)"
 #endif
@@ -45,30 +47,47 @@
 #define ARRAY_LENGTH ((BIT_LENGTH / STORAGE_BITS) + (bool)(BIT_LENGTH % STORAGE_BITS))
 
 #if defined(__has_include)
-    #if __has_include(<immintrin.h>)
-        #include <immintrin.h>
-        #if defined(__POPCNT__)
-            #if STORAGE_BITS <= 32
-                #define _popcnt(_X) _mm_popcnt_u32(_X)
-            #elif STORAGE_BITS <= 64
-                #define _popcnt(_X) _mm_popcnt_u64(_X)
+    #if defined(__i386__) || defined(__x86_64__)
+        #if __has_include(<immintrin.h>)
+            #include <immintrin.h>
+
+            #if defined(__POPCNT__)
+                #if STORAGE_BITS <= 32
+                    #define _popcnt(_X) _mm_popcnt_u32(_X)
+                #elif STORAGE_BITS <= 64
+                    #define _popcnt(_X) _mm_popcnt_u64(_X)
+                #endif
             #endif
+            #if defined(__BMI__)
+                #if STORAGE_BITS <= 32
+                    #define _tzcnt(_X) (_X? _tzcnt_u32(_X): STORAGE_BITS)
+                #elif STORAGE_BITS <= 64
+                    #define _tzcnt(_X) (_X? _tzcnt_u64(_X): STORAGE_BITS)
+                #endif
+            #endif
+            #if defined(__BMI2__)
+                #if STORAGE_BITS <= 32
+                    #define _pext(_X,_Y) _pext_u32(_X,_Y)
+                    #define _pdep(_X,_Y) _pdep_u32(_X,_Y)
+                #elif STORAGE_BITS <= 64
+                    #define _pext(_X,_Y) _pext_u64(_X,_Y)
+                    #define _pdep(_X,_Y) _pdep_u64(_X,_Y)
+                #endif
+            #endif
+
         #endif
-        #if defined(__BMI__)
+    #elif defined(__ARM_ARCH) || defined(__ARM_NEON)
+        #if __has_include(<arm_neon.h>)
+            #include <arm_neon.h>
+
             #if STORAGE_BITS <= 32
-                #define _tzcnt(_X) (_X? _tzcnt_u32(_X): STORAGE_BITS)
+                #define _popcnt(_X) __builtin_popcount(_X)
+                #define _tzcnt(_X) (_X? __builtin_ctz(_X): STORAGE_BITS)
             #elif STORAGE_BITS <= 64
-                #define _tzcnt(_X) (_X? _tzcnt_u64(_X): STORAGE_BITS)
+                #define _popcnt(_X) __builtin_popcountll(_X)
+                #define _tzcnt(_X) (_X? __builtin_ctzll(_X): STORAGE_BITS)
             #endif
-        #endif
-        #if defined(__BMI2__)
-            #if STORAGE_BITS <= 32
-                #define _pext(_X,_Y) _pext_u32(_X,_Y)
-                #define _pdep(_X,_Y) _pdep_u32(_X,_Y)
-            #elif STORAGE_BITS <= 64
-                #define _pext(_X,_Y) _pext_u64(_X,_Y)
-                #define _pdep(_X,_Y) _pdep_u64(_X,_Y)
-            #endif
+
         #endif
     #endif
 #endif

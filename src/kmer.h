@@ -74,11 +74,21 @@ class kmer {
     static void reverse_complement(kmer_t& kmer);
 
     /**
-     * This function constructs the r.c. representative of a given k-mer.
+     * This function constructs the canonical k-mer of a given k-mer.
      *
      * @param kmer bit sequence
      * @return 1 if inverted, 0 otherwise
      */
     static bool reverse_represent(kmer_t& kmer);
+	
+		
+	/**
+	* This function converts a bit-represented k-mer into a string.
+	* WARNING: k-mer will be empty afterwards!
+	*
+	* @param kmer k-mer to convert
+	*/
+	static string kmer_to_string(kmer_t& kmer);
+
 
 };

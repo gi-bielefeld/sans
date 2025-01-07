@@ -7,7 +7,7 @@ PTH=$(dirname $0)
 $PTH/SANS "$@" -M "$PTH/makefile"
 
 # if Ns okay, we're done. Re-compile and re-run if necessary, i.e. if exit code is 3
-if [ $? == "3" ]
+if [ $? -eq "3" ]
 then
 	# go to SANS directory and re-compile
 	echo "Re-compile with makefile_autoN in $PTH ..."
