@@ -20,7 +20,7 @@ process sans {
   if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
     /usr/bin/Xvfb &
   fi
-  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "-v" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" }
+  SANS -i genomeList.txt -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ params.label ? "--label ${ params.label }" : "" }}
   """
 }
 

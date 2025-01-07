@@ -42,17 +42,19 @@
                     "type": "integer",
                     "description": "Discard k-mers with lower abundance than this threshold",
                     "minimum": 2,
-                    "maximum": 100,
+                    "maximum": 10,
                     "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\nk-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all k-mers that occur less than 2 times per genome."
                 },
                 "amino": {
                     "type": "boolean",
-                    "description": "input provides amino acid sequences"
+                    "description": "input provides amino acid sequences",
+                    "default": false
                 },
                 "code": {
-                    "type": "integer",
-                    "description": "input provides coding sequences, ID of the genetic code for translation",
-                    "default": 1
+                    "type": "boolean",
+                    "description": "input provides coding sequences",
+                    "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement k-mers are not considered and the default k-mer length is 10. By default, the standard genetic code will be used for translation. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify different code tables.",
+                    "default": false
                 }
             },
             "fa_icon": "fas fa-terminal"
@@ -91,7 +93,7 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Color taxa according to given groups",
-                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label <groups.tsv> to provide a mapping of some or all genome identifiers to arbitrary group names."
+                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label <groups.tsv> to provide a mapping of some or all genome identifiers to arbitrary group names. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups."
                 }
             }
         },
@@ -104,6 +106,7 @@
                 "kmer": {
                     "type": "integer",
                     "description": "k-mer length",
+                    "help_text": "You may want to try different values for the k-mer length. On shorter sequences, e.g. virus data, use a smaller k, e.g., -k 11"
                     "default": 31,
                     "minimum": 9,
                     "maximum": 64
