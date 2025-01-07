@@ -15,7 +15,9 @@ process sans {
     path inputFiles
     file label
   output:
-    tuple path("splits.*"), path("genomeList.txt")
+    path 'splits.tsv'
+    path 'genomeList.txt'
+    path 'splits.pdf', optional: true
 
   script:
   """
