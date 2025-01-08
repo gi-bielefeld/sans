@@ -18,7 +18,7 @@
                     "type": "string",
                     "format": "path",
                     "fa_icon": "fas fa-sign-in-alt",
-                    "description": "Either: Input directory containing all fasta or fastq files\nOr: Zip-File containing all fasta or fastq files (no folders)"
+                    "description": "Either: Input directory containing all fasta or fastq files\nOr: zip or tar.gz file containing all fasta or fastq files (no folders)"
                 },
                 "outdir": {
                     "type": "string",

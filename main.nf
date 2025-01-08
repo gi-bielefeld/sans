@@ -49,11 +49,32 @@ process unzip {
   """
 }
 
+process untargz {
+
+  container 'python:3.12'
+  input:
+  path zipgenomes
+  output:
+  path 'output/*'
+  
+  script:
+  """
+  import tarfile 
+  file = tarfile.open("${zipgenomes }") 
+  file.extractall("output") 
+  file.close()
+  """
+}
+
+
 workflow {
   opt_label = file(params.label, checkIfExists:true)
   opt_fof = file(params.file_of_files, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
+    sans(unzip.output,opt_label,opt_fof)
+  } else if (params.input.endsWith(".tar.gz")) {
+    untargz(params.input)
     sans(unzip.output,opt_label,opt_fof)
   } else {
     sans(inputChannel.collect(),opt_label,opt_fof)
