@@ -59,6 +59,8 @@ process untargz {
   
   script:
   """
+  #!/usr/local/bin/python
+
   import tarfile 
   file = tarfile.open("${zipgenomes }") 
   file.extractall("output") 
