@@ -75,7 +75,7 @@ workflow {
     sans(unzip.output,opt_label,opt_fof)
   } else if (params.input.endsWith(".tar.gz")) {
     untargz(params.input)
-    sans(unzip.output,opt_label,opt_fof)
+    sans(untargz.output,opt_label,opt_fof)
   } else {
     sans(inputChannel.collect(),opt_label,opt_fof)
   }
