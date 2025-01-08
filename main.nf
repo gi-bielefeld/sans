@@ -44,7 +44,7 @@ process unzip {
   #!/usr/local/bin/python
   
   import zipfile
-  with ipfile.ZipFile("${zipgenomes }", 'r') as zip_ref:
+  with zipfile.ZipFile("${zipgenomes }", 'r') as zip_ref:
     zip_ref.extractall("output")
   """
 }
