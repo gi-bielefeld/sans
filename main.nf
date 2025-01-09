@@ -15,10 +15,15 @@ process sans {
     path inputFiles
     file label
     file fof
+
   output:
-    path 'splits.tsv'
-    path 'genomeList.txt'
-    path 'splits.pdf', optional: true
+    path 'sans_splitnetwork.pdf'
+    path 'sans_splitnetwork.nexus'
+    path 'sans_splitnetwork.tsv'
+    path 'sans_tree.pdf', optional: true
+    path 'sans_tree.newick', optional: true
+    path 'sans_tree.tsv', optional: true
+    path 'sans.log'
 
   script:
   """
@@ -27,7 +32,11 @@ process sans {
   if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
     /usr/bin/Xvfb &
   fi
-  SANS ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } -o splits.tsv ${ params.verbose ? "--verbose" : "" } --mean ${ params.mean } --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } ${ params.filter != null ? "--filter ${ params.filter }" : "" } ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf splits.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' }
+  SANS ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } -o sans_splitnetwork.tsv --verbose  --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } --filter weakly ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' } --nexus sans_splitnetwork.nexus 2>>&1 | grep -v "(genome" | grep -v "%)" > sans.log
+  if [ ${params.tree ? "1" : "0"} -eq 1 ]; then
+    SANS ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } -s sans_splitnetwork.tsv -o sans_tree.tsv --verbose  --kmer ${ params.kmer }  --filter strict --threads ${ task.cpus } ${ params.pdf ? "--pdf sans_tree.pdf" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' } --newick sans_tree.newick 2>>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
+  fi
+  rm -f gegnomeList.txt
   """
 }
 

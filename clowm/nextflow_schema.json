@@ -1,6 +1,3 @@
-
-
-
 {
     "$schema": "http://json-schema.org/draft-07/schema",
     "$id": "https://gitlab.ub.uni-bielefeld.de/gi/sans/-/raw/master/nextflow_schema.json",
@@ -53,55 +50,15 @@
                 },
                 "amino": {
                     "type": "boolean",
-                    "description": "input provides amino acid sequences",
-                    "default": false
+                    "description": "input provides amino acid sequences"
                 },
                 "code": {
                     "type": "boolean",
                     "description": "input provides coding sequences",
-                    "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement k-mers are not considered and the default k-mer length is 10. By default, the standard genetic code will be used for translation. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify different code tables.",
-                    "default": false
+                    "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement k-mers are not considered and the default k-mer length is 10. By default, the standard genetic code will be used for translation. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify different code tables."
                 }
             },
             "fa_icon": "fas fa-terminal"
-        },
-        "optional_output_arguments": {
-            "title": "Optional output arguments",
-            "type": "object",
-            "description": "",
-            "default": "",
-            "properties": {
-                "filter": {
-                    "type": "string",
-                    "enum": [
-                        "strict",
-                        "weakly",
-                        "2-tree",
-                        "3-tree"
-                    ],
-                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.\n - strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree\n - weakly: a split is kept if it is weakly compatible to all previously filtered splits\n - n-tree: several sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).",
-                    "description": "Filter the output splits (greedy maximum weight subset)",
-                    "default": "weakly"
-                },
-                "top": {
-                    "type": "string",
-                    "pattern": "^\\d+[n]?$",
-                    "description": "Number of splits in the output list",
-                    "help_text": "For large data sets, the list of splits can become very long. We recommend to restrict the output for n genomes as input to the 10n strongest splits in the output using -t 10n. Use an integer (without n) to limit by an absolute value.",
-                    "default": "10n"
-                },
-                "pdf": {
-                    "type": "boolean",
-                    "description": "Output network as PDF file with Splitstree 4",
-                    "default": true
-                },
-                "label": {
-                    "type": "string",
-                    "format": "file-path",
-                    "description": "Color taxa according to given groups",
-                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label <groups.tsv> to provide a mapping of some or all genome identifiers to arbitrary group names. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups."
-                }
-            }
         },
         "further_optional_parameters": {
             "title": "Further optional Parameters",
@@ -112,27 +69,34 @@
                 "kmer": {
                     "type": "integer",
                     "description": "k-mer length",
-                    "help_text": "You may want to try different values for the k-mer length. On shorter sequences, e.g. virus data, use a smaller k, e.g., -k 11",
+                    "help_text": "You may want to try different values for the k-mer length. On shorter or rather heterogeneous sequences, use a smaller k, e.g., -k 15.",
                     "default": 31,
                     "minimum": 9,
                     "maximum": 64
                 },
-                "verbose": {
-                    "type": "boolean",
-                    "hidden": true,
-                    "default": true,
-                    "description": "Print information messages during execution"
-                },
-                "mean": {
+                "label": {
                     "type": "string",
-                    "default": "geom2",
-                    "enum": [
-                        "arith",
-                        "geom",
-                        "geom2"
-                    ],
-                    "description": "Mean weight function to handle asymmetric splits",
-                    "hidden": true
+                    "format": "file-path",
+                    "description": "Color taxa according to given groups",
+                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label groups.tsv to provide a mapping of some or all genome identifiers to arbitrary group names. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups."
+                },
+                "top": {
+                    "type": "string",
+                    "pattern": "^\\d+[n]?$",
+                    "description": "Number of splits in the output list",
+                    "help_text": "For large data sets, the list of splits can become very long. We recommend to restrict the output for n genomes as input to the 10n strongest splits in the output using --top 10n. Use an integer (without n) to limit by an absolute value.",
+                    "default": "10n"
+                },
+                "tree": {
+                    "type": "boolean",
+                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met.\n In a first step, the weakly filter is applied, i.e., a split is kept if it is weakly compatible to all previously filtered splits. If set to true, in a second step the strict filter is applied, i.e., a split is kept if the resulting set of splits is equivalent to a tree.",
+                    "description": "Additionally filter the output splits to obtain a tree.",
+                    "default": true
+                },
+                "pdf": {
+                    "type": "boolean",
+                    "description": "Output network as PDF file with Splitstree 4",
+                    "default": true
                 }
             }
         }
@@ -143,9 +107,6 @@
         },
         {
             "$ref": "#/definitions/optional_input_arguments"
-        },
-        {
-            "$ref": "#/definitions/optional_output_arguments"
         },
         {
             "$ref": "#/definitions/further_optional_parameters"
