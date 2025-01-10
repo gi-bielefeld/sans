@@ -36,7 +36,7 @@ process sans {
     /usr/bin/Xvfb &
   fi
   
-  if [ ${params.bootstrapping} -ne 0 ]; then
+  if [ ${params.bootstrapping} != null ]; then
     if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
       echo "ERROR: For bootstrapping, you have to choose a filter criterioin using --filter." > sans.log;
       exit 1
