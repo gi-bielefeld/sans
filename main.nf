@@ -142,15 +142,16 @@ process untargz {
 
 workflow {
   opt_label = file(params.label, checkIfExists:true)
+  opt_label_colors = file(params.label_colors, checkIfExists:true)
   opt_fof = file(params.file_of_files, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
-    sans(unzip.output,opt_label,opt_fof)
+    sans(unzip.output,opt_label,opt_label_colors,opt_fof)
   } else if (params.input.endsWith(".tar.gz")) {
     untargz(params.input)
-    sans(untargz.output,opt_label,opt_fof)
+    sans(untargz.output,opt_label,opt_label_colors,opt_fof)
   } else {
-    sans(inputChannel.collect(),opt_label,opt_fof)
+    sans(inputChannel.collect(),opt_label,opt_label_colors,opt_fof)
   }
 }
 
