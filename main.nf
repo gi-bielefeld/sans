@@ -54,7 +54,8 @@ process sans {
   ${ params.amino ? "--amino" : "" } \
   ${ params.translate ? "--code ${ params.code }" : "" } \
   --kmer ${ params.kmer } \
-  ${ label.name != 'NO_FILE' ? "--label $label" : '' } \
+  ${ label.name != 'NO_FILE' && label_colors == 'NO_FILE' ? "--label $label" : '' } \
+  ${ label.name != 'NO_FILE' && label_colors != 'NO_FILE' ? "--label $label $label_colors" : '' } \
   ${ params.top != null ? "--top ${ params.top }" : "" } \
   ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
@@ -82,7 +83,8 @@ process sans {
     ${ params.amino ? "--amino" : "" } \
     ${ params.translate ? "--code ${ params.code }" : "" } \
     --kmer ${ params.kmer } \
-    ${ label.name != 'NO_FILE' ? "--label $label" : '' } \
+    ${ label.name != 'NO_FILE' && label_colors == 'NO_FILE' ? "--label $label" : '' } \
+    ${ label.name != 'NO_FILE' && label_colors != 'NO_FILE' ? "--label $label $label_colors" : '' } \
     ${ params.top != null ? "--top ${ params.top }" : "" } \
     ${ params.pdf ? "--pdf sans_tree.pdf" : "" } \
     --filter strict
