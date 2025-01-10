@@ -52,7 +52,7 @@
                     "type": "boolean",
                     "description": "input provides amino acid sequences"
                 },
-                "code": {
+                "tanslate": {
                     "type": "boolean",
                     "description": "input provides coding sequences",
                     "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement k-mers are not considered and the default k-mer length is 10. By default, the standard genetic code will be used for translation. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify different code tables."
@@ -80,6 +80,12 @@
                     "description": "Color taxa according to given groups",
                     "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label groups.tsv to provide a mapping of some or all genome identifiers to arbitrary group names. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups."
                 },
+                "label_colors": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "Assign colors to groups",
+                    "help_text": "additional tab-separated file with group and color (rgb values, e.g. 90 0 255)"
+                },
                 "top": {
                     "type": "string",
                     "pattern": "^\\d+[n]?$",
@@ -97,8 +103,91 @@
                     "type": "boolean",
                     "description": "Output network as PDF file with Splitstree 4",
                     "default": true
+                },
+                "filter": {
+                    "type": "string",
+                    "enum": [
+                        "strict",
+                        "weakly",
+                        "2-tree",
+                        "3-tree",
+                        "none",
+                        "default"
+                    ],
+                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met. By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis).",
+                    "description": "Filter the output splits (greedy maximum weight subset)",
+                    "default": "default",
+                    "hidden": true
+                },
+                "bootstrapping": {
+                    "type": "integer",
+                    "description": "Bootstrapping with n replicates",
+                    "help_text": "To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed k-mer content. The originally determined splits or tree edges are compared to n bootstrap replicates. This option requires to select a filter criterion other than none and default, see --filter.",
+                    "minimum": 1,
+                    "maximum": 1000,
+                    "hidden": true
+                },
+                "support": {
+                    "type": "decimal",
+                    "description": "threshold to filter low support splits (e.g. 0.75)",
+                    "help_text": "Filter out low support splits, e.g., those appearing in less than 75% of the bootstrap replicates.",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "default": 0,
+                    "hidden": true
+                },
+                 "consensus": {
+                    "type": "string",
+                    "enum": [
+                        "strict",
+                        "weakly",
+                        "2-tree",
+                        "3-tree",
+                        "none"
+                    ],
+                    "help_text": "generate a consensus split network or tree",
+                    "description": "filter all splits (greedily according to their support value) to obtain a consensus split network or tree",
+                    "default": "none",
+                    "hidden": true
+                },
+                "iupac": {
+                    "type": "integer",
+                    "description": "resolve ambiguous iupac bases or amino acids",
+                    "help_text": "Specify a threshold to limit the number of considered k-mers per position. By default, respective k-mers are ignored.",
+                    "minimum": 0,
+                    "maximum": 1000,
+                    "default": 0,
+                    "hidden": true
+                },
+                "norev": {
+                    "type": "boolean",
+                    "description": "do not consider reverse complement k-mers",
+                    "help_text": "By default, each *k*-mer is compared to its reverse complement and the lexicagrafically smaller ist chosen as a canonical representative.",
+                    "default": false,
+                    "hidden": true
+                },
+                "code": {
+                    "type": "integer",
+                    "description": "Select the ID of the genetic code to be used for translation, if --translate is used.",
+                    "help_text": "Default: 1 (standard genetic code). Use 11 for Bacterial, Archaeal, and Plant Plastid Code. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.",
+                    "minimum": 1,
+                    "maximum": 33,
+                    "default": 1,
+                    "hidden": true
+                },
+                "mean": {
+                    "type": "string",
+                     "enum": [
+                        "arith",
+                        "geom",
+                        "geom2"
+                    ],
+                    "description": "Mean weight function to combine k-mer counts to final split weight",
+                    "default": "geom2",
+                    "hidden": true
                 }
-            }
+
+           }
         }
     },
     "allOf": [

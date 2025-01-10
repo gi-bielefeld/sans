@@ -23,19 +23,77 @@ process sans {
     path 'sans_tree.pdf', optional: true
     path 'sans_tree.newick', optional: true
     path 'sans_tree.tsv', optional: true
+    path 'sans_tree.tsv.bootstrap', optional: true
+    path 'sans_splitnetwork.tsv.bootstrap', optional: true
     path 'sans.log'
 
   script:
   """
   touch $inputFiles
   echo "$inputFiles" | tr " " "\n" > genomeList.txt
+  
   if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
     /usr/bin/Xvfb &
   fi
-  SANS ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } -o sans_splitnetwork.tsv --verbose  --kmer ${ params.kmer } ${ params.top != null ? "--top ${ params.top }" : "" } --filter weakly ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } --threads ${ task.cpus } ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } ${ params.amino ? "--amino" : "" } ${ params.code ? "--code" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' } --nexus sans_splitnetwork.nexus 2>>&1 | grep -v "(genome" | grep -v "%)" > sans.log
-  if [ ${params.tree ? "1" : "0"} -eq 1 ]; then
-    SANS ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } -s sans_splitnetwork.tsv -o sans_tree.tsv --verbose  --kmer ${ params.kmer }  --filter strict --threads ${ task.cpus } ${ params.pdf ? "--pdf sans_tree.pdf" : "" } ${ label.name != 'NO_FILE' ? "--label $label" : '' } --newick sans_tree.newick 2>>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
+  
+  if [ ${params.bootstrapping} -ne 0 ]; then
+    if [ ${params.filter -eq "none" ] || [ ${params.filter -eq "default" ]; then
+      echo "ERROR: For bootstrapping, you have to choose a filter criterioin using --filter." > sans.log;
+      exit 1
+    fi
+  fi  
+  
+  SANS \
+  ${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
+  ${ params.consensus == 'strict' ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus =! null && params.consensus != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == null && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == null && params.filter != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
+  ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } \
+  ${ params.amino ? "--amino" : "" } \
+  ${ params.translate ? "--code ${ params.code }" : "" } \
+  --kmer ${ params.kmer } \
+  ${ label.name != 'NO_FILE' ? "--label $label" : '' } \
+  ${ params.top != null ? "--top ${ params.top }" : "" } \
+  ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } \
+  ${ params.filter == 'strict' ? "--filter strict" : '' } \
+  ${ params.filter == 'weakly' ? "--filter weakly" : '' } \
+  ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
+  ${ params.filter == '3-tree' ? "--filter 3-tree" : '' } \
+  ${ params.filter == 'default' ? "--filter weakly" : '' } \
+  ${ params.bootstrapping != '' ? "--bootstrapping ${ params.bootstrapping } ${ params.support }" : "" } \
+  ${ params.consensus != null ? "--consensus ${ params.consensus }" : "" } \
+  ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
+  ${ params.norev ? "--norev" : "" } \
+  ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
+  --verbose \
+  --threads ${ task.cpus } \
+  2>>&1 | grep -v "(genome" | grep -v "%)" > sans.log
+  
+  
+  if [ ${params.filter} -eq "default" ] && [ ${params.tree ? "1" : "0"} -eq 1 ]; then
+    SANS \
+    --splits sans_splitnetwork.tsv \
+    --output sans_tree.tsv \
+    --newick sans_tree.newick \
+    ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
+    ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } \
+    ${ params.amino ? "--amino" : "" } \
+    ${ params.translate ? "--code ${ params.code }" : "" } \
+    --kmer ${ params.kmer } \
+    ${ label.name != 'NO_FILE' ? "--label $label" : '' } \
+    ${ params.top != null ? "--top ${ params.top }" : "" } \
+    ${ params.pdf ? "--pdf sans_tree.pdf" : "" } \
+    --filter strict
+    ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
+    ${ params.norev ? "--norev" : "" } \
+    ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
+    --verbose \
+    --threads ${ task.cpus } \
+    2>>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
   fi
+
   rm -f gegnomeList.txt
   """
 }

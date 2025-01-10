@@ -1,25 +1,35 @@
+
+To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
+
+**Simple:** Select the input and output folders and run SANS with default parameters.
+**Advanced:** If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced".
+**Expert:** This parameter view provides further options, such as bootstrapping.
+
 ## Input
 
-To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a simplified parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
+To compute a phylogeny with SANS, the only requirement are the input sequences.
 
-### Format
+#### Format
 
 Input sequences are read from Fasta or Fastq files.
 * Each file can be gzipped.
 * Each file can contain multiple sequence enties, e.g., contigs.
 
+If your input are reads or coding sequnces, switch the parameter view to "advanced".
 
-### Upload
+
+#### Upload
 
 Use the menu "Files", "My Data Buckets" and
 * upload all files into one folder individually, or
 * join all files in one zip or tar.gz file (no folder structure).
+* The CloWM version of SANS allows for a maximum of 100 sequences. A local installation of [SANS](https://github.com/gi-bielefeld/sans) can process up to thousands of seuences.
 
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html).
 
 ## Output
 
-### Files
+#### Files
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
@@ -31,20 +41,20 @@ You can also transfer data using an S3 management software such as provided by [
 
 * `sans.log` shows the logging output of the SANS run including the actual parameter settings.
 
-### Download
+#### Download
 
 Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 command line tool (see "Upload").
 
-## Optional input options
+## Optional input options (Parameter View "Advanced")
 
-### Abundance threshold
+#### Abundance threshold
 When analyzing read data, a common preprocessing step is to filter out low coverage
 *k*-mers that typically arise from sequencing errors. SANS includes the
 option `--qualify` to perform such a filtering step, allowing raw read data to be analyzed without
 the need to run another tool first. A minimum coverage threshold can be specified,
 i.e., `--qualify 2` filters out all *k*-mers that occur less than 2 times per genome.
 
-### File-of-files
+#### File-of-files
 By default, 
 * each genome is identified by the name of its input file,
 * one genome corresponds to one file, and
@@ -70,29 +80,71 @@ Example:
   ...
   ```
 
-### Coding sequences as input
+#### Coding sequences as input
 Even though SANS is originally developed to process whole genome DNA data, it also offers to process protein sequences, either translated (using parameter `--amino`), or
-untranslated employing automatic translation (using parameter `--code`). Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. (A local installation of [SANS](https://github.com/gi-bielefeld/sans) allows to specify different code tables.) 
+untranslated employing automatic translation (using parameter `--translate`). Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. See "Genetic code" for further options. 
 
 
-## Further optional options
+## Further optional paramters (Parameter View "Advanced")
 
 
-### *k*-mer length
+#### *k*-mer length
 You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`.
 
-### Labeled output
+#### Labeled output
 To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. An example is shown on the "Description" tab.
  
-Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifyers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. Colors are selected automatically. (A local installation of [SANS](https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups.) 
+Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifyers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. 
 
-### Number of splits
+Colors are selected automatically. Optionally, you can use `--label_colors` to specify custom color assignments to groups using an additional tab-separated file with group names in the first and and colors (rgb values, e.g. 90 0 255) in the second column.
+
+
+#### Number of splits
 For large data sets, the list of splits can become very long. We recommend to restrict the output for *n* genomes as input to the 10*n* strongest splits in the output using `--top 10n`. Use an integer (without *n*) to limit by an absolute value.
 
 
-### Tree or network
+#### Tree or network
 By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis). The tree filtering step can be turned off by setting `--tree` to false.
 
 
-### PDF output
+#### PDF output
 By default, the CloWM version of SANS generates a PDF of the phylogeny using [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). This can be turned off by setting `--pdf` to false.
+
+
+## Even further optional parameters (Parameter View "Expert")
+
+#### Filter criteria
+The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the `--filter` criterion is met.
+* strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree
+* weakly: a split is kept if it is weakly compatible to all previously filtered splits
+* *n*-tree: multiple sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).
+* default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis).
+* none: apply no filter (not recommended)
+
+
+#### Bootstrapping
+To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed *k*-mer content. To compare the originally determined splits or tree to, e.g., 1000 bootstrap replicates, use `--bootstrap 1000`. Bootstrap support values will be integrated into the nexus/newick output file and can, e.g., be visualized in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). Further, an additional output file `sans_*.bootstrap` containing the bootstrap support values will be created. This option requires to select a filter criterion other than "none" and "default", see "Filter criteria".
+
+The bootstrap support values can also be used for filtering splits:
+* To filter out low support splits, e.g., those appearing in less than 75% of the bootstrap replicates, use `--support 0.75`.
+* To filter all splits (greedily according to their support value) to obtain a consensus split network or tree, select a filter for `--consensus`. You could, e.g., use support values from tree replicates (`--filter strict`) to filter for a consensus tree (`--consensus strict`) or for a split network (`--consensus weakly`).
+
+
+#### IUPAC characters
+`--iupac` allows to consider the extended IUPAC alphabet to resolve ambiguous bases or amino acids. Specify a threshold to limit the number of considered *k*-mers per position between 1 (no ambiguity) and 4^k respectively 22^k (allows NNN...N). By default, respective *k*-mers are ignored.
+
+#### Canonical *k*-mers
+By default, each *k*-mer is compared to its reverse complement and the lexicagrafically smaller ist chosen as a canonical representative.
+Set `--norev` to true to not consider reverse complement *k*-mers.
+
+#### Genetic code
+Use `--code` to select the ID of the genetic code to be used for translation, if `--translate` is used.
+Default: 1 (standard genetic code). Use 11 for Bacterial, Archaeal, and Plant Plastid Code. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.
+
+#### Mean function
+If *m* *k*-mers are present in genome set *A* but not *B*, and *n* *k*-mers are present in genome set *B* but not *A*, both counts are combined by a mean function to obtain a final weight for the split *{A,B}*. Option `--mean` offers:
+* arith: arithmetic mean, *(m+n)/2*
+* geom:  geometric mean, *sqrt(m n)*
+* geom2: geometric mean with pseudo-counts, *sqrt((m+1)(n+1))* (default)
+
+
