@@ -80,7 +80,7 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Color taxa according to given groups",
-                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label groups.tsv to provide a mapping of some or all genome identifiers to arbitrary group names. A local installation of SANS (https://github.com/gi-bielefeld/sans) allows to specify custom color assignments to groups."
+                    "help_text": "To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. Use option --label groups.tsv to provide a mapping of some or all genome identifiers to arbitrary group names. Use --label_colors to specify custom color assignments to groups."
                 },
                 "label_colors": {
                     "type": "string",

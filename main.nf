@@ -3,7 +3,8 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 inputChannel=Channel.fromPath(fileEndingList.collect { params.input + "/" + it },type : "file")
 
 params.label = "$projectDir/clowm/NO_FILE"
-params.file_of_files = "$projectDir/clowm/NO_FILE2"
+params.label_color = "$projectDir/clowm/NO_FILE2"
+params.file_of_files = "$projectDir/clowm/NO_FILE3"
 
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
@@ -50,12 +51,12 @@ process sans {
   ${ params.consensus == null && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == null && params.filter != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
-  ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } \
+  ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
   ${ params.amino ? "--amino" : "" } \
   ${ params.translate ? "--code ${ params.code }" : "" } \
   --kmer ${ params.kmer } \
-  ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE' ? "--label $label" : '' } \
-  ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE' ? "--label $label $label_colors" : '' } \
+  ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
+  ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
   ${ params.top != null ? "--top ${ params.top }" : "" } \
   ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
@@ -79,12 +80,12 @@ process sans {
     --output sans_tree.tsv \
     --newick sans_tree.newick \
     ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
-    ${ fof.name != 'NO_FILE2' ? "--input $fof" : '--input genomeList.txt' } \
+    ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
     ${ params.amino ? "--amino" : "" } \
     ${ params.translate ? "--code ${ params.code }" : "" } \
     --kmer ${ params.kmer } \
-    ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE' ? "--label $label" : '' } \
-    ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE' ? "--label $label $label_colors" : '' } \
+    ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
+    ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
     ${ params.top != null ? "--top ${ params.top }" : "" } \
     ${ params.pdf ? "--pdf sans_tree.pdf" : "" } \
     --filter strict
