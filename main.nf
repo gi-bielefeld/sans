@@ -69,7 +69,7 @@ process sans {
   ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
   --verbose \
   --threads ${ task.cpus } \
-  2>>&1 | grep -v "(genome" | grep -v "%)" > sans.log
+  2>&1 | grep -v "(genome" | grep -v "%)" > sans.log
   
   
   if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
@@ -91,7 +91,7 @@ process sans {
     ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
     --verbose \
     --threads ${ task.cpus } \
-    2>>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
+    2>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
   fi
 
   rm -f gegnomeList.txt
