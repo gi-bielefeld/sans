@@ -37,7 +37,7 @@ process sans {
   fi
   
   if [ ${params.bootstrapping} -ne 0 ]; then
-    if [ ${params.filter} -eq "none" ] || [ ${params.filter} -eq "default" ]; then
+    if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
       echo "ERROR: For bootstrapping, you have to choose a filter criterioin using --filter." > sans.log;
       exit 1
     fi
