@@ -130,7 +130,7 @@
                     "hidden": true
                 },
                 "support": {
-                    "type": "decimal",
+                    "type": "number",
                     "description": "threshold to filter low support splits (e.g. 0.75)",
                     "help_text": "Filter out low support splits, e.g., those appearing in less than 75% of the bootstrap replicates.",
                     "minimum": 0,
