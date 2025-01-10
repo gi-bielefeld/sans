@@ -17,9 +17,9 @@ process sans {
     file fof
 
   output:
-    path 'sans_splitnetwork.pdf'
-    path 'sans_splitnetwork.nexus'
-    path 'sans_splitnetwork.tsv'
+    path 'sans_splitnetwork.pdf', optional: true
+    path 'sans_splitnetwork.nexus', optional: true
+    path 'sans_splitnetwork.tsv', optional: true
     path 'sans_tree.pdf', optional: true
     path 'sans_tree.newick', optional: true
     path 'sans_tree.tsv', optional: true
