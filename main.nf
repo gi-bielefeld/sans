@@ -62,8 +62,8 @@ process sans {
   ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
   ${ params.filter == '3-tree' ? "--filter 3-tree" : '' } \
   ${ params.filter == 'default' ? "--filter weakly" : '' } \
-  ${ params.bootstrapping != '' ? "--bootstrapping ${ params.bootstrapping } ${ params.support }" : "" } \
-  ${ params.consensus != null ? "--consensus ${ params.consensus }" : "" } \
+  ${ params.bootstrapping != null ? "--bootstrapping ${ params.bootstrapping } ${ params.support }" : "" } \
+  ${ params.consensus != null && params.consensus != "none" ? "--consensus ${ params.consensus }" : "" } \
   ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
   ${ params.norev ? "--norev" : "" } \
   ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
