@@ -15,6 +15,7 @@ process sans {
   input:
     path inputFiles
     file label
+    file label_color
     file fof
 
   output:
