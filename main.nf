@@ -37,7 +37,7 @@ process sans {
   fi
   
   if [ ${params.bootstrapping} -ne 0 ]; then
-    if [ ${params.filter -eq "none" ] || [ ${params.filter -eq "default" ]; then
+    if [ ${params.filter} -eq "none" ] || [ ${params.filter} -eq "default" ]; then
       echo "ERROR: For bootstrapping, you have to choose a filter criterioin using --filter." > sans.log;
       exit 1
     fi
@@ -72,7 +72,7 @@ process sans {
   2>>&1 | grep -v "(genome" | grep -v "%)" > sans.log
   
   
-  if [ ${params.filter} -eq "default" ] && [ ${params.tree ? "1" : "0"} -eq 1 ]; then
+  if [ ${params.filter} -eq "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
     SANS \
     --splits sans_splitnetwork.tsv \
     --output sans_tree.tsv \
