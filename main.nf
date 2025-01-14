@@ -5,7 +5,7 @@ inputChannel=Channel.fromPath(fileEndingList.collect { params.input + "/" + it }
 params.label = "$projectDir/clowm/NO_FILE"
 params.label_color = "$projectDir/clowm/NO_FILE2"
 params.file_of_files = "$projectDir/clowm/NO_FILE3"
-params.blcklist = "$projectDir/clowm/NO_FILE4"
+params.blacklist = "$projectDir/clowm/NO_FILE4"
 
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
@@ -153,7 +153,7 @@ workflow {
   opt_label = file(params.label, checkIfExists:true)
   opt_label_colors = file(params.label_colors, checkIfExists:true)
   opt_fof = file(params.file_of_files, checkIfExists:true)
-  opt_blacklist = file(params.blcklist, checkIfExists:true)
+  opt_blacklist = file(params.blacklist, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
     sans(unzip.output,opt_label,opt_label_colors,opt_fof,opt_blacklist)
