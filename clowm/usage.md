@@ -147,4 +147,9 @@ If *m* *k*-mers are present in genome set *A* but not *B*, and *n* *k*-mers are 
 * geom:  geometric mean, *sqrt(m n)*
 * geom2: geometric mean with pseudo-counts, *sqrt((m+1)(n+1))* (default)
 
+#### Output core k-mers
+Use `--core` to output all core *k*-mers, i.e., *k*-mers appearing in all input genomes, in a fasta file `sans_core.fasta`.
+
+#### Ignore certain k-mers
+Use `--blacklist` to provide a Fasta or Fastq file containing *k*-mers to be ignored when reading input files.
 

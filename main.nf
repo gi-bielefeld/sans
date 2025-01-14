@@ -5,6 +5,7 @@ inputChannel=Channel.fromPath(fileEndingList.collect { params.input + "/" + it }
 params.label = "$projectDir/clowm/NO_FILE"
 params.label_color = "$projectDir/clowm/NO_FILE2"
 params.file_of_files = "$projectDir/clowm/NO_FILE3"
+params.blcklist = "$projectDir/clowm/NO_FILE4"
 
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
@@ -17,6 +18,7 @@ process sans {
     file label
     file label_colors
     file fof
+    file blacklist
 
   output:
     path 'sans_splitnetwork.pdf', optional: true
@@ -27,6 +29,7 @@ process sans {
     path 'sans_tree.tsv', optional: true
     path 'sans_tree.tsv.bootstrap', optional: true
     path 'sans_splitnetwork.tsv.bootstrap', optional: true
+    path 'sans_core.fasta', optional: true
     path 'sans.log'
 
   script:
@@ -70,9 +73,12 @@ process sans {
   ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
   ${ params.norev ? "--norev" : "" } \
   ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
+  ${ params.core ? "--core sans_core.fasta" : "" } \
+  ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist : "" } \
   --verbose \
   --threads ${ task.cpus } \
-  2>&1 | grep -v "(genome" | grep -v "%)" > sans.log
+  2>&1 | grep -v "Fontconfig error" | grep -F -v "... [0-9]" > sans.log
+  echo "\nUsed SANS parameters: !:*" >> sans.log
   
   
   if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
@@ -93,9 +99,12 @@ process sans {
     ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
     ${ params.norev ? "--norev" : "" } \
     ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
-    --verbose \
+    ${ params.core ? "--core sans_core.fasta" : "" } \
+    ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist : "" } \
+   --verbose \
     --threads ${ task.cpus } \
-    2>&1 | grep -v "(genome" | grep -v "%)" >> sans.log
+    2>&1 | grep -v "Fontconfig error" | grep -F -v "... [0-9]" >> sans.log
+    echo "\nUsed SANS parameters: !:*" >> sans.log
   fi
 
   rm -f gegnomeList.txt
@@ -144,14 +153,15 @@ workflow {
   opt_label = file(params.label, checkIfExists:true)
   opt_label_colors = file(params.label_colors, checkIfExists:true)
   opt_fof = file(params.file_of_files, checkIfExists:true)
+  opt_blacklist = file(params.blcklist, checkIfExists:true)
   if (params.input.endsWith(".zip")) {
     unzip(params.input)
-    sans(unzip.output,opt_label,opt_label_colors,opt_fof)
+    sans(unzip.output,opt_label,opt_label_colors,opt_fof,opt_blacklist)
   } else if (params.input.endsWith(".tar.gz")) {
     untargz(params.input)
-    sans(untargz.output,opt_label,opt_label_colors,opt_fof)
+    sans(untargz.output,opt_label,opt_label_colors,opt_fof,opt_blacklist)
   } else {
-    sans(inputChannel.collect(),opt_label,opt_label_colors,opt_fof)
+    sans(inputChannel.collect(),opt_label,opt_label_colors,opt_fof,opt_blacklist)
   }
 }
 
