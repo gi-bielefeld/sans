@@ -77,8 +77,8 @@ process sans {
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
   --threads ${ task.cpus } \
-  2>&1 | grep -v "Fontconfig error" | grep -F -v "... [0-9]" > sans.log
-  echo "\nUsed SANS parameters: !:*" >> sans.log
+  2>&1 | grep -v 'Fontconfig error' | grep -F -v '... [0-9]' > sans.log
+  echo '\nUsed SANS parameters: !:*' >> sans.log
   
   
   if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
@@ -103,8 +103,8 @@ process sans {
     ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
    --verbose \
     --threads ${ task.cpus } \
-    2>&1 | grep -v "Fontconfig error" | grep -F -v "... [0-9]" >> sans.log
-    echo "\nUsed SANS parameters: !:*" >> sans.log
+    2>&1 | grep -v 'Fontconfig error' | grep -F -v '... [0-9]' >> sans.log
+    echo '\nUsed SANS parameters: !:*' >> sans.log
   fi
 
   rm -f gegnomeList.txt

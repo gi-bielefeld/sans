@@ -199,7 +199,8 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "k-mers to be ignored",
-                    "help_text": "Fasta or Fastq file containing k-mers to be ignored when reading input files"
+                    "help_text": "Fasta or Fastq file containing k-mers to be ignored when reading input files",
+                    "hidden": true
                 }
            }
         }
