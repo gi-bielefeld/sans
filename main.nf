@@ -74,7 +74,7 @@ process sans {
   ${ params.norev ? "--norev" : "" } \
   ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
   ${ params.core ? "--core sans_core.fasta" : "" } \
-  ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist : "" } \
+  ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
   --threads ${ task.cpus } \
   2>&1 | grep -v "Fontconfig error" | grep -F -v "... [0-9]" > sans.log
