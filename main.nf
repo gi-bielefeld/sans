@@ -77,7 +77,7 @@ process sans {
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
   --threads ${ task.cpus } \
-  2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print $NF}' > sans.log
+  2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' > sans.log
   echo \"\nUsed SANS parameters: !:*\" >> sans.log
   
   
@@ -103,7 +103,7 @@ process sans {
     ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
    --verbose \
     --threads ${ task.cpus } \
-    2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print $NF}' >> sans.log
+    2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
     echo \"\nUsed SANS parameters: !:*\" >> sans.log
   fi
 
