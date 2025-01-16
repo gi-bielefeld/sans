@@ -1,18 +1,21 @@
+## Parameter Views
 
 To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
 
-| Parameter view ||
-|:--|:--|
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple"/> | Select the input and output folders and run SANS with default parameters. |
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/> | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert"/> | This parameter view provides further options, such as bootstrapping. |
+
+|:--|:--|:--|
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple"/> | | Select the input and output folders and run SANS with default parameters. |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/> | | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert"/> | | This parameter view provides further options, such as bootstrapping. |
 
 
-## Input
+</br>
+
+## Input / Output   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple" align="right"/>
 
 To compute a phylogeny with SANS, the only requirement are the input sequences.
 
-#### Format
+#### Input File Format
 
 Input sequences are read from Fasta or Fastq files.
 * Each file can be gzipped.
@@ -30,9 +33,8 @@ Use the menu "Files", "My Data Buckets" and
 
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html).
 
-## Output
 
-#### Files
+#### Output Files
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
@@ -49,6 +51,7 @@ You can also transfer data using an S3 management software such as provided by [
 Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 command line tool (see "Upload").
 
 ## Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+---
 
 #### Abundance threshold
 When analyzing read data, a common preprocessing step is to filter out low coverage
@@ -89,6 +92,7 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 
 ## Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+---
 
 
 #### *k*-mer length
@@ -115,6 +119,8 @@ By default, the CloWM version of SANS generates a PDF of the phylogeny using [Sp
 
 
 ## Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
+---
+
 
 #### Filter criteria
 The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the `--filter` criterion is met.
