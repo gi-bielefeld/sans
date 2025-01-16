@@ -47,6 +47,8 @@ process sans {
       exit 1
     fi
   fi  
+
+  echo -n \"SANS \" > sans.log
   
   SANS \
   ${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
@@ -77,11 +79,15 @@ process sans {
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
   --threads ${ task.cpus } \
-  2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' > sans.log
-  echo \"\nUsed SANS parameters: !:*\" >> sans.log
-  
+  2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' > sans.tmp.log
+  echo !:* >> sans.log
+  echo \"\" >> sans.log
+  cat sans.tmp.log>> sans.log
+  rm sans.tmp.log  
   
   if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
+    echo \"\" >> sans.log
+    echo -n \"SANS \" >> sans.log
     SANS \
     --splits sans_splitnetwork.tsv \
     --output sans_tree.tsv \
@@ -103,8 +109,11 @@ process sans {
     ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
    --verbose \
     --threads ${ task.cpus } \
-    2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
-    echo \"\nUsed SANS parameters: !:*\" >> sans.log
+    2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.tmp.log
+    echo !:* >> sans.log
+    echo \"\" >> sans.log
+    cat sans.tmp.log>> sans.log
+    rm sans.tmp.log
   fi
 
   rm -f gegnomeList.txt
