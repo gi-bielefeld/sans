@@ -2,6 +2,8 @@
 
 **Symmetric Alignment-free phylogeNomic Splits**  
 
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right"/>
+
 SANS is a whole-genome based, alignment- and reference-free approach
 for reconstructing phylogenies. It does not rely on a pairwise comparison of the genomes.
 In a pangenomic approach, evolutionary relationships are determined based on the
@@ -10,7 +12,7 @@ of genomes are interpreted as a phylogenetic split indicating the closeness of t
 genomes and their separation from the other genomes. The resulting splits can be
 visualized as a phylogenetic tree or network.
 
-SANS can be easily installed locally (with extended functionality) from our [git repository](https://github.com/gi-bielefeld/sans).
+SANS can be also easily installed locally from our [git repository](https://github.com/gi-bielefeld/sans).
 
 
 * Reference-free
@@ -18,7 +20,6 @@ SANS can be easily installed locally (with extended functionality) from our [git
 * Input: assembled genomes / reads, or coding sequences / amino acid sequences
 * Output: phylogenetic splits or tree
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network"/>
 
 ## Dos and Don'ts
 
