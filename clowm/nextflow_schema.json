@@ -30,7 +30,7 @@
             ]
         },
         "optional_input_arguments": {
-            "title": "Optional input arguments",
+            "title": "Advanced Input Arguments",
             "type": "object",
             "description": "Specify input",
             "default": "",
@@ -63,7 +63,7 @@
             "fa_icon": "fas fa-terminal"
         },
         "further_optional_parameters": {
-            "title": "Further optional Parameters",
+            "title": "Advanced Parameters",
             "type": "object",
             "description": "Optional Parameters",
             "default": "",
@@ -105,7 +105,14 @@
                     "type": "boolean",
                     "description": "Output network as PDF file with Splitstree 4",
                     "default": true
-                },
+                }
+		},
+        "expert_optional_parameters": {
+            "title": "Expert Parameters",
+            "type": "object",
+            "description": "Optional Parameters",
+            "default": "",
+            "properties": {
                 "filter": {
                     "type": "string",
                     "enum": [
@@ -214,6 +221,9 @@
         },
         {
             "$ref": "#/definitions/further_optional_parameters"
+        },
+        {
+            "$ref": "#/definitions/expert_optional_parameters"
         }
     ]
 }
