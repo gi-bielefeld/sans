@@ -1,9 +1,12 @@
 
 To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple"/> Select the input and output folders and run SANS with default parameters.
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/> If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced".
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert"/> This parameter view provides further options, such as bootstrapping.
+| Parameter view ||
+|:--|:--|
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple"/> | Select the input and output folders and run SANS with default parameters. |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/> | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert"/> | This parameter view provides further options, such as bootstrapping. |
+
 
 ## Input
 
@@ -45,7 +48,7 @@ You can also transfer data using an S3 management software such as provided by [
 
 Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 command line tool (see "Upload").
 
-## >_ Optional input arguments (Parameter View <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/>)
+## Advanced Input Arguments <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" height="20"/>
 
 #### Abundance threshold
 When analyzing read data, a common preprocessing step is to filter out low coverage
@@ -85,7 +88,7 @@ Even though SANS is originally developed to process whole genome DNA data, it al
 untranslated employing automatic translation (using parameter `--translate`). Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. See "Genetic code" for further options. 
 
 
-## Advanced Parameters (Parameter View <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/>)
+## Advanced Parameters <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" height="20"/>
 
 
 #### *k*-mer length
@@ -111,7 +114,7 @@ By default, the CloWM version of SANS first generates a phylogenetic split netwo
 By default, the CloWM version of SANS generates a PDF of the phylogeny using [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). This can be turned off by setting `--pdf` to false.
 
 
-## Expert Parameters (Parameter View <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert"/>)
+## Expert Parameters <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" height="20"/>
 
 #### Filter criteria
 The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the `--filter` criterion is met.
