@@ -1,8 +1,9 @@
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right"/>
+
 # SANS
 
 **Symmetric Alignment-free phylogeNomic Splits**  
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right"/>
 
 SANS is a whole-genome based, alignment- and reference-free approach
 for reconstructing phylogenies. It does not rely on a pairwise comparison of the genomes.
