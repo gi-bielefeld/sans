@@ -10,3 +10,4 @@ ENV DISPLAY=":0.0"
 RUN ln -s /opt/splitstree/SplitsTree /usr/bin/SplitsTree
 COPY . .
 RUN make
+RUN chmod 777 -R /app
