@@ -54,7 +54,7 @@ process sans {
   ${ params.consensus == "none" && params.filter == 'strict' ? "--output sans_tree.tsv" : '' } \
   ${ params.consensus == "none" && params.filter != 'strict' ? "--output sans_splitnetwork.tsv" : '' } \
   ${ params.consensus == "strict" ? "--output sans_tree.tsv" : '' } \
-  ${ params.consensus != "none" && params.consensus != "strict"? "--output sans_splitnetwork.tsv" : '' } \
+  ${ params.consensus != "none" && params.consensus != "strict" ? "--output sans_splitnetwork.tsv" : '' } \
   ${ params.consensus == "none" && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == '2-tree' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == '3-tree' ? "--newick sans_tree.newick" : '' } \
@@ -75,7 +75,10 @@ process sans {
   ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
   ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
   ${ params.top != null ? "--top ${ params.top }" : "" } \
-  ${ params.pdf ? "--pdf sans_splitnetwork.pdf" : "" } \
+  ${ params.pdf  && params.consensus == "none" && params.filter == 'strict' ? "--pdf sans_tree.pdf" : "" } \
+  ${ params.pdf  && params.consensus == "none" && params.filter != 'strict' ? "--pdf sans_splitnetwork.pdf" : "" } \
+  ${ params.pdf  && params.consensus == "tree" ? "--pdf sans_tree.pdf" : "" } \
+  ${ params.pdf  && params.consensus != "none" && params.consensus != "strict" ? "--pdf sans_splitnetwork.pdf" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
   ${ params.filter == 'weakly' ? "--filter weakly" : '' } \
   ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
