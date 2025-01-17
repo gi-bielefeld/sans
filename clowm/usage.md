@@ -2,7 +2,7 @@
 
 To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
 
-
+| test |||
 |:--|:--|:--|
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple"/> | | Select the input and output folders and run SANS with default parameters. |
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced"/> | | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
