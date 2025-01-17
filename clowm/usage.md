@@ -153,7 +153,7 @@ By default, the CloWM version of SANS generates a PDF of the phylogeny using [Sp
 </br>
 
 
-## <i class="fa fa-magic" aria-hidden="true"></i> Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
+## <i class="fa fa-graduation-cap" aria-hidden="true"></i> Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
 
 ---
 
