@@ -40,7 +40,7 @@ You can also transfer data using an S3 management software such as provided by [
 
 #### Output Files
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right" width="33%"/>
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right" width="25%"/>
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
@@ -55,6 +55,8 @@ You can also transfer data using an S3 management software such as provided by [
 #### Download
 
 Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 command line tool (see "Upload").
+
+</br>
 
 ## Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
@@ -98,6 +100,9 @@ Even though SANS is originally developed to process whole genome DNA data, it al
 untranslated employing automatic translation (using parameter `--translate`). Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. See "Genetic code" for further options. 
 
 
+
+</br>
+
 ## Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
 ---
@@ -126,6 +131,8 @@ By default, the CloWM version of SANS first generates a phylogenetic split netwo
 
 #### PDF output
 By default, the CloWM version of SANS generates a PDF of the phylogeny using [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). This can be turned off by setting `--pdf` to false.
+
+</br>
 
 
 ## Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
