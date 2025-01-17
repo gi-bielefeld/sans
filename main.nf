@@ -48,10 +48,9 @@ process sans {
     fi
   fi  
 
-  echo -n \"SANS \" > sans.log
+
   
-  SANS \
-  ${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
+  SANS_PARAMS=${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
   ${ params.consensus == 'strict' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus =! null && params.consensus != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == null && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
@@ -78,18 +77,17 @@ process sans {
   ${ params.core ? "--core sans_core.fasta" : "" } \
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
-  --threads ${ task.cpus } \
-  2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' > sans.tmp.log
-  echo !:* >> sans.log
-  echo \"\" >> sans.log
-  cat sans.tmp.log>> sans.log
-  rm sans.tmp.log  
+  --threads ${ task.cpus }
+
+  echo SANS \$SANS_PARAMS > sans.log
+
+  SANS \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
   
   if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
+
     echo \"\" >> sans.log
-    echo -n \"SANS \" >> sans.log
-    SANS \
-    --splits sans_splitnetwork.tsv \
+
+    SANS_PARAMS=--splits sans_splitnetwork.tsv \
     --output sans_tree.tsv \
     --newick sans_tree.newick \
     ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
@@ -107,13 +105,13 @@ process sans {
     ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
     ${ params.core ? "--core sans_core.fasta" : "" } \
     ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
-   --verbose \
-    --threads ${ task.cpus } \
-    2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.tmp.log
-    echo !:* >> sans.log
-    echo \"\" >> sans.log
-    cat sans.tmp.log>> sans.log
-    rm sans.tmp.log
+    --verbose \
+    --threads ${ task.cpus }
+    
+    echo SANS \$SANS_PARAMS >> sans.log
+ 
+    SANS \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
+
   fi
 
   rm -f gegnomeList.txt
