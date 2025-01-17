@@ -38,9 +38,9 @@ Use the menu "Files", "My Data Buckets" and
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html).
 
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right"/>
-
 #### Output Files
+
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right" width="33%"/>
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
@@ -106,9 +106,9 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 #### *k*-mer length
 You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`.
 
-<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right"/>
 
 #### Labeled output
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right" width="33%"/>
 To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. An example is shown on the "Description" tab.
  
 Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifyers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. 
