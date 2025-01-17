@@ -96,7 +96,7 @@ process sans {
 
   echo SANS \$SANS_PARAMS > sans.log
 
-  SANS \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
+  SANS-autoN.sh \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
   
   if [ ${params.filter} == "default" ] && [ ${params.tree ? "1" : "0"} -eq 1 ]; then
 
@@ -125,7 +125,7 @@ process sans {
     
     echo SANS \$SANS_PARAMS >> sans.log
  
-    SANS \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
+    SANS-autoN.sh \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
 
   fi
 
