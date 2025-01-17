@@ -50,7 +50,7 @@ process sans {
 
 
   
-  SANS_PARAMS=${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
+  SANS_PARAMS=\"${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
   ${ params.consensus == 'strict' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus =! null && params.consensus != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == null && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
@@ -77,7 +77,7 @@ process sans {
   ${ params.core ? "--core sans_core.fasta" : "" } \
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
-  --threads ${ task.cpus }
+  --threads ${ task.cpus }\"
 
   echo SANS \$SANS_PARAMS > sans.log
 
@@ -87,7 +87,7 @@ process sans {
 
     echo \"\" >> sans.log
 
-    SANS_PARAMS=--splits sans_splitnetwork.tsv \
+    SANS_PARAMS=\"--splits sans_splitnetwork.tsv \
     --output sans_tree.tsv \
     --newick sans_tree.newick \
     ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
@@ -106,7 +106,7 @@ process sans {
     ${ params.core ? "--core sans_core.fasta" : "" } \
     ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
     --verbose \
-    --threads ${ task.cpus }
+    --threads ${ task.cpus }\"
     
     echo SANS \$SANS_PARAMS >> sans.log
  
