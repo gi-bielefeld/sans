@@ -50,11 +50,23 @@ process sans {
 
 
   
-  SANS_PARAMS=\"${ params.filter == 'strict' ? "--output sans_tree.tsv" : '--output sans_splitnetwork.tsv' } \
-  ${ params.consensus == 'strict' ? "--newick sans_tree.newick" : '' } \
-  ${ params.consensus =! null && params.consensus != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
-  ${ params.consensus == null && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
-  ${ params.consensus == null && params.filter != 'strict' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  SANS_PARAMS=\"\
+  ${ params.consensus == "none" && params.filter == 'strict' ? "--output sans_tree.tsv" : '' } \
+  ${ params.consensus == "none" && params.filter != 'strict' ? "--output sans_splitnetwork.tsv" : '' } \
+  ${ params.consensus == "strict" ? "--output sans_tree.tsv" : '' } \
+  ${ params.consensus != "none" && params.consensus != "strict"? "--output sans_splitnetwork.tsv" : '' } \
+  ${ params.consensus == "none" && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "none" && params.filter == '2-tree' ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "none" && params.filter == '3-tree' ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "tree" ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "2-tree" ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "3-tree" ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "none" && params.filter == 'weakly' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "none" && params.filter == '2-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "none" && params.filter == '3-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "weakly" ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "2-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "3-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
   ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
   ${ params.amino ? "--amino" : "" } \
@@ -70,7 +82,7 @@ process sans {
   ${ params.filter == '3-tree' ? "--filter 3-tree" : '' } \
   ${ params.filter == 'default' ? "--filter weakly" : '' } \
   ${ params.bootstrapping != null ? "--bootstrapping ${ params.bootstrapping } ${ params.support }" : "" } \
-  ${ params.consensus != null && params.consensus != "none" ? "--consensus ${ params.consensus }" : "" } \
+  ${ params.consensus != "none" ? "--consensus ${ params.consensus }" : "" } \
   ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
   ${ params.norev ? "--norev" : "" } \
   ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
