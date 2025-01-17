@@ -31,7 +31,7 @@ To ease the application of SANS for unexperiences users, the CloWM version of SA
 
 </br>
 
-## Input / Output   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple" align="right"/>
+## <i class="fa fa-file-text" aria-hidden="true"></i> Input / Output   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple" align="right"/>
 
 ---
 
@@ -121,7 +121,7 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 </br>
 
-## Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+## <i class="fa fa-wrench" aria-hidden="true"></i> Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
 ---
 
@@ -153,7 +153,7 @@ By default, the CloWM version of SANS generates a PDF of the phylogeny using [Sp
 </br>
 
 
-## Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
+## <i class="fa fa-magic" aria-hidden="true"></i> Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
 
 ---
 

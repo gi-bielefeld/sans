@@ -27,7 +27,8 @@
             "required": [
                 "input",
                 "outdir"
-            ]
+            ],
+            "fa_icon": "fas fa-file-text"
         },
         "optional_input_arguments": {
             "title": "Advanced Input Arguments",
