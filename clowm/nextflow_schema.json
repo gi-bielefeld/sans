@@ -107,7 +107,7 @@
                     "default": true
                 }
 			},
-            "fa_icon": "fas fa-cog"
+            "fa_icon": "fas fa-wrench"
 		},
         "expert_optional_parameters": {
             "title": "Expert Parameters",
@@ -212,7 +212,7 @@
                     "hidden": true
                 }
            },
-            "fa_icon": "fas fa-cogs"
+            "fa_icon": "fas fa-magic"
 		}
     },
     "allOf": [
