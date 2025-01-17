@@ -35,7 +35,7 @@ Use the menu "Files", "My Data Buckets" and
 * join all files in one zip or tar.gz file (no folder structure).
 * The CloWM version of SANS allows for a maximum of 100 sequences. A local installation of [SANS](https://github.com/gi-bielefeld/sans) can process up to thousands of seuences.
 
-You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html).
+You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html). For example, for using the minIO client, look up the S3 endpoint, access key, and secret key under "Files, S3 Bucket Keys", create an alias with `mc alias set sans-clowm <endpoint> <access_key> <secret_key> --api "s3v4" --path "auto"`, and then upload with `mc cp <files> sans-clowm/<bucket_name>`.
 
 
 #### Output Files
