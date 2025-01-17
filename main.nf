@@ -98,7 +98,7 @@ process sans {
 
   SANS \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
   
-  if [ ${params.filter} == "default" ] && [ ${params.tree} ? "1" : "0" -eq 1 ]; then
+  if [ ${params.filter} == "default" ] && [ ${params.tree ? "1" : "0"} -eq 1 ]; then
 
     echo \"\" >> sans.log
 
