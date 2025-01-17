@@ -60,7 +60,7 @@
                     "default": false
                 }
             },
-            "fa_icon": "fas fa-terminal"
+            "fa_icon": "fas fa-tag"
         },
         "further_optional_parameters": {
             "title": "Advanced Parameters",
@@ -106,7 +106,8 @@
                     "description": "Output network as PDF file with Splitstree 4",
                     "default": true
                 }
-			}
+			},
+            "fa_icon": "fas fa-cog"
 		},
         "expert_optional_parameters": {
             "title": "Expert Parameters",
@@ -210,7 +211,8 @@
                     "help_text": "Fasta or Fastq file containing k-mers to be ignored when reading input files",
                     "hidden": true
                 }
-           }
+           },
+            "fa_icon": "fas fa-cogs"
 		}
     },
     "allOf": [
