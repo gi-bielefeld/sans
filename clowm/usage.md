@@ -1,6 +1,8 @@
 ## Parameter Views
 
-To ease the application of SANS for unexperiences users, the CloWM vesion of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
+---
+
+To ease the application of SANS for unexperiences users, the CloWM version of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
 
 |  |||
 |:--|:--|:--|
@@ -35,6 +37,8 @@ Use the menu "Files", "My Data Buckets" and
 
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html).
 
+
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right"/>
 
 #### Output Files
 
@@ -101,6 +105,8 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 #### *k*-mer length
 You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`.
+
+<img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right"/>
 
 #### Labeled output
 To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. An example is shown on the "Description" tab.
