@@ -1,21 +1,3 @@
-<style>
-html[data-bs-theme='light'] .only-on-light {
-	display: block
-}
-
-html[data-bs-theme='dark'] .only-on-light {
-	display: none
-}
-
-html[data-bs-theme='dark'] .only-on-dark {
-	display: block
-}
-
-html[data-bs-theme='light'] .only-on-dark {
-	display: none
-}
-</style>
-
 ## Parameter Views
 
 ---
@@ -24,14 +6,14 @@ To ease the application of SANS for unexperiences users, the CloWM version of SA
 
 |  |||
 |:--|:--|:--|
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" class="only-light" style="border:0;" alt="simple" height="30"/> | | Select the input and output folders and run SANS with default parameters. |
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" class="only-light" style="border:0;" alt="advanced" height="30"/> | | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" class="only-light" style="border:0;" alt="expert" height="30"/> | | This parameter view provides further options, such as bootstrapping. |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/simple.png" style="border:0;" alt="simple" height="30"/> | | Select the input and output folders and run SANS with default parameters. |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" height="30"/> | | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/expert.png" style="border:0;" alt="expert" height="30"/> | | This parameter view provides further options, such as bootstrapping. |
 
 
 </br>
 
-## <i class="fa fa-file-text" aria-hidden="true"></i> Input / Output   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/simple.png" style="border:0;" alt="simple" align="right"/>
+## <i class="fa fa-file-text" aria-hidden="true"></i> Input / Output   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/simple.png" style="border:0;" alt="simple" align="right"/>
 
 ---
 
@@ -76,7 +58,7 @@ Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 comman
 
 </br>
 
-## <i class="fa fa-pencil" aria-hidden="true"></i> Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+## <i class="fa fa-pencil" aria-hidden="true"></i> Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
 ---
 
@@ -121,7 +103,7 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 </br>
 
-## <i class="fa fa-wrench" aria-hidden="true"></i> Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+## <i class="fa fa-wrench" aria-hidden="true"></i> Advanced Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
 ---
 
@@ -153,7 +135,7 @@ By default, the CloWM version of SANS generates a PDF of the phylogeny using [Sp
 </br>
 
 
-## <i class="fa fa-graduation-cap" aria-hidden="true"></i> Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
+## <i class="fa fa-graduation-cap" aria-hidden="true"></i> Expert Parameters   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/expert.png" style="border:0;" alt="expert" align="right"/>
 
 ---
 
