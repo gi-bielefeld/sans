@@ -76,7 +76,7 @@ Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 comman
 
 </br>
 
-## <i class="fa fa-tag" aria-hidden="true"></i> Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
+## <i class="fa fa-pencil" aria-hidden="true"></i> Advanced Input Arguments   <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration-extensions/clowm/advanced.png" style="border:0;" alt="advanced" align="right"/>
 
 ---
 

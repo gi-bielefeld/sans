@@ -61,7 +61,7 @@
                     "default": false
                 }
             },
-            "fa_icon": "fas fa-tag"
+            "fa_icon": "fas fa-pencil"
         },
         "further_optional_parameters": {
             "title": "Advanced Parameters",
