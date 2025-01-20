@@ -1,4 +1,4 @@
-#### Output Files
+# Output Files
 
 <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/prasinoviruses/weakly.splits.nexus.png" style="border:0;" alt="Example network" align="right" width="25%"/>
 
