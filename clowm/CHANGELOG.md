@@ -1,5 +1,21 @@
 # SANS Changelog
 
+## v0.9.1 [2025-01-20]
+
+### Added
+
+- further parameter defaults in nextflow.config
+
+### Changed
+
+- moved main.nf into clowm subfolder
+
+### Fixed
+
+- graphics in usage.md
+
+
+
 ## v0.9 [2025-01-20]
 
 Second release of SANS ambage on CloWM staging.
