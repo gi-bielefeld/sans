@@ -1,0 +1,1 @@
+-i /home/roland/PRJ/SANS/virus2/list.txt -o test -v -b 1 -f strict

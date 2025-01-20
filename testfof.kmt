@@ -1,0 +1,5 @@
+A : AR158.fasta ! 1
+B : BpV1.fasta ; BpV2.fasta ! 2 
+M : MpV-12T.fasta; MpV-PL1.fasta ; MpV-SP1.fasta ; MpV1.fasta ! 1
+O : OlV1.fasta ; OtV1.fasta ; OtV2.fasta ; OtV5.fasta ; OtV6.fasta
+PB : PBCV1.fasta
