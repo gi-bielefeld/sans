@@ -29,7 +29,7 @@ SANS can be also easily installed locally from our [git repository](https://gith
 * The sequences should not be too short. Provide whole-genome data or as many coding sequences as possible.
 * Be careful with viruses (for the reasons above).
 * Have a look at the network (weakly compatible or 2-tree). It does not make much sense to extract a tree, if the split network is a hairball.
-* Reconstructed phylogenies are unrooted, even though a Newick file (-N) suggests a root.
+* Reconstructed phylogenies are unrooted, even though a Newick file suggests a root.
 * In case of problems, contact us (see below).
 
 
