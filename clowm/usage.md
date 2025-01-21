@@ -109,16 +109,16 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 #### *k*-mer length
 The default *k*-mer length is 31 for DNA sequences, and 10 for amino acid sequences. 
-You may want to try different values. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`. If you want to use a *k"-mer length larger than 63, please use a local installation of [SANS](https://github.com/gi-bielefeld/sans).
+You may want to try different values. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`. If you want to use a *k*-mer length larger than 63, please use a local installation of [SANS](https://github.com/gi-bielefeld/sans).
 
 
 #### Labeled output
 <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right" width="33%"/>
-To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. An example is shown on the "Description" tab.
+To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly as shown in the figure on the right.
  
 Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifiers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. 
 
-Colors are selected automatically. Optionally, you can use `--label_colors` to specify custom color assignments to groups using an additional tab-separated file with group names in the first and and colors (rgb values, e.g. 90 0 255) in the second column.
+Colors are selected automatically. Optionally, you can use `--label_colors` to specify custom color assignments to groups using an additional tab-separated file with group names in the first and colors (rgb values, e.g. 90 0 255) in the second column.
 
 
 #### Number of splits
@@ -144,7 +144,7 @@ By default, the CloWM version of SANS generates a PDF of the phylogeny using [Sp
 The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the `--filter` criterion is met.
 * strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree
 * weakly: a split is kept if it is weakly compatible to all previously filtered splits
-* *n*-tree: multiple sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).
+* *n*-tree: multiple sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... *n*-th set if possible (compatible).
 * default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits).
 * none: apply no filter (not recommended)
 
@@ -169,13 +169,13 @@ Use `--code` to select the ID of the genetic code to be used for translation, if
 Default: 1 (standard genetic code). Use 11 for Bacterial, Archaeal, and Plant Plastid Code. See https://www.ncbi.nlm.nih.gov/Taxonomy/Utils/wprintgc.cgi for details.
 
 #### Mean function
-If *m* *k*-mers are present in genome set *A* but not *B*, and *n* *k*-mers are present in genome set *B* but not *A*, both counts are combined by a mean function to obtain a final weight for the split *{A,B}*. Option `--mean` offers:
-* arith: arithmetic mean, *(m+n)/2*
-* geom:  geometric mean, *sqrt(m n)*
-* geom2: geometric mean with pseudo-counts, *sqrt((m+1)(n+1))* (default)
+If *a* *k*-mers are present in genome set *A* but not *B*, and *b* *k*-mers are present in genome set *B* but not *A*, both counts are combined by a mean function to obtain a final weight for the split *{A,B}*. Option `--mean` offers:
+* arith: arithmetic mean, *(a+b)/2*
+* geom:  geometric mean, *sqrt(a b)*
+* geom2: geometric mean with pseudo-counts, *sqrt((a+1)(b+1))* (default)
 
 #### Output core k-mers
-Use `--core` to output all core *k*-mers, i.e., *k*-mers appearing in all input genomes, in a fasta file `sans_core.fasta`.
+Use `--core` to output all core *k*-mers, i.e., *k*-mers appearing in all input genomes, in a Fasta file `sans_core.fasta`.
 
 #### Ignore certain k-mers
 Use `--blacklist` to provide a Fasta or Fastq file containing *k*-mers to be ignored when reading input files.
