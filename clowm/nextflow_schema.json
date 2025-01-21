@@ -72,10 +72,9 @@
                 "kmer": {
                     "type": "integer",
                     "description": "*k*-mer length",
-                    "help_text": "You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller k, e.g., -k 15. If you want to use a *k*-mer length larger than 31, please use a local installation of SANS.",
-                    "default": 31,
+                    "help_text": "You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller k, e.g., -k 15. If you want to use a *k*-mer length larger than 63, please use a local installation of SANS.",
                     "minimum": 9,
-                    "maximum": 64
+                    "maximum": 63
                 },
                 "label": {
                     "type": "string",

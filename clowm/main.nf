@@ -71,7 +71,7 @@ process sans {
   ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
   ${ params.amino ? "--amino" : "" } \
   ${ params.translate ? "--code ${ params.code }" : "" } \
-  --kmer ${ params.kmer } \
+  ${ params.kmer != null ? "--kmer ${ params.kmer" : "" } \
   ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
   ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
   ${ params.top != null ? "--top ${ params.top }" : "" } \
@@ -109,7 +109,7 @@ process sans {
     ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
     ${ params.amino ? "--amino" : "" } \
     ${ params.translate ? "--code ${ params.code }" : "" } \
-    --kmer ${ params.kmer } \
+    ${ params.kmer != null ? "--kmer ${ params.kmer" : "" } \
     ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
     ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
     ${ params.top != null ? "--top ${ params.top }" : "" } \

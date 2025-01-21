@@ -32,8 +32,7 @@ If your input are reads or coding sequences, switch the parameter view to "advan
 
 Use the menu "Files", "My Data Buckets" and
 * upload all files into one folder individually, or
-* join all files in one zip or tar.gz file (no folder structure).
-* The CloWM version of SANS allows for a maximum of 100 sequences. A local installation of [SANS](https://github.com/gi-bielefeld/sans) can process up to thousands of sequences.
+* upload one zip or tar.gz file containing all input files (without folder structure).
 
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html). For example, for using the minIO client, look up the S3 endpoint, access key, and secret key under "Files, S3 Bucket Keys", create an alias with `mc alias set sans-clowm <endpoint> <access_key> <secret_key> --api "s3v4" --path "auto"`, and then upload with `mc cp <files> sans-clowm/<bucket_name>`.
 
@@ -109,7 +108,8 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 
 #### *k*-mer length
-You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`. If you want to use a *k"-mer length larger than 31, please use a local installation of [SANS](https://github.com/gi-bielefeld/sans).
+The default *k*-mer length is 31 for DNA sequences, and 10 for amino acid sequences. 
+You may want to try different values. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`. If you want to use a *k"-mer length larger than 63, please use a local installation of [SANS](https://github.com/gi-bielefeld/sans).
 
 
 #### Labeled output
