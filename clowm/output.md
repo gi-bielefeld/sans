@@ -4,7 +4,7 @@
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
-* `sans_splitnetwork.tsv` is a tab separated file. Each line corresponds to one split. The first column specifies the split weight. The remaining columns specify a set of genomes that is split from the others. Splits are odered by weight.
+* `sans_splitnetwork.tsv` is a tab separated file. Each line corresponds to one split. The first column specifies the split weight. The remaining columns specify a set of genomes that is split from the others. Splits are ordered by weight.
 
 
 * `sans_tree.pdf` shows the phylogenetic tree, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).

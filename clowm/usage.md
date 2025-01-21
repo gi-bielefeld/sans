@@ -2,12 +2,12 @@
 
 ---
 
-To ease the application of SANS for unexperiences users, the CloWM version of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
+To ease the application of SANS for unexperienced users, the CloWM version of SANS provides a slightly different parameter handling compared to a local installation from our [git repository](https://github.com/gi-bielefeld/sans).
 
 |  |||
 |:--|:--|:--|
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/simple.png" style="border:0;" alt="simple" height="30"/> | | Select the input and output folders and run SANS with default parameters. |
-| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" height="30"/> | | If your input are **reads** or **coding sequnces**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
+| <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" height="30"/> | | If your input are **reads** or **coding sequences**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/expert.png" style="border:0;" alt="expert" height="30"/> | | This parameter view provides further options, such as bootstrapping. |
 
 
@@ -25,7 +25,7 @@ Input sequences are read from Fasta or Fastq files.
 * Each file can be gzipped.
 * Each file can contain multiple sequence entries, e.g., contigs.
 
-If your input are reads or coding sequnces, switch the parameter view to "advanced".
+If your input are reads or coding sequences, switch the parameter view to "advanced".
 
 
 #### Upload
@@ -33,7 +33,7 @@ If your input are reads or coding sequnces, switch the parameter view to "advanc
 Use the menu "Files", "My Data Buckets" and
 * upload all files into one folder individually, or
 * join all files in one zip or tar.gz file (no folder structure).
-* The CloWM version of SANS allows for a maximum of 100 sequences. A local installation of [SANS](https://github.com/gi-bielefeld/sans) can process up to thousands of seuences.
+* The CloWM version of SANS allows for a maximum of 100 sequences. A local installation of [SANS](https://github.com/gi-bielefeld/sans) can process up to thousands of sequences.
 
 You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html). For example, for using the minIO client, look up the S3 endpoint, access key, and secret key under "Files, S3 Bucket Keys", create an alias with `mc alias set sans-clowm <endpoint> <access_key> <secret_key> --api "s3v4" --path "auto"`, and then upload with `mc cp <files> sans-clowm/<bucket_name>`.
 
@@ -44,7 +44,7 @@ You can also transfer data using an S3 management software such as provided by [
 
 * `sans_splitnetwork.pdf` shows the phylogeny, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_splitnetwork.nexus` can be opened in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html) to explore the phylogeny interactively.
-* `sans_splitnetwork.tsv` is a tab separated file. Each line corresponds to one split. The first column specifies the split weight. The remaining columns specify a set of genomes that is split from the others. Splits are odered by weight.
+* `sans_splitnetwork.tsv` is a tab separated file. Each line corresponds to one split. The first column specifies the split weight. The remaining columns specify a set of genomes that is split from the others. Splits are ordered by weight.
 
 * `sans_tree.pdf` shows the phylogenetic tree, generated with [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
 * `sans_tree.newick` contains the phylogenetic tree in newick format.
@@ -54,7 +54,7 @@ You can also transfer data using an S3 management software such as provided by [
 
 #### Download
 
-Use the menu "Files", "My Data Buckets" to acces the ouput files or an S3 command line tool (see "Upload").
+Use the menu "Files", "My Data Buckets" to access the output files or an S3 command line tool (see "Upload").
 
 </br>
 
@@ -76,7 +76,7 @@ By default,
 * the same abundance filter (see "qualify") is used for each genome.
 
 By providing a `file-of-files` in the following format, you can 
-* assign custom identifyers to the genomes,
+* assign custom identifiers to the genomes,
 * specify multiple input files for each genome, and/or
 * specify individual abundance thresholds for each genome (overwriting the global qualify-value).
 
@@ -109,14 +109,14 @@ untranslated employing automatic translation (using parameter `--translate`). Re
 
 
 #### *k*-mer length
-You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`.
+You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller *k*, e.g., `-k 15`. If you want to use a *k"-mer length larger than 31, please use a local installation of [SANS](https://github.com/gi-bielefeld/sans).
 
 
 #### Labeled output
 <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/master/example_data/drosophila/WG_weakly_groups.png" style="border:0;" alt="Example network" align="right" width="33%"/>
 To depict the phylogeny on a higher level, taxa can be assigned to groups. Each group is then represented by a color and individual text labels of taxa are replaced by colored circles accordingly. An example is shown on the "Description" tab.
  
-Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifyers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. 
+Use option `--label` to provide a mapping of genome identifiers to group names. The file needs to be tab-separated with genome identifiers in the first column and group names in the second. Not all genomes need to be mapped. Group names can be arbitrary strings. 
 
 Colors are selected automatically. Optionally, you can use `--label_colors` to specify custom color assignments to groups using an additional tab-separated file with group names in the first and and colors (rgb values, e.g. 90 0 255) in the second column.
 
@@ -126,7 +126,7 @@ For large data sets, the list of splits can become very long. We recommend to re
 
 
 #### Tree or network
-By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis). The tree filtering step can be turned off by setting `--tree` to false.
+By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits). The tree filtering step can be turned off by setting `--tree` to false.
 
 
 #### PDF output
@@ -145,7 +145,7 @@ The sorted list of splits is greedily filtered, i.e., splits are iterated from s
 * strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree
 * weakly: a split is kept if it is weakly compatible to all previously filtered splits
 * *n*-tree: multiple sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... n-th set if possible (compatible).
-* default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis).
+* default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits).
 * none: apply no filter (not recommended)
 
 
@@ -161,7 +161,7 @@ The bootstrap support values can also be used for filtering splits:
 `--iupac` allows to consider the extended IUPAC alphabet to resolve ambiguous bases or amino acids. Specify a threshold to limit the number of considered *k*-mers per position between 1 (no ambiguity) and 4^k respectively 22^k (allows NNN...N). By default, respective *k*-mers are ignored.
 
 #### Canonical *k*-mers
-By default, each *k*-mer is compared to its reverse complement and the lexicagrafically smaller ist chosen as a canonical representative.
+By default, each *k*-mer is compared to its reverse complement and the lexicografically smaller is chosen as a canonical representative.
 Set `--norev` to true to not consider reverse complement *k*-mers.
 
 #### Genetic code

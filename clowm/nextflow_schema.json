@@ -38,16 +38,16 @@
             "properties": {
                 "qualify": {
                     "type": "integer",
-                    "description": "Discard k-mers with lower abundance than this threshold",
+                    "description": "Discard *k*-mers with lower abundance than this threshold",
                     "minimum": 2,
                     "maximum": 10,
-                    "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\nk-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all k-mers that occur less than 2 times per genome."
+                    "help_text": "When analyzing read data, a common preprocessing step is to filter out low coverage\n*k*-mers that typically arise from sequencing errors. SANS ambages includes a new\noption to perform such a filtering step, allowing raw read data to be analyzed without\nthe need to run another tool first. A minimum coverage threshold can be specified,\ni.e., --qualify 2 filters out all *k*-mers that occur less than 2 times per genome."
                 },
                 "file_of_files": {
                     "type": "string",
                     "format": "file-path",
                     "description": "Specify input in more detail",
-                    "help_text": "For each input genome, you can define an identifyer, specify multiple input files (gzipped or not), and optionally specify a minimum abundance threshold (overwriting the global qualify-value:\n Identifier : File1 ; ... ; FileN ! MinAbundance\n\nExample:\nTaxon1 : assembled_genome.fasta ! 1\nTaxon2 : reads_fw.fastq.gz ; reads_rv.fastq.gz ! 3"
+                    "help_text": "For each input genome, you can define an identifier, specify multiple input files (gzipped or not), and optionally specify a minimum abundance threshold (overwriting the global qualify-value:\n Identifier : File1 ; ... ; FileN ! MinAbundance\n\nExample:\nTaxon1 : assembled_genome.fasta ! 1\nTaxon2 : reads_fw.fastq.gz ; reads_rv.fastq.gz ! 3"
                 },
                 "amino": {
                     "type": "boolean",
@@ -57,7 +57,7 @@
                 "tanslate": {
                     "type": "boolean",
                     "description": "input provides coding sequences",
-                    "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement k-mers are not considered and the default k-mer length is 10. By default, the standard genetic code will be used for translation. Use --code to specify different code tables.",
+                    "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. Use --code to specify different code tables.",
                     "default": false
                 }
             },
@@ -71,8 +71,8 @@
             "properties": {
                 "kmer": {
                     "type": "integer",
-                    "description": "k-mer length",
-                    "help_text": "You may want to try different values for the k-mer length. On shorter or rather heterogeneous sequences, use a smaller k, e.g., -k 15.",
+                    "description": "*k*-mer length",
+                    "help_text": "You may want to try different values for the *k*-mer length. On shorter or rather heterogeneous sequences, use a smaller k, e.g., -k 15. If you want to use a *k*-mer length larger than 31, please use a local installation of SANS.",
                     "default": 31,
                     "minimum": 9,
                     "maximum": 64
@@ -126,7 +126,7 @@
                         "none",
                         "default"
                     ],
-                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met. By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible spltis).",
+                    "help_text": "The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the filter criterion is met. By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits).",
                     "description": "Filter the output splits (greedy maximum weight subset)",
                     "default": "default",
                     "hidden": true
@@ -134,7 +134,7 @@
                 "bootstrapping": {
                     "type": "integer",
                     "description": "Bootstrapping with n replicates",
-                    "help_text": "To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed k-mer content. The originally determined splits or tree edges are compared to n bootstrap replicates. This option requires to select a filter criterion other than none and default, see --filter.",
+                    "help_text": "To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed *k*-mer content. The originally determined splits or tree edges are compared to n bootstrap replicates. This option requires to select a filter criterion other than none and default, see --filter.",
                     "minimum": 1,
                     "maximum": 1000,
                     "hidden": true
@@ -158,14 +158,14 @@
                         "none"
                     ],
                     "help_text": "generate a consensus split network or tree",
-                    "description": "filter all splits (greedily according to their support value) to obtain a consensus split network or tree",
+                    "description": "Filter all splits (greedily according to their support value) to obtain a consensus split network or tree",
                     "default": "none",
                     "hidden": true
                 },
                 "iupac": {
                     "type": "integer",
                     "description": "resolve ambiguous iupac bases or amino acids",
-                    "help_text": "Specify a threshold to limit the number of considered k-mers per position. By default, respective k-mers are ignored.",
+                    "help_text": "Specify a threshold to limit the number of considered *k*-mers per position. By default, respective *k*-mers are ignored.",
                     "minimum": 0,
                     "maximum": 1000,
                     "default": 0,
@@ -173,8 +173,8 @@
                 },
                 "norev": {
                     "type": "boolean",
-                    "description": "do not consider reverse complement k-mers",
-                    "help_text": "By default, each *k*-mer is compared to its reverse complement and the lexicagrafically smaller ist chosen as a canonical representative.",
+                    "description": "do not consider reverse complement *k*-mers",
+                    "help_text": "By default, each *k*-mer is compared to its reverse complement and the lexicografically smaller ist chosen as a canonical representative.",
                     "default": false,
                     "hidden": true
                 },
@@ -194,22 +194,22 @@
                         "geom",
                         "geom2"
                     ],
-                    "description": "Mean weight function to combine k-mer counts to final split weight",
+                    "description": "Mean weight function to combine *k*-mer counts to final split weight",
                     "default": "geom2",
                     "hidden": true
                 },
                 "core": {
                     "type": "boolean",
-                    "description": "output core k-mers",
-                    "help_text": "output all core k-mers, i.e., k-mers appearing in all input genomes, in a fasta file sans_core.fasta",
+                    "description": "output core *k*-mers",
+                    "help_text": "output all core *k*-mers, i.e., *k*-mers appearing in all input genomes, in a fasta file sans_core.fasta",
                     "default": false,
                     "hidden": true
                 },
                 "blacklist": {
                     "type": "string",
                     "format": "file-path",
-                    "description": "k-mers to be ignored",
-                    "help_text": "Fasta or Fastq file containing k-mers to be ignored when reading input files",
+                    "description": "*k*-mers to be ignored",
+                    "help_text": "Fasta or Fastq file containing *k*-mers to be ignored when reading input files",
                     "hidden": true
                 }
            },
