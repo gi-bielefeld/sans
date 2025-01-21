@@ -47,11 +47,11 @@ process sans {
       exit 0
     fi
   fi  
-  if [ ${params.consensus} != "none" && ${params.bootstrapping} != null ]; then
+  if [ ${params.consensus} != "none" && ${params.bootstrapping} == null ]; then
     echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
     exit 0
   fi
-  if [ ${params.support} -gt 0 && ${params.bootstrapping} != null ]; then
+  if [ ${params.support} -gt 0 && ${params.bootstrapping} == null ]; then
     echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
     exit 0
   fi
