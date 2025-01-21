@@ -51,7 +51,7 @@ process sans {
     echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
     exit 0
   fi
-  if [ $(bc -l <<< "${params.support} > 0") -eq 1 && ${params.bootstrapping} == null ]; then
+  if [ ${params.support} != null && ${params.support} != "0" && ${params.bootstrapping} == null ]; then
     echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
     exit 0
   fi
