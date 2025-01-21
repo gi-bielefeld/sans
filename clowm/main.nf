@@ -43,10 +43,18 @@ process sans {
   
   if [ ${params.bootstrapping} != null ]; then
     if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
-      echo "ERROR: For bootstrapping, you have to choose a filter criterioin using --filter." > sans.log;
-      exit 1
+      echo "ERROR: For bootstrapping, you have to choose a filter criterion using --filter." > sans.log;
+      exit 0
     fi
   fi  
+  if [ ${params.consensus} != "none" && ${params.bootstrapping} != null ]; then
+    echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
+    exit 0
+  fi
+  if [ ${params.support} -gt 0 && ${params.bootstrapping} != null ]; then
+    echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
+    exit 0
+  fi
 
 
   
@@ -94,7 +102,7 @@ process sans {
   --verbose \
   --threads ${ task.cpus }\"
 
-  echo SANS \$SANS_PARAMS > sans.log
+  echo SANS \$SANS_PARAMS >> sans.log
 
   SANS-autoN.sh \$SANS_PARAMS 2>&1 | grep -v \"Fontconfig error\" | awk -F \"\r\" '{print \$NF}' >> sans.log
   
