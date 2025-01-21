@@ -2,10 +2,10 @@ fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz
 
 inputChannel=Channel.fromPath(fileEndingList.collect { params.input + "/" + it },type : "file")
 
-params.label = "$projectDir/clowm/NO_FILE"
-params.label_colors = "$projectDir/clowm/NO_FILE2"
-params.file_of_files = "$projectDir/clowm/NO_FILE3"
-params.blacklist = "$projectDir/clowm/NO_FILE4"
+params.label = "$projectDir/NO_FILE"
+params.label_colors = "$projectDir/NO_FILE2"
+params.file_of_files = "$projectDir/NO_FILE3"
+params.blacklist = "$projectDir/NO_FILE4"
 
 process sans {
   container "ghcr.io/gi-bielefeld/sans:latest"
