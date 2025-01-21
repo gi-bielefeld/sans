@@ -153,7 +153,7 @@ The sorted list of splits is greedily filtered, i.e., splits are iterated from s
 To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed *k*-mer content. To compare the originally determined splits or tree to, e.g., 1000 bootstrap replicates, use `--bootstrap 1000`. Bootstrap support values will be integrated into the nexus/newick output file and can, e.g., be visualized in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). Further, an additional output file `sans_*.bootstrap` containing the bootstrap support values will be created. This option requires to select a filter criterion other than "none" and "default", see "Filter criteria".
 
 The bootstrap support values can also be used for filtering splits:
-* To filter out low support splits, e.g., those appearing in less than 75% of the bootstrap replicates, use `--support 0.75`.
+* To filter out low support splits, e.g., those appearing in less than 75% of the bootstrap replicates, use `--support 0.75`. (Note that choosing filter "tree" in combination with a threshold of 50% or higher implies compatibility of the filtered splits, i.e., a tree.)
 * To filter all splits (greedily according to their support value) to obtain a consensus split network or tree, select a filter for `--consensus`. You could, e.g., use support values from tree replicates (`--filter strict`) to filter for a consensus tree (`--consensus strict`) or for a split network (`--consensus weakly`).
 
 
