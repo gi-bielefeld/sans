@@ -1,5 +1,13 @@
 # SANS Changelog
 
+
+## v0.9.2 [2025-01-22]
+
+### Fixed
+
+- paramter descriptions, validation and error handling
+
+
 ## v0.9.1 [2025-01-20]
 
 ### Added
