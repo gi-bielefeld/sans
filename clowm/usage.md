@@ -158,7 +158,7 @@ The bootstrap support values can also be used for filtering splits:
 
 
 #### IUPAC characters
-By default, *k*-mers spanning ambiguous characters like 'N' are ignored/skipped. Instead, using using `--iupac <threshold>` all variants of such *k*-mers can be considered, replacing the ambiguous character by all the characters it represents. For instance, for DNA input, one occurrence of 'N' results in four variants. If a *k*-mer spans multiple ambiguous characters, the number of resulting combinations grows quickly. Thus, the number of considered *k*-mers is limited. If resolving the next read ambiguous character would exceed `<threshold>`, the *k*-mer is skipped instead.
+By default, *k*-mers spanning ambiguous characters like 'N' are ignored/skipped. Instead, using `--iupac <threshold>` all variants of such *k*-mers can be considered, replacing the ambiguous character by all the characters it represents. For instance, for DNA input, one occurrence of 'N' results in four variants. If a *k*-mer spans multiple ambiguous characters, the number of resulting combinations grows quickly. Thus, the number of considered *k*-mers is limited. If resolving the next read ambiguous character would exceed `<threshold>`, the *k*-mer is skipped instead.
 
 #### Canonical *k*-mers
 By default, each *k*-mer is compared to its reverse complement and the lexicografically smaller is chosen as a canonical representative.
