@@ -13,8 +13,6 @@ of genomes are interpreted as a phylogenetic split indicating the closeness of t
 genomes and their separation from the other genomes. The resulting splits can be
 visualized as a phylogenetic tree or network.
 
-SANS can be also easily installed locally from our [git repository](https://github.com/gi-bielefeld/sans).
-
 
 * Reference-free
 * Alignment-free
@@ -31,6 +29,11 @@ SANS can be also easily installed locally from our [git repository](https://gith
 * Have a look at the network (weakly compatible or 2-tree). It does not make much sense to extract a tree, if the split network is a hairball.
 * Reconstructed phylogenies are unrooted, even though a Newick file suggests a root.
 * In case of problems, contact us (see below).
+
+
+## Local installation
+
+SANS can be also easily installed locally from our [git repository](https://github.com/gi-bielefeld/sans). 
 
 
 ## Contact

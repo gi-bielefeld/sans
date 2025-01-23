@@ -47,7 +47,7 @@
                     "type": "string",
                     "format": "file-path",
                     "description": "Specify input in more detail",
-                    "help_text": "For each input genome, you can define an identifier, specify multiple input files (gzipped or not), and optionally specify a minimum abundance threshold (overwriting the global qualify-value:\n Identifier : File1 ; ... ; FileN ! MinAbundance\n\nExample:\nTaxon1 : assembled_genome.fasta ! 1\nTaxon2 : reads_fw.fastq.gz ; reads_rv.fastq.gz ! 3"
+                    "help_text": "For each input genome, you can define an identifier, specify multiple input files (gzipped or not), and optionally specify a minimum abundance threshold (overwriting the global qualify-value):\n Identifier : File1 ; ... ; FileN ! MinAbundance\n\nExample:\nTaxon1 : assembled_genome.fasta ! 1\nTaxon2 : reads_fw.fastq.gz ; reads_rv.fastq.gz ! 3"
                 },
                 "amino": {
                     "type": "boolean",
@@ -164,7 +164,7 @@
                 "iupac": {
                     "type": "integer",
                     "description": "resolve ambiguous iupac bases or amino acids",
-                    "help_text": "Specify a threshold to limit the number of considered *k*-mers per position. By default, respective *k*-mers are ignored.",
+                    "help_text": "By default, *k*-mers spanning ambiguous characters are ignored/skipped. Use this parameter to consider all variants of such *k*-mers, replacing the ambiguous character by all the characters it represents. If a *k*-mer spans multiple ambiguous characters, the number of resulting combinations grows quickly. Thus, the number of considered *k*-mers is limited. If resolving the next read ambiguous character would exceed the specified threshold, the *k*-mer is skipped instead.",
                     "minimum": 0,
                     "maximum": 1000,
                     "default": 0,

@@ -11,4 +11,4 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 
 # Splitstree
 
-Huson, D. H. and Bryant, D.: [Application of Phylogenetic Networks in Evolutionary Studies](http://mbe.oxfordjournals.org/cgi/reprint/msj030?ijkey=GvcBFw4QPIORzUE&keytype=ref), Mol. Biol. Evol., 23(2):254-267 (2006).
+Huson, D. H. and Bryant, D.: [Application of Phylogenetic Networks in Evolutionary Studies](https://doi.org/10.1093/molbev/msj030), Mol. Biol. Evol., 23(2):254-267 (2006).

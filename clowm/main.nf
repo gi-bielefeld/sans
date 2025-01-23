@@ -72,6 +72,7 @@ process sans {
   ${ params.consensus == "none" && params.filter == 'weakly' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "none" && params.filter == '2-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "none" && params.filter == '3-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "none" && params.filter == 'default' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "weakly" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "2-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "3-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \

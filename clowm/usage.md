@@ -34,7 +34,7 @@ Use the menu "Files", "My Data Buckets" and
 * upload all files into one folder individually, or
 * upload one zip or tar.gz file containing all input files (without folder structure).
 
-You can also transfer data using an S3 management software such as provided by [AWS](https://aws.amazon.com/cli/) or [minIO](https://min.io/docs/minio/linux/reference/minio-mc.html). For example, for using the minIO client, look up the S3 endpoint, access key, and secret key under "Files, S3 Bucket Keys", create an alias with `mc alias set sans-clowm <endpoint> <access_key> <secret_key> --api "s3v4" --path "auto"`, and then upload with `mc cp <files> sans-clowm/<bucket_name>`.
+You can also transfer data using an S3 management software such as [S3cmd](https://s3tools.org/s3cmd) or provided by [AWS](https://aws.amazon.com/cli/) or [MinIO](https://min.io/docs/minio/linux/reference/minio-mc.html). For example, for using the minIO client, look up the S3 endpoint, access key, and secret key under "Files, S3 Bucket Keys", create an alias with `mc alias set sans-clowm <endpoint> <access_key> <secret_key> --api "s3v4" --path "auto"`, and then upload with `mc cp <files> sans-clowm/<bucket_name>`.
 
 
 #### Output Files
@@ -158,7 +158,7 @@ The bootstrap support values can also be used for filtering splits:
 
 
 #### IUPAC characters
-`--iupac` allows to consider the extended IUPAC alphabet to resolve ambiguous bases or amino acids. Specify a threshold to limit the number of considered *k*-mers per position between 1 (no ambiguity) and 4^k respectively 22^k (allows NNN...N). By default, respective *k*-mers are ignored.
+By default, *k*-mers spanning ambiguous characters like 'N' are ignored/skipped. Instead, using using `--iupac <threshold>` all variants of such *k*-mers can be considered, replacing the ambiguous character by all the characters it represents. For instance, for DNA input, one occurrence of 'N' results in four variants. If a *k*-mer spans multiple ambiguous characters, the number of resulting combinations grows quickly. Thus, the number of considered *k*-mers is limited. If resolving the next read ambiguous character would exceed `<threshold>`, the *k*-mer is skipped instead.
 
 #### Canonical *k*-mers
 By default, each *k*-mer is compared to its reverse complement and the lexicografically smaller is chosen as a canonical representative.
