@@ -65,7 +65,7 @@ sudo apt install libz-dev
 ## Compilation
 
 ```
-git clone https://gitlab.ub.uni-bielefeld.de/gi/sans.git
+git clone https://github.com/gi-bielefeld/sans.git
 cd sans
 make
 ```

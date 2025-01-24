@@ -38,13 +38,15 @@ namespace nexus_color{
     /**
      * This function adds a network to the initially generated nexus file via SplitsTree.
      * @param nexus_file Path to the initial nexus file
+	 * @param pdf_file Path to PDF file (or empty)
+	 * @param svg_file Path to SVG file (or empty)
      * @param verbose If info should be printed
      * @param splitstree_path Path to SplitsTree
      * @param update If the given nexus file needs to be updated (if a network needs to be added)
      * @param save If the network should be saved to the given nexus file
      *             (chance of SplitsTree saving a not openable network but needed to add color)
      */
-    void open_in_splitstree(const string& nexus_file, const string& pdf, bool verbose = false, bool update = true, const string& save_as = "", const string splitstree_path = "SplitsTree");
+    void open_in_splitstree(const string& nexus_file, const string& pdf, const string& svg, bool verbose = false, bool update = true, const string& save_as = "", const string splitstree_path = "SplitsTree");
 
     /**
      * This function adds color values to the nodes of a given nexus file. Already colored nodes
