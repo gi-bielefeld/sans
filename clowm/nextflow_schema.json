@@ -105,6 +105,11 @@
                     "type": "boolean",
                     "description": "Output network as PDF file with Splitstree 4",
                     "default": true
+                },
+                "svg": {
+                    "type": "boolean",
+                    "description": "Output network as SVG file with Splitstree 4",
+                    "default": false
                 }
 			},
             "fa_icon": "fas fa-wrench"

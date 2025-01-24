@@ -22,9 +22,11 @@ process sans {
 
   output:
     path 'sans_splitnetwork.pdf', optional: true
+    path 'sans_splitnetwork.svg', optional: true
     path 'sans_splitnetwork.nexus', optional: true
     path 'sans_splitnetwork.tsv', optional: true
     path 'sans_tree.pdf', optional: true
+    path 'sans_tree.svg', optional: true
     path 'sans_tree.newick', optional: true
     path 'sans_tree.tsv', optional: true
     path 'sans_tree.tsv.bootstrap', optional: true
@@ -37,7 +39,7 @@ process sans {
   touch $inputFiles
   echo "$inputFiles" | tr " " "\n" > genomeList.txt
   
-  if [ ${params.pdf ? "1" : "0"} -eq 1 ]; then
+  if [ ${params.pdf ? "1" : "0"} -eq 1 ] || [ ${params.svg ? "1" : "0"} -eq 1 ]  || [ label.name != 'NO_FILE' ]; then
     /usr/bin/Xvfb &
   fi
   
@@ -56,6 +58,9 @@ process sans {
     exit 0
   fi
 
+  if [ ${params.pdf ? "1" : "0"} -eq 1 ] && [ ${params.svg ? "1" : "0"} -eq 0 ]; then
+    echo "NOTE: In some cases, the PDF might not be properly readable. Thus, the CloWM version generates the PDF output by first generating an SVG file that is then converted to PDF." >> sans.log
+  fi
 
   
   SANS_PARAMS=\"\
@@ -84,10 +89,14 @@ process sans {
   ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
   ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
   ${ params.top != null ? "--top ${ params.top }" : "" } \
-  ${ params.pdf  && params.consensus == "none" && params.filter == 'strict' ? "--pdf sans_tree.pdf" : "" } \
-  ${ params.pdf  && params.consensus == "none" && params.filter != 'strict' ? "--pdf sans_splitnetwork.pdf" : "" } \
-  ${ params.pdf  && params.consensus == "tree" ? "--pdf sans_tree.pdf" : "" } \
-  ${ params.pdf  && params.consensus != "none" && params.consensus != "strict" ? "--pdf sans_splitnetwork.pdf" : "" } \
+  ${ params.pdf  && params.consensus == "none" && params.filter == 'strict' ? "--svg sans_tree.svg" : "" } \
+  ${ params.pdf  && params.consensus == "none" && params.filter != 'strict' ? "--svg sans_splitnetwork.svg" : "" } \
+  ${ params.pdf  && params.consensus == "tree" ? "--svg sans_tree.svg" : "" } \
+  ${ params.pdf  && params.consensus != "none" && params.consensus != "strict" ? "--svg sans_splitnetwork.svg" : "" } \
+  ${ params.svg  && params.consensus == "none" && params.filter == 'strict' ? "--svg sans_tree.svg" : "" } \
+  ${ params.svg  && params.consensus == "none" && params.filter != 'strict' ? "--svg sans_splitnetwork.svg" : "" } \
+  ${ params.svg  && params.consensus == "tree" ? "--svg sans_tree.svg" : "" } \
+  ${ params.svg  && params.consensus != "none" && params.consensus != "strict" ? "--svg sans_splitnetwork.svg" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
   ${ params.filter == 'weakly' ? "--filter weakly" : '' } \
   ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
@@ -122,7 +131,8 @@ process sans {
     ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
     ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
     ${ params.top != null ? "--top ${ params.top }" : "" } \
-    ${ params.pdf ? "--pdf sans_tree.pdf" : "" } \
+    ${ params.pdf ? "--svg sans_tree.svg" : "" } \
+    ${ params.svg ? "--svg sans_tree.svg" : "" } \
     --filter strict
     ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
     ${ params.norev ? "--norev" : "" } \
@@ -138,7 +148,12 @@ process sans {
 
   fi
 
-  rm -f gegnomeList.txt
+  if [ ${params.pdf ? "1" : "0"} -eq 1 ] && [ ${params.svg ? "1" : "0"} -eq 0 ]; then
+    if [ -f "sans_tree.svg" ]; then cairosvg sans_tree.svg -o sans_tree.pdf; rm sans_tree.svg; fi
+    if [ -f "sans_splitnetwork.svg" ]; then cairosvg sans_splitnetwork.svg -o sans_splitnetwork.pdf; rm sans_splitnetwork.svg; fi
+  fi
+
+  rm -f genomeList.txt
   """
 }
 

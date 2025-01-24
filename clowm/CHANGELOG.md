@@ -1,6 +1,16 @@
 # SANS Changelog
 
 
+## v0.9.3 [2025-01-24]
+
+### Added
+
+- optional SVG output
+
+### Fixed
+
+- PDF generated via SVG to obtain a PDF that is MacOS compatible
+
 ## v0.9.2 [2025-01-22]
 
 ### Fixed

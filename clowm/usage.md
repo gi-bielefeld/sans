@@ -132,6 +132,9 @@ By default, the CloWM version of SANS first generates a phylogenetic split netwo
 #### PDF output
 By default, the CloWM version of SANS generates a PDF of the phylogeny using [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). This can be turned off by setting `--pdf` to false.
 
+#### SVG output
+Generates an SVG file of the phylogeny using [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html).
+
 </br>
 
 
