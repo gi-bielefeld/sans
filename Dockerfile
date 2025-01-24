@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 RUN apt-get update && apt-get install -y build-essential zlib1g-dev bash default-jre xvfb && apt-get clean
-RUN pip install --no-cache-dir pygtrie
+RUN pip install --no-cache-dir pygtrie cairosvg
 WORKDIR /app
 ENV PATH="$PATH:/app:/app/scripts"
 
