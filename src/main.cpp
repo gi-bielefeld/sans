@@ -552,7 +552,8 @@ int main(int argc, char* argv[]) {
      *   request the current SANS version from gitlab and check if this version is up to date (requires wget)
      */
 
-    if (verbose){cout << "Checking for updates" << endl;}
+    /* Turn off for CloWM
+      if (verbose){cout << "Checking for updates" << endl;}
     bool version_checked = false;
     if (!system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/master/src/main.h | grep -q SANS_VERSION")){
         version_checked = true;
@@ -562,7 +563,7 @@ int main(int argc, char* argv[]) {
         else if(verbose){cout << "Version up to date" << endl;}
     }
     if (!version_checked && verbose) {cout << "Could not fetch version information" << endl;}
-
+   */
     
     // set consensus filter to default (same as --filter) if necessary
 	if (consensus_filter=="SameAsFilter"){
