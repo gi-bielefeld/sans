@@ -259,7 +259,7 @@ void create_legend_pdf(unordered_map<string, rgb_color>& grp_clr_map){
     temp_nexus << ";\nVLABELS\n" << labels.str() << ";\nEDGES\n;\nEND; [Network]\n";
     temp_nexus << "BEGIN st_Assumptions;\nuptodate;\n exclude  no missing;\nautolayoutnodelabels;\nEND; [st_Assumptions]";
 
-    nexus_color::open_in_splitstree(temp_file, "", true, false, temp_file);
+    nexus_color::open_in_splitstree(temp_file, "", "", true, false, temp_file);
     // TODO weird error messages (: must start with #nexus , tut sie aber doch??!?)
 
     //cout << "Legend saved in " << pdf << endl;
@@ -336,7 +336,7 @@ void nexus_color::scale_nexus(const string& unopened_nexus_file, bool verbose, b
 }
 
 
-void nexus_color::open_in_splitstree(const string& nexus_file, const string& pdf, bool verbose, bool update, const string& save_as, const string splitstree_path){
+void nexus_color::open_in_splitstree(const string& nexus_file, const string& pdf, const string& svg, bool verbose, bool update, const string& save_as, const string splitstree_path){
     // = "../splitstree4/SplitsTree"
     if (!program_in_path(splitstree_path)) {
         cerr << splitstree_path << " is not in the PATH." << endl;
@@ -352,6 +352,7 @@ void nexus_color::open_in_splitstree(const string& nexus_file, const string& pdf
         if(update) temp_file << "UPDATE\n";// add network in SplitsTree graphic
         if(!save_as.empty()) temp_file << "SAVE FILE=" << save_as << " REPLACE=YES\n"; // save the network to the file (only needed if color should be added)
         if(!pdf.empty()) temp_file << "EXPORTGRAPHICS format=PDF file=" << pdf << " REPLACE=yes\n";
+        if(!svg.empty()) temp_file << "EXPORTGRAPHICS format=SVG file=" << svg << " REPLACE=yes\n";
         temp_file << "QUIT\nend;";
         temp_file.close();
 
