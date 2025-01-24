@@ -11,6 +11,10 @@
 
 - PDF generated via SVG to obtain a PDF that is MacOS compatible
 
+### Changed
+
+- no SANS version check anymore
+
 ## v0.9.2 [2025-01-22]
 
 ### Fixed
