@@ -126,22 +126,14 @@ process sans {
     SANS_PARAMS=\"--splits sans_splitnetwork.tsv \
     --output sans_tree.tsv \
     --newick sans_tree.newick \
-    ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
     ${ fof.name != 'NO_FILE3' ? "--input $fof" : '--input genomeList.txt' } \
-    ${ params.amino ? "--amino" : "" } \
-    ${ params.translate ? "--code ${ params.code }" : "" } \
-    ${ params.kmer != null ? "--kmer ${ params.kmer }" : "" } \
     ${ label.name != 'NO_FILE' && label_colors.name == 'NO_FILE2' ? "--label $label" : '' } \
     ${ label.name != 'NO_FILE' && label_colors.name != 'NO_FILE2' ? "--label $label $label_colors" : '' } \
     ${ params.top != null ? "--top ${ params.top }" : "" } \
     ${ params.pdf ? "--svg sans_tree.svg" : "" } \
     ${ params.svg ? "--svg sans_tree.svg" : "" } \
     --filter strict
-    ${ params.iupac != 0 ? "--iupac ${ params.iupac }" : "" } \
-    ${ params.norev ? "--norev" : "" } \
     ${ params.mean != "geom2" ? "--mean ${ params.mean }" : "" } \
-    ${ params.core ? "--core sans_core.fasta" : "" } \
-    ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
     --verbose \
     --threads ${ task.cpus }\"
     
