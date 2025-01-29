@@ -456,6 +456,14 @@ public:
     static void filter_weakly(multimap_<double, color_t>& split_list, bool& verbose);
 
     /**
+     * This function filters a planar graph compatible subset.
+     * @param split_list list of splits to be filtered
+     * @param verbose print progress
+     */
+    static void filter_planar(multimap_<double, color_t>& split_list, bool& verbose);
+
+
+    /**
      * This function filters a greedy maximum weight n-tree compatible subset.
      *
      * @param n number of trees

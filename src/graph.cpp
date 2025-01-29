@@ -1,5 +1,6 @@
 #include "graph.h"
 #include "util.h"
+#include "pctree/PCTree.h"
 #include <mutex>
 #include <thread>
 #include <algorithm>
@@ -1726,6 +1727,58 @@ loop:
         it = split_list.erase(it);    // otherwise, remove split
     }
 }
+
+/**
+ * This function filters a planar graph compatible subset.
+ *
+ * @param split_list list of splits to be filtered
+ * @param verbose print progress
+ */
+void graph::filter_planar(multimap_<double, color_t>& split_list, bool& verbose) {
+
+    auto it = split_list.begin();
+    color_t split_copy;
+
+    // single bit of split
+    int state = 0;
+
+    // construct PC-Tree with maxN nodes
+    vector<pc_tree::PCNode*> leaves; 
+	pc_tree::PCTree tree(maxN, &leaves);
+
+   
+loop:
+    while(it != split_list.end()) {
+
+        vector<pc_tree::PCNode*> consecutiveLeaves = {}; 
+    
+        // current split
+        split_copy = it->second;
+
+        // read all bits of the current split
+        for(int j=0;j<maxN;j++) {
+            state = (split_copy & 0b1u);
+            split_copy >>= 01u;
+
+            //collect all leaves which should be consecutive
+            if (state == 1) {
+                consecutiveLeaves.push_back(leaves.at(j));
+            }
+        }
+
+        // if possible, insert the new split in pc-tree
+        if (tree.makeConsecutive(consecutiveLeaves)) { 
+            ++it; goto loop;
+        }
+
+        // delete the split, if it is not compatible to the pc-tree
+        it = split_list.erase(it); 
+                
+
+    }
+    
+}
+
 
 /**
  * This function filters a greedy maximum weight n-tree compatible subset and returns a string with all trees in newick format.
