@@ -75,10 +75,12 @@ process sans {
   ${ params.consensus == "2-tree" ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "3-tree" ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == 'weakly' ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "none" && params.filter == 'planar' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "none" && params.filter == '2-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "none" && params.filter == '3-tree' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "none" && params.filter == 'default' ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "weakly" ? "--nexus sans_splitnetwork.nexus" : '' } \
+  ${ params.consensus == "planar" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "2-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.consensus == "3-tree" ? "--nexus sans_splitnetwork.nexus" : '' } \
   ${ params.qualify != null ? "--qualify ${ params.qualify }" : "" } \
@@ -99,6 +101,7 @@ process sans {
   ${ params.svg  && params.consensus != "none" && params.consensus != "strict" ? "--svg sans_splitnetwork.svg" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
   ${ params.filter == 'weakly' ? "--filter weakly" : '' } \
+  ${ params.filter == 'planar' ? "--filter weakly" : '' } \
   ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
   ${ params.filter == '3-tree' ? "--filter 3-tree" : '' } \
   ${ params.filter == 'default' ? "--filter weakly" : '' } \

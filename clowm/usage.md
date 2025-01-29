@@ -147,6 +147,7 @@ Generates an SVG file of the phylogeny using [SplitsTree 4](https://software-ab.
 The sorted list of splits is greedily filtered, i.e., splits are iterated from strongest to weakest and a split is kept if and only if the `--filter` criterion is met.
 * strict: a split is kept if it is compatible to all previously filtered splits, i.e., the resulting set of splits is equivalent to a tree
 * weakly: a split is kept if it is weakly compatible to all previously filtered splits
+* planar: a split is kept if the resulting set of splits can be displayed in the plain without any edges crossing (a.k.a. circular compatible, outer-labeled planar)
 * *n*-tree: multiple sets of compatible splits (=trees) are maintained. A split is added to the first, second, ... *n*-th set if possible (compatible).
 * default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits).
 * none: apply no filter (not recommended)

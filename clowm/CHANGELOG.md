@@ -1,6 +1,12 @@
 # SANS Changelog
 
 
+## v0.9.4 [2025-01-??]
+
+### Added
+
+- new filter option: planar
+
 ## v0.9.3 [2025-01-24]
 
 ### Added
