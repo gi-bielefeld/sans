@@ -49,7 +49,7 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 
 ## Requirements
 
-For the main program, there are no strict dependencies other than C++ version 14.  
+For the main program, there are no strict dependencies other than C++ version 17.
 To read in **compressed** fasta/fastq files, it could be necessary to install zlib:
 ```
 sudo apt install libz-dev
