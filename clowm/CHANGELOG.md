@@ -7,6 +7,10 @@
 
 - made public
 
+### Fixed
+
+- too many parameters for second filter step in default mode
+
 ## v0.9.4 [2025-01-29]
 
 ### Added
