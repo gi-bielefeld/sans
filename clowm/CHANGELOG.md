@@ -1,6 +1,12 @@
 # SANS Changelog
 
 
+## v1.0.0 [2025-01-29]
+
+### Added
+
+- made public
+
 ## v0.9.4 [2025-01-29]
 
 ### Added
