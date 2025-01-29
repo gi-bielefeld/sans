@@ -32,7 +32,9 @@ process sans {
     path 'sans_tree.tsv.bootstrap', optional: true
     path 'sans_splitnetwork.tsv.bootstrap', optional: true
     path 'sans_core.fasta', optional: true
-    path 'sans.log'
+    path 'sans.log', optional: true
+    path 'sans.log', optional: true
+    
 
   script:
   """
@@ -42,19 +44,24 @@ process sans {
   if [ ${params.pdf ? "1" : "0"} -eq 1 ] || [ ${params.svg ? "1" : "0"} -eq 1 ]  || [ label.name != 'NO_FILE' ]; then
     /usr/bin/Xvfb &
   fi
-  
+
+  if [ $( cat genomeList.txt | wc -l) -lt 1 ]; then
+    echo "ERROR: Check input!" > sans.err;
+    exit 0
+  fi
+ 
   if [ ${params.bootstrapping} != null ]; then
     if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
-      echo "ERROR: For bootstrapping, you have to choose a filter criterion using --filter." > sans.log;
+      echo "ERROR: For bootstrapping, you have to choose a filter criterion using --filter." > sans.err;
       exit 0
     fi
   fi  
   if [ ${params.consensus} != "none" ] && [ ${params.bootstrapping} == null ]; then
-    echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
+    echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.err;
     exit 0
   fi
   if [ ${params.support} != null ] && [ ${params.support} != "0" ] && [ ${params.bootstrapping} == null ]; then
-    echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.log;
+    echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.err;
     exit 0
   fi
 
