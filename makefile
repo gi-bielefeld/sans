@@ -57,7 +57,7 @@ $(BUILDDIR)/kmerAmino.o: makefile $(SRCDIR)/kmerAmino.cpp $(SRCDIR)/kmerAmino.h 
 $(BUILDDIR)/color.o: makefile $(SRCDIR)/color.cpp $(SRCDIR)/color.h
 	$(CC) -c $(SRCDIR)/color.cpp -o $(BUILDDIR)/color.o
 	
-$(BUILDDIR)/nexus_color.o: makefile $(SRCDIR)/nexus_color.cpp $(SRCDIR)/nexus_color.h
+$(BUILDDIR)/nexus_color.o: $(SRCDIR)/nexus_color.cpp $(SRCDIR)/nexus_color.h
 	$(CC) -c $(SRCDIR)/nexus_color.cpp -o $(BUILDDIR)/nexus_color.o
 
 $(BUILDDIR)/util.o: $(SRCDIR)/util.cpp $(SRCDIR)/util.h
@@ -76,22 +76,22 @@ $(BUILDDIR)/gzstream.o: $(SRCDIR)/gz/gzstream.C $(SRCDIR)/gz/gzstream.h
 # PC-Tree
 
 	
-$(BUILDDIR)/PCNode.o: makefile $(SRCDIR)/pctree/PCNode.cpp $(SRCDIR)/pctree/PCNode.h $(BUILDDIR)/PCTreeForest.o
+$(BUILDDIR)/PCNode.o: $(SRCDIR)/pctree/PCNode.cpp $(SRCDIR)/pctree/PCNode.h $(BUILDDIR)/PCTreeForest.o
 	$(CC) -c $(SRCDIR)/pctree/PCNode.cpp -o $(BUILDDIR)/PCNode.o
 	
-$(BUILDDIR)/PCTree_basic.o: makefile $(SRCDIR)/pctree/PCTree_basic.cpp $(BUILDDIR)/PCNode.o 
+$(BUILDDIR)/PCTree_basic.o: $(SRCDIR)/pctree/PCTree_basic.cpp $(BUILDDIR)/PCNode.o 
 	$(CC) -c $(SRCDIR)/pctree/PCTree_basic.cpp -o $(BUILDDIR)/PCTree_basic.o
 	
-$(BUILDDIR)/PCTree_construction.o: makefile $(SRCDIR)/pctree/PCTree_construction.cpp $(BUILDDIR)/PCNode.o 
+$(BUILDDIR)/PCTree_construction.o: $(SRCDIR)/pctree/PCTree_construction.cpp $(BUILDDIR)/PCNode.o 
 	$(CC) -c $(SRCDIR)/pctree/PCTree_construction.cpp -o $(BUILDDIR)/PCTree_construction.o
 	
-$(BUILDDIR)/PCTreeForest.o: makefile $(SRCDIR)/pctree/PCTreeForest.cpp $(SRCDIR)/pctree/PCTreeForest.h
+$(BUILDDIR)/PCTreeForest.o: $(SRCDIR)/pctree/PCTreeForest.cpp $(SRCDIR)/pctree/PCTreeForest.h
 	$(CC) -c $(SRCDIR)/pctree/PCTreeForest.cpp -o $(BUILDDIR)/PCTreeForest.o
 	
-$(BUILDDIR)/PCTree_intersect.o: makefile $(SRCDIR)/pctree/PCTree_intersect.cpp
+$(BUILDDIR)/PCTree_intersect.o: $(SRCDIR)/pctree/PCTree_intersect.cpp
 	$(CC) -c $(SRCDIR)/pctree/PCTree_intersect.cpp -o $(BUILDDIR)/PCTree_intersect.o
 		
-$(BUILDDIR)/PCTree_restriction.o: makefile $(SRCDIR)/pctree/PCTree_restriction.cpp $(BUILDDIR)/PCNode.o
+$(BUILDDIR)/PCTree_restriction.o: $(SRCDIR)/pctree/PCTree_restriction.cpp $(BUILDDIR)/PCNode.o
 	$(CC) -c $(SRCDIR)/pctree/PCTree_restriction.cpp -o $(BUILDDIR)/PCTree_restriction.o
 	
 

@@ -88,9 +88,10 @@ int main(int argc, char* argv[]) {
         // cout << "                  \t filtered splits w.r.t. original splits" << endl;
         cout << "                  \t options: strict: compatible to a tree" << endl;
         cout << "                  \t          weakly: weakly compatible network" << endl;
+        cout << "                  \t          planar: compatible to a planar graph" << endl;
+        cout << "                  \t                  (a.k.a. circular compatible, outer labeled planar)" << endl;
         cout << "                  \t          n-tree: compatible to a union of n trees" << endl;
         cout << "                  \t                  (where n is an arbitrary number, e.g. 2-tree)" << endl;
-        cout << "                  \t          planar: compatible to a planar graph" << endl;
         cout << endl;
         cout << "    -x, --iupac   \t Extended IUPAC alphabet, resolve ambiguous bases or amino acids" << endl;
         cout << "                  \t Specify a number to limit the k-mers per position between" << endl;
