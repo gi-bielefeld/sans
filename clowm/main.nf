@@ -8,7 +8,7 @@ params.file_of_files = "$projectDir/NO_FILE3"
 params.blacklist = "$projectDir/NO_FILE4"
 
 process sans {
-  container "ghcr.io/gi-bielefeld/sans:0e9fe4f34c1e02563a0e2e4d9f4e64134fccfefe"
+  container "ghcr.io/gi-bielefeld/sans:362ceabbcff93c77f06f0a42d5e5d5d395c9c40f"
   publishDir params.outdir, mode: 'symlink'
   debug false
   label 'highmemMedium'
