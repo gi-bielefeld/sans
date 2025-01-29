@@ -90,6 +90,7 @@ int main(int argc, char* argv[]) {
         cout << "                  \t          weakly: weakly compatible network" << endl;
         cout << "                  \t          n-tree: compatible to a union of n trees" << endl;
         cout << "                  \t                  (where n is an arbitrary number, e.g. 2-tree)" << endl;
+        cout << "                  \t          planar: compatible to a planar graph" << endl;
         cout << endl;
         cout << "    -x, --iupac   \t Extended IUPAC alphabet, resolve ambiguous bases or amino acids" << endl;
         cout << "                  \t Specify a number to limit the k-mers per position between" << endl;
@@ -382,7 +383,7 @@ int main(int argc, char* argv[]) {
         else if (strcmp(argv[i], "-f") == 0 || strcmp(argv[i], "--filter") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             filter = argv[++i];    // Filter a greedy maximum weight subset
-            if (filter == "strict" || filter == "tree") {
+            if (filter == "strict" || filter == "tree" | filter == "planar") {
                 // compatible to a tree
             }
             else if (filter == "weakly") {
@@ -1736,6 +1737,9 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 			else if (filter == "weakly") {
 				graph::filter_weakly(split_list, verbose);
 			}
+            else if (filter == "planar") {
+                graph::filter_planar(split_list, verbose);
+            }
 			else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
 				if (!newick.empty()) {
 					ofstream file(newick);    // output file stream

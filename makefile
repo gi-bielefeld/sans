@@ -1,5 +1,5 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -std=c++14
+CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=13 -std=c++17
 XX = -lpthread -lz
 
 ## IF DEBUG
@@ -15,6 +15,7 @@ CFLAGS = gcc -O3 -march=native
 # Directories
 SRCDIR		:= src
 BUILDDIR 	:= obj
+
 
 # Wrap Windows / Unix commands
 ifeq ($(OS), Windows_NT)
@@ -39,9 +40,9 @@ endif
 all: makefile start SANS done
 
 SANS: makefile $(BUILDDIR)/main.o
-	$(CC) -o SANS $(BUILDDIR)/nexus_color.o $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(XX)
+	$(CC) -o SANS $(BUILDDIR)/nexus_color.o $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o  $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o $(XX)
 
-$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o
+$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o
 	$(CC) -c $(SRCDIR)/main.cpp -o $(BUILDDIR)/main.o
 
 $(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o
@@ -70,6 +71,29 @@ $(BUILDDIR)/cleanliness.o: $(SRCDIR)/cleanliness.cpp $(SRCDIR)/cleanliness.h
 
 $(BUILDDIR)/gzstream.o: $(SRCDIR)/gz/gzstream.C $(SRCDIR)/gz/gzstream.h	
 	$(CFLAGS) -c $(SRCDIR)/gz/gzstream.C  -o $(BUILDDIR)/gzstream.o
+
+
+# PC-Tree
+
+	
+$(BUILDDIR)/PCNode.o: makefile $(SRCDIR)/pctree/PCNode.cpp $(SRCDIR)/pctree/PCNode.h $(BUILDDIR)/PCTreeForest.o
+	$(CC) -c $(SRCDIR)/pctree/PCNode.cpp -o $(BUILDDIR)/PCNode.o
+	
+$(BUILDDIR)/PCTree_basic.o: makefile $(SRCDIR)/pctree/PCTree_basic.cpp $(BUILDDIR)/PCNode.o 
+	$(CC) -c $(SRCDIR)/pctree/PCTree_basic.cpp -o $(BUILDDIR)/PCTree_basic.o
+	
+$(BUILDDIR)/PCTree_construction.o: makefile $(SRCDIR)/pctree/PCTree_construction.cpp $(BUILDDIR)/PCNode.o 
+	$(CC) -c $(SRCDIR)/pctree/PCTree_construction.cpp -o $(BUILDDIR)/PCTree_construction.o
+	
+$(BUILDDIR)/PCTreeForest.o: makefile $(SRCDIR)/pctree/PCTreeForest.cpp $(SRCDIR)/pctree/PCTreeForest.h
+	$(CC) -c $(SRCDIR)/pctree/PCTreeForest.cpp -o $(BUILDDIR)/PCTreeForest.o
+	
+$(BUILDDIR)/PCTree_intersect.o: makefile $(SRCDIR)/pctree/PCTree_intersect.cpp
+	$(CC) -c $(SRCDIR)/pctree/PCTree_intersect.cpp -o $(BUILDDIR)/PCTree_intersect.o
+		
+$(BUILDDIR)/PCTree_restriction.o: makefile $(SRCDIR)/pctree/PCTree_restriction.cpp $(BUILDDIR)/PCNode.o
+	$(CC) -c $(SRCDIR)/pctree/PCTree_restriction.cpp -o $(BUILDDIR)/PCTree_restriction.o
+	
 
 
 # [Internal rules]
