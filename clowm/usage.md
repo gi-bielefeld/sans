@@ -152,6 +152,8 @@ The sorted list of splits is greedily filtered, i.e., splits are iterated from s
 * default: By default, the CloWM version of SANS first generates a phylogenetic split network (weakly compatible splits), and then also filters the splits to obtain a tree (strictly compatible splits).
 * none: apply no filter (not recommended)
 
+Any choice other than "default" deactivates the two-step procedure (see "Tree or network").
+
 
 #### Bootstrapping
 To assess the robustness of reconstructed splits with respect to noise in the input data, bootstrap replicates can be constructed by randomly varying the observed *k*-mer content. To compare the originally determined splits or tree to, e.g., 1000 bootstrap replicates, use `--bootstrap 1000`. Bootstrap support values will be integrated into the nexus/newick output file and can, e.g., be visualized in [SplitsTree 4](https://software-ab.cs.uni-tuebingen.de/download/splitstree4/welcome.html). Further, an additional output file `sans_*.bootstrap` containing the bootstrap support values will be created. This option requires to select a filter criterion other than "none" and "default", see "Filter criteria".
