@@ -61,6 +61,7 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 
 * The sparse-map library is licensed under the [MIT license](https://github.com/Tessil/sparse-map/blob/master/LICENSE).
 * The Bifrost library is licensed under the [BSD-2 license](https://github.com/pmelsted/bifrost/blob/master/LICENSE).
+* The PC-tree library is licensed under the [OGDF license](https://github.com/N-Coder/pc-tree/blob/main/LICENSE.txt).
 * SANS uses gzstream, licensed under the [LGPL license](https://github.com/gi-bielefeld/sans/blob/master/src/gz/COPYING.LIB).
 * SANS is licensed under the [GNU general public license](https://github.com/gi-bielefeld/sans/blob/master/LICENSE).
 
