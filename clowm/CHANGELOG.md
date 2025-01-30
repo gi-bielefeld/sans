@@ -12,6 +12,7 @@
 - too many parameters for second filter step in default mode
 - check if input is empty
 
+
 ## v0.9.4 [2025-01-29]
 
 ### Added
