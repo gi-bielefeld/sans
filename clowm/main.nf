@@ -46,22 +46,22 @@ process sans {
   fi
 
   if [ \$( cat genomeList.txt | wc -l) -lt 1 ]; then
-    echo "ERROR: Check input!" > sans.err;
+    echo \"ERROR: Check input!\" > sans.err;
     exit 0
   fi
  
   if [ ${params.bootstrapping} != null ]; then
     if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
-      echo "ERROR: For bootstrapping, you have to choose a filter criterion using --filter." > sans.err;
+      echo \"ERROR: For bootstrapping, you have to choose a filter criterion using --filter.\" > sans.err;
       exit 0
     fi
   fi  
   if [ ${params.consensus} != "none" ] && [ ${params.bootstrapping} == null ]; then
-    echo "ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.err;
+    echo \"ERROR: Filter on bootstrap values (--consensus) can only be chosen in combination with bootstrapping (--boostrapping).\" > sans.err;
     exit 0
   fi
   if [ ${params.support} != null ] && [ ${params.support} != "0" ] && [ ${params.bootstrapping} == null ]; then
-    echo "ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping)." > sans.err;
+    echo \"ERROR: Bootstrap support filter (--support) can only be chosen in combination with bootstrapping (--boostrapping).\" > sans.err;
     exit 0
   fi
 
