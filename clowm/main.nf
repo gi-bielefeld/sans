@@ -45,7 +45,7 @@ process sans {
     /usr/bin/Xvfb &
   fi
 
-  if [ $( cat genomeList.txt | wc -l) -lt 1 ]; then
+  if [ \$( cat genomeList.txt | wc -l) -lt 1 ]; then
     echo "ERROR: Check input!" > sans.err;
     exit 0
   fi
