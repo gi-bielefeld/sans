@@ -33,7 +33,7 @@ process sans {
     path 'sans_splitnetwork.tsv.bootstrap', optional: true
     path 'sans_core.fasta', optional: true
     path 'sans.log', optional: true
-    path 'sans.log', optional: true
+    path 'sans.err', optional: true
     
 
   script:
