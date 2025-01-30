@@ -45,10 +45,11 @@ process sans {
     /usr/bin/Xvfb &
   fi
 
-  if [ \$( cat genomeList.txt | wc -l) -lt 1 ]; then
-    echo \"ERROR: Check input!\" > sans.err;
+  if [ \$( cat genomeList.txt | wc -l) -lt 2 ]; then
+    echo \"ERROR: The input is either empty or fewer than two files.\" > sans.err;
     exit 0
   fi
+
  
   if [ ${params.bootstrapping} != null ]; then
     if [ ${params.filter} == "none" ] || [ ${params.filter} == "default" ]; then
@@ -209,7 +210,7 @@ workflow {
     untargz(params.input)
     sans(untargz.output,opt_label,opt_label_colors,opt_fof,opt_blacklist)
   } else {
-    sans(inputChannel.collect(),opt_label,opt_label_colors,opt_fof,opt_blacklist)
+    sans(inputChannel.ifEmpty(file("$projectDir/NO_FILE5")).collect(),opt_label,opt_label_colors,opt_fof,opt_blacklist)
   }
 }
 
