@@ -1436,12 +1436,13 @@ void graph::add_singleton_weights(double mean(uint32_t&, uint32_t&), double min_
 
 
 /**
- * This function calculates the weight for all splits and puts them into the split_ölist
+ * This function calculates the weight for all splits and puts them into the split_list
  * @param mean weight function
  * @param min_value the minimal weight represented in the top list
  */
 void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_value)
 {
+	
 	// Iterating over the map using Iterator till map end.
 	hash_map<color_t, array<uint32_t,2>>::iterator it = color_table.begin();
 	while (it != color_table.end())	{
@@ -1465,6 +1466,84 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
 		// iterator incremented to point next item
 		it++;
 	}
+}
+
+
+void graph::smooth_split_list(const int percent)
+{
+	cerr << "\nStarting smoothing ...\n" << endl;
+// 	cout << "graph { " << endl;
+	uint64_t cur = 0, prog = 0, next;
+	uint64_t max = color_table.size();
+	hash_map<color_t, array<uint32_t,2>> transfer_table;
+	
+	
+	
+	// for all i
+	int i_no = 0;
+	hash_map<color_t, array<uint32_t,2>>::iterator it_i = color_table.begin();
+	while (it_i != color_table.end())	{
+		// progress
+		next = 100*cur/max;
+// 		if (prog < next)  cout << "\33[2K\r" << "Smoothing... " << next << "%" << flush;
+		prog = next; cur++;
+
+		color_t i = it_i->first;
+		color_t not_i = ~i;
+		
+		uint32_t ones = i.popcnt();
+		uint32_t zeros = maxN - ones;
+		
+		// for all j != i
+		int j_no=i_no;
+		hash_map<color_t, array<uint32_t,2>>::iterator it_j = color_table.begin();
+		it_j++; j_no++;
+		while (it_j != color_table.end()){
+			if (it_j!=it_i){
+				color_t j = it_j->first;
+				color_t not_j = ~j;
+				not_j &= i;
+				uint32_t m = not_j.popcnt();
+				j &= not_i;
+				uint32_t e = j.popcnt();
+				const array<uint32_t,2>& weights_j = it_j->second;
+				if (weights_j[0]>0 && (100*m)/ones < percent && e==0){// compare left i with left j
+					const color_t& color = it_i.key();
+					array<uint32_t,2>& transfer_weights = transfer_table[color];
+					transfer_weights[0]+=weights_j[0]; // add left count to left
+				}
+				if (weights_j[1]>0 && (100*e)/zeros < percent && m==0){// compare right i with right j
+					const color_t& color = it_i.key();
+					array<uint32_t,2>& transfer_weights = transfer_table[color];
+					transfer_weights[1]+=weights_j[1]; // add right count to right
+				}
+				if (weights_j[1]>0 && (100*m)/ones >= (100-percent) && e==zeros){ // compare left i with right j
+					const color_t& color = it_i.key();
+					array<uint32_t,2>& transfer_weights = transfer_table[color];
+					transfer_weights[0]+=weights_j[1]; // add right count to left 
+				}
+				if (weights_j[0]>0 && (100*e)/zeros >= (100-percent) && m==ones){ // compare right i with left j
+					const color_t& color = it_i.key();
+					array<uint32_t,2>& transfer_weights = transfer_table[color];
+					transfer_weights[1]+=weights_j[0]; // add left count to right 
+				}
+			}
+			it_j++; j_no++;
+		}
+		it_i++; i_no++;
+	}
+	cerr << "Done with searching for similar splits. Start to add weights"<< endl;
+	// go through transfer_weights table and transfer weights
+	hash_map<color_t, array<uint32_t,2>>::iterator it = transfer_table.begin();
+	while (it != transfer_table.end()){
+		const color_t& color = it.key();
+		array<uint32_t,2>& transfer_weights = transfer_table[color];
+		array<uint32_t,2>& old_weights = color_table[color];
+		old_weights[0]+=transfer_weights[0];
+		old_weights[1]+=transfer_weights[1];
+		it++;
+	}
+	cerr << "Finished smoothing ...\n" << endl;
 }
 
 /**

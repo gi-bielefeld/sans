@@ -360,6 +360,7 @@ public:
 	*/
 	static void compile_split_list(double mean(uint32_t&, uint32_t&), double min_value);
 
+	static void smooth_split_list(const int percent);
 	/**
 	* This function determines the core k-mers, i.e., all k-mers present in all genomes.
 	* Core k-mers are output to given file in fasta format, one k-mer per entry

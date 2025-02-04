@@ -215,6 +215,9 @@ int main(int argc, char* argv[]) {
     bool pdf_wanted = false;
     bool svg_wanted = false;
 	
+	// approximate splits
+	int A=0;
+	
 	/**
 	* Look-up set for k-mers that are ignored, i.e., not stored, counted etc.
 	*/
@@ -540,6 +543,11 @@ int main(int argc, char* argv[]) {
 				consensus_filter="SameAsFilter"; // set to the same as --filter later because --filter might not be set yet.
 			}
 
+        }
+        else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--approximate") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            catch_failed_stoi_cast(argv[i + 1], argv[i]);
+            A = stoi(argv[++i]);
         }
         else {
             cerr << "Error: unknown argument: " << argv[i] <<  "\t type --help" << endl;
@@ -1414,6 +1422,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		if (verbose) {
 			cout << "Compile split list..."  << flush;
 		}
+		if (A>0) {graph::smooth_split_list(A); }
 		graph::compile_split_list(mean, min_value);
 		if (verbose) {
 			end = chrono::high_resolution_clock::now();
