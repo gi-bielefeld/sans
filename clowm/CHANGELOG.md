@@ -1,5 +1,10 @@
 # SANS Changelog
 
+## v1.0.2 [2025-02-0]
+
+### Fixed
+
+- parameter translate did not work (due to typo)
 
 ## v1.0.1 [2025-02-06]
 

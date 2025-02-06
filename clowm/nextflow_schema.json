@@ -54,7 +54,7 @@
                     "description": "input provides amino acid sequences",
                     "default": false
                 },
-                "tanslate": {
+                "translate": {
                     "type": "boolean",
                     "description": "input provides coding sequences",
                     "help_text": "Provided coding sequences will be translated to amino acids. Reverse complement *k*-mers are not considered and the default *k*-mer length is 10. By default, the standard genetic code will be used for translation. Use --code to specify different code tables.",
