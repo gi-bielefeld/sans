@@ -1,4 +1,4 @@
-fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz", "*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"]
+fileEndingList = ["*.fa", "*.fa.gz", "*.fasta", "*.fasta.gz", "*.faa", "*.faa.gz", "*.fna", "*.fna.gz", "*.mpfa", "*.mpfa.gz", "*.ffn", "*.ffn.gz", "*.faa.gz", "*.fastq", "*.fastq.gz", "*.fq", "*.fq.gz"]
 
 inputChannel=Channel.fromPath(fileEndingList.collect { params.input + "/" + it },type : "file")
 

@@ -1,6 +1,12 @@
 # SANS Changelog
 
 
+## v1.0.1 [2025-02-06]
+
+### Added
+
+- support further fasta file endings
+
 ## v1.0.0 [2025-01-30]
 
 ### Added
