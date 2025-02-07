@@ -8,7 +8,7 @@ params.file_of_files = "$projectDir/NO_FILE3"
 params.blacklist = "$projectDir/NO_FILE4"
 
 process sans {
-  container "ghcr.io/gi-bielefeld/sans:v1.0.2"
+  container "ghcr.io/gi-bielefeld/sans:v1.0.3"
   publishDir params.outdir, mode: 'symlink'
   debug false
   label 'highmemMedium'
@@ -79,7 +79,7 @@ process sans {
   ${ params.consensus == "none" && params.filter == 'strict' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == '2-tree' ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == '3-tree' ? "--newick sans_tree.newick" : '' } \
-  ${ params.consensus == "tree" ? "--newick sans_tree.newick" : '' } \
+  ${ params.consensus == "strict" ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "2-tree" ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "3-tree" ? "--newick sans_tree.newick" : '' } \
   ${ params.consensus == "none" && params.filter == 'weakly' ? "--nexus sans_splitnetwork.nexus" : '' } \
@@ -101,15 +101,15 @@ process sans {
   ${ params.top != null ? "--top ${ params.top }" : "" } \
   ${ params.pdf  && params.consensus == "none" && params.filter == 'strict' ? "--svg sans_tree.svg" : "" } \
   ${ params.pdf  && params.consensus == "none" && params.filter != 'strict' ? "--svg sans_splitnetwork.svg" : "" } \
-  ${ params.pdf  && params.consensus == "tree" ? "--svg sans_tree.svg" : "" } \
+  ${ params.pdf  && params.consensus == "strict" ? "--svg sans_tree.svg" : "" } \
   ${ params.pdf  && params.consensus != "none" && params.consensus != "strict" ? "--svg sans_splitnetwork.svg" : "" } \
   ${ params.svg  && params.consensus == "none" && params.filter == 'strict' ? "--svg sans_tree.svg" : "" } \
   ${ params.svg  && params.consensus == "none" && params.filter != 'strict' ? "--svg sans_splitnetwork.svg" : "" } \
-  ${ params.svg  && params.consensus == "tree" ? "--svg sans_tree.svg" : "" } \
+  ${ params.svg  && params.consensus == "strict" ? "--svg sans_tree.svg" : "" } \
   ${ params.svg  && params.consensus != "none" && params.consensus != "strict" ? "--svg sans_splitnetwork.svg" : "" } \
   ${ params.filter == 'strict' ? "--filter strict" : '' } \
   ${ params.filter == 'weakly' ? "--filter weakly" : '' } \
-  ${ params.filter == 'planar' ? "--filter weakly" : '' } \
+  ${ params.filter == 'planar' ? "--filter planar" : '' } \
   ${ params.filter == '2-tree' ? "--filter 2-tree" : '' } \
   ${ params.filter == '3-tree' ? "--filter 3-tree" : '' } \
   ${ params.filter == 'default' ? "--filter weakly" : '' } \

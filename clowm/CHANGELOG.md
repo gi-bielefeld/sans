@@ -1,5 +1,13 @@
 # SANS Changelog
 
+
+## v1.0.3 [2025-02-07]
+
+### Fixed
+
+- consensus planar was missing in parameter definitions
+- some filtering combinations with tree/strict were not handled properly
+
 ## v1.0.2 [2025-02-0]
 
 ### Fixed

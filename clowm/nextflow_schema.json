@@ -158,6 +158,7 @@
                     "enum": [
                         "strict",
                         "weakly",
+                        "planar",
                         "2-tree",
                         "3-tree",
                         "none"
