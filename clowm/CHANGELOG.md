@@ -1,6 +1,5 @@
 # SANS Changelog
 
-
 ## v1.0.3 [2025-02-07]
 
 ### Fixed
