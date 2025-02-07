@@ -8,7 +8,7 @@
 * Input: assembled genomes / reads, or coding sequences / amino acid sequences
 * Output: phylogenetic splits or tree
 * Features: abundance-filter, bootstrapping, multi-threading, labeled PDF and Nexus output
-* **NEW**: Launch SANS on [CloWM](https://clowm.bi.denbi.de) (just using your [LifeScience](https://lifescience-ri.eu/) account). <img src="clowm.svg" style="border:0;" alt="CloWM icon" width="32" height="32"/>
+* **NEW**: Launch SANS on [CloWM](https://clowm.bi.denbi.de) <img src="clowm.svg" style="border:0;" alt="CloWM icon" width="32" height="32"/> (just using your [LifeScience](https://lifescience-ri.eu/) account).
 
 
 ### Dos and Don'ts
