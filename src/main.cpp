@@ -1222,7 +1222,6 @@ int main(int argc, char* argv[]) {
 						if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
 							
 							if (sequence.length()>0) {
-								cout << sequence.length() << endl;
 								
 								// reading frames for each k-mer
 								for (uint64_t p=0;p<sequence.length()-(3*kmer)+1; p++){
@@ -1230,7 +1229,6 @@ int main(int argc, char* argv[]) {
 										continue;
 									}
 									string kmer_str = sequence.substr(p,3*kmer);
-									count::deleteCount();
 									//translate
 									kmer_str_tr = translator::translate(kmer_str);
 									//add k-mer
