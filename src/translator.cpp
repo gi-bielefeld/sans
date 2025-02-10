@@ -54,6 +54,7 @@ struct translationTable {
     string ncbieaa;
     string sncbieaa;
     unordered_map<string, codon> codons;
+    unordered_map<string, string> codons_inv;
 
     void createCodons(){
         if (!ncbieaa.empty() && !sncbieaa.empty()) {
@@ -66,10 +67,12 @@ struct translationTable {
                 current.isStop = sncbieaa[i] == '*';
                 current.isStart = sncbieaa[i] == 'M';
                 codons[current.triplet] = current;
+				codons_inv[current.amino] = current.triplet;
             }
         }
     }
 
+    
     codon operator[](const string& triplet) {
         auto it = codons.find(triplet);
         return it == codons.end() ? codon() :  it->second;
@@ -141,7 +144,7 @@ string translator::getTranslatedAminoAcid(string &unit) {
 
     if (!codon.isValid()) {
         count::incrementCount();
-        translated = "";
+        translated = "X";
     } else {
         translated = codon.amino;
     }
@@ -177,10 +180,24 @@ bool translator::isBase(char &base) {
 
 string translator::translate(string &line) {
     string translated;
-    for (auto pos = 0; pos+3 < line.length(); pos = pos +3) {
+	string aa;
+    for (auto pos = 0; pos+3 <= line.length(); pos = pos +3) {
         string unit = line.substr(pos, 3);
-        translated+= translator::getTranslatedAminoAcid(unit);
+		aa=translator::getTranslatedAminoAcid(unit);
+        translated+=aa;
+		if(aa=="*") {return "*";}
     }
 
     return translated;
 }
+
+string translator::unify(string &line) {
+    string unified;
+    for (auto pos = 0; pos+3 <= line.length(); pos = pos +3) {
+        string unit = line.substr(pos, 3);
+        unified+= translator::translationTable.codons_inv[translator::getTranslatedAminoAcid(unit)];
+    }
+
+    return unified;
+}
+

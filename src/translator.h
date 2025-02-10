@@ -67,6 +67,7 @@ public:
      * @return the translated line
      */
     static string translate(string& line);
+    static string unify(string& line);
 
 protected:
     /**

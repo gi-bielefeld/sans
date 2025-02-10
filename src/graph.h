@@ -486,6 +486,13 @@ public:
     static string filter_n_tree(uint64_t n, std::function<string(const uint16_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool& verbose);
 	
 	
+    /**
+     * This function checks if the character at the given position is allowed.
+     * @param pos position in str
+     * @param str the current part of the sequence
+     * @return true if allowed, false otherwise
+     */
+    static bool isAllowedChar(uint64_t pos, string &str);
 
 
 protected:
@@ -582,11 +589,4 @@ protected:
     static string print_tree(node* root, std::function<string(const uint16_t&)> map, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no);
     static string print_tree(node* root, std::function<string(const uint16_t&)> map);
 
-    /**
-     * This function checks if the character at the given position is allowed.
-     * @param pos position in str
-     * @param str the current part of the sequence
-     * @return true if allowed, false otherwise
-     */
-    static bool isAllowedChar(uint64_t pos, string &str);
 };

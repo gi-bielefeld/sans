@@ -700,7 +700,12 @@ int main(int argc, char* argv[]) {
     * prepare the processing based on the input
     */
 
-    // enable translation
+    // enable translation (in any case for this experimental branch
+    amino = true;
+	if (!translator::init(code)) {
+		cerr << "Error: No translation data found" << translate << endl;
+	}
+    reverse = false;    // Do not consider reverse complement k-mers
     if (shouldTranslate) {
         amino = true;
         if (!translator::init(code)) {
@@ -1211,9 +1216,39 @@ int main(int argc, char* argv[]) {
 
 				string appendixChars; 
 				string line;    // read the file line by line
+				string kmer_str_tr;
 				while (getline(file, line)) {
 					if (line.length() > 0) {
 						if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
+							
+							if (sequence.length()>0) {
+								cout << sequence.length() << endl;
+								
+								// reading frames for each k-mer
+								for (uint64_t p=0;p<sequence.length()-(3*kmer)+1; p++){
+									if (!graph::isAllowedChar(p,sequence)){
+										continue;
+									}
+									string kmer_str = sequence.substr(p,3*kmer);
+									count::deleteCount();
+									//translate
+									kmer_str_tr = translator::translate(kmer_str);
+									//add k-mer
+									if(kmer_str_tr!="*"){
+										graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+									}
+									//reverse
+									kmer_str = reverseComplement(kmer_str);
+									//translate
+									kmer_str_tr = translator::translate(kmer_str);
+									//add k-mer
+									if(kmer_str_tr!="*"){
+										graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+									}
+								}
+							}
+							
+							
 							if (window > 1) {
 								iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)
 										: graph::add_minimizers(T, sequence, genome_ids[i], reverse, window);
@@ -1254,6 +1289,29 @@ int main(int argc, char* argv[]) {
 				if (verbose && count::getCount() > 0) {
 					cerr << count::getCount()<< " triplets could not be translated."<< endl;
 				}
+				
+				// reading frames for each k-mer
+				for (uint64_t p=0;p<sequence.length()-(3*kmer)+1; p++){
+					if (!graph::isAllowedChar(p,sequence)){
+						continue;
+					}
+					string kmer_str = sequence.substr(p,3*kmer);
+					//translate
+					kmer_str_tr = translator::translate(kmer_str);
+					//add k-mer
+					if(kmer_str_tr!="*"){
+						graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+					}
+					//reverse
+					kmer_str = reverseComplement(kmer_str);
+					//translate
+					kmer_str_tr = translator::translate(kmer_str);
+					//add k-mer
+					if(kmer_str_tr!="*"){
+						graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+					}
+				}
+
 				if (window > 1) {
 					iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)
 							: graph::add_minimizers(T, sequence, genome_ids[i], reverse, window);
@@ -1763,4 +1821,27 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 			}
 		}	
 
+}
+
+string reverseComplement(const string &dna) {
+    string revComp;
+    revComp.reserve(dna.size());
+
+    // Iteriere von hinten nach vorne durch die Sequenz
+    for (auto it = dna.rbegin(); it != dna.rend(); ++it) {
+        char nucleotide = *it;
+        switch (nucleotide) {
+            case 'A': revComp.push_back('T'); break;
+            case 'T': revComp.push_back('A'); break;
+            case 'C': revComp.push_back('G'); break;
+            case 'G': revComp.push_back('C'); break;
+            case 'a': revComp.push_back('t'); break;
+            case 't': revComp.push_back('a'); break;
+            case 'c': revComp.push_back('g'); break;
+            case 'g': revComp.push_back('c'); break;
+            default:
+               revComp.push_back('N');
+        }
+    }
+    return revComp;
 }

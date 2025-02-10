@@ -51,3 +51,5 @@ int main(int argc, char* argv[]);
  */
 void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, bool verbose);
 void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool verbose);
+
+string reverseComplement(const string &dna);
