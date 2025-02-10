@@ -1247,14 +1247,6 @@ int main(int argc, char* argv[]) {
 							}
 							
 							
-							if (window > 1) {
-								iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)
-										: graph::add_minimizers(T, sequence, genome_ids[i], reverse, window);
-							} else {
-								iupac > 1 ? graph::add_kmers(T, sequence, genome_ids[i], reverse, iupac)
-										: graph::add_kmers(T, sequence, genome_ids[i], reverse);
-							}
-
 							sequence.clear();
 
 //                            if (verbose) {
@@ -1267,19 +1259,6 @@ int main(int argc, char* argv[]) {
 						else {
 							transform(line.begin(), line.end(), line.begin(), ::toupper);
 							string newLine = line;
-							if (shouldTranslate) {
-								if (appendixChars.length() >0 ) {
-									newLine= appendixChars + newLine;
-									appendixChars = "";
-								}
-								auto toManyChars = line.length() % 3;
-								if (toManyChars > 0) {
-									appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
-									newLine = newLine.substr(0, line.length() - toManyChars);
-								}
-
-								newLine = translator::translate(newLine);
-							}
 							sequence += newLine;    // FASTA & FASTQ sequence -> read
 						}
 					}
@@ -1310,13 +1289,6 @@ int main(int argc, char* argv[]) {
 					}
 				}
 
-				if (window > 1) {
-					iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)
-							: graph::add_minimizers(T, sequence, genome_ids[i], reverse, window);
-				} else {
-					iupac > 1 ? graph::add_kmers(T, sequence, genome_ids[i], reverse, iupac)
-							: graph::add_kmers(T, sequence, genome_ids[i], reverse);
-				}
 				sequence.clear();
 
 				
