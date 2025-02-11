@@ -10,6 +10,7 @@ To ease the application of SANS for unexperienced users, the CloWM version of SA
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/advanced.png" style="border:0;" alt="advanced" height="30"/> | | If your input are **reads** or **coding sequences**, or if you want to **beautify the output**, switch the parameter view to "advanced". |
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/expert.png" style="border:0;" alt="expert" height="30"/> | | This parameter view provides further options, such as bootstrapping. |
 | | | |
+| | | |
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/tryitout.png" style="border:0;" alt="expert" height="30"/> | | The launch page also provides a simple example. (See "Citations" for details.)|
 
 
