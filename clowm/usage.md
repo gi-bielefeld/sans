@@ -11,6 +11,8 @@ To ease the application of SANS for unexperienced users, the CloWM version of SA
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/expert.png" style="border:0;" alt="expert" height="30"/> | | This parameter view provides further options, such as bootstrapping. |
 | | | |
 | | | |
+| | | |
+| | | |
 | <img src="https://raw.githubusercontent.com/gi-bielefeld/sans/clowm-integration/clowm/tryitout.png" style="border:0;" alt="expert" height="30"/> | | The launch page also provides a simple example. (See "Citations" for details.)|
 
 
