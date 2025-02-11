@@ -177,7 +177,7 @@ bool translator::isBase(char &base) {
 
 string translator::translate(string &line) {
     string translated;
-    for (auto pos = 0; pos+3 < line.length(); pos = pos +3) {
+    for (auto pos = 0; pos+3 <= line.length(); pos = pos +3) {
         string unit = line.substr(pos, 3);
         translated+= translator::getTranslatedAminoAcid(unit);
     }
