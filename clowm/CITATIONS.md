@@ -12,3 +12,10 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 # Splitstree
 
 Huson, D. H. and Bryant, D.: [Application of Phylogenetic Networks in Evolutionary Studies](https://doi.org/10.1093/molbev/msj030), Mol. Biol. Evol., 23(2):254-267 (2006).
+
+# Example dataset
+
+Shapiro, B. J., Levade, I., Kovacikova, G., Taylor, R. K. and Almagro-Moreno S.: [Origins of pandemic Vibrio cholerae from environmental gene pools](https://doi.org/10.1038/nmicrobiol.2016.240), Nat. Microbiol., 2(3):16240 (2017).
+
+preprocessed with [ORFfinder](https://ftp.ncbi.nlm.nih.gov/genomes/TOOLS/ORFfinder/)
+

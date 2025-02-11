@@ -1,5 +1,18 @@
 # SANS Changelog
 
+
+
+## v1.0.4 [2025-02-11]
+
+### Fixed
+
+- last codon in coding sequence translation got lost
+
+### Added
+
+- example data set
+
+
 ## v1.0.3 [2025-02-07]
 
 ### Fixed
