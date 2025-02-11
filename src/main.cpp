@@ -1221,10 +1221,10 @@ int main(int argc, char* argv[]) {
 					if (line.length() > 0) {
 						if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
 							
-							if (sequence.length()>0) {
+							if (sequence.length()>=3*kmer) {
 								
 								// reading frames for each k-mer
-								for (uint64_t p=0;p<sequence.length()-(3*kmer)+1; p++){
+								for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
 									if (!graph::isAllowedChar(p,sequence)){
 										continue;
 									}
@@ -1268,7 +1268,7 @@ int main(int argc, char* argv[]) {
 				}
 				
 				// reading frames for each k-mer
-				for (uint64_t p=0;p<sequence.length()-(3*kmer)+1; p++){
+				for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
 					if (!graph::isAllowedChar(p,sequence)){
 						continue;
 					}
