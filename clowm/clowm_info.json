@@ -1,6 +1,6 @@
 {
   "inputParameters": [
-    "inputdir"
+    "input"
   ],
   "outputParameters": [
     "outdir"
@@ -10,7 +10,7 @@
     "10.1186/s13015-020-00164-3"
   ],
   "exampleParameters": {
-    "inputfile": "s3://workflow-exampledata/sans-ambage/example2/",
+    "input": "s3://workflow-exampledata/sans-ambage/example2/",
     "file_of_files": "s3://workflow-exampledata/sans-ambage/example2/cholerae.kmt",
     "translate": true,
     "label": "s3://workflow-exampledata/sans-ambage/example2/mapping.tsv"
