@@ -1268,24 +1268,26 @@ int main(int argc, char* argv[]) {
 				}
 				
 				// reading frames for each k-mer
-				for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
-					if (!graph::isAllowedChar(p,sequence)){
-						continue;
-					}
-					string kmer_str = sequence.substr(p,3*kmer);
-					//translate
-					kmer_str_tr = translator::translate(kmer_str);
-					//add k-mer
-					if(kmer_str_tr!="*"){
-						graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
-					}
-					//reverse
-					kmer_str = reverseComplement(kmer_str);
-					//translate
-					kmer_str_tr = translator::translate(kmer_str);
-					//add k-mer
-					if(kmer_str_tr!="*"){
-						graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+				if (sequence.length()>=3*kmer) {
+					for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
+						if (!graph::isAllowedChar(p,sequence)){
+							continue;
+						}
+						string kmer_str = sequence.substr(p,3*kmer);
+						//translate
+						kmer_str_tr = translator::translate(kmer_str);
+						//add k-mer
+						if(kmer_str_tr!="*"){
+							graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+						}
+						//reverse
+						kmer_str = reverseComplement(kmer_str);
+						//translate
+						kmer_str_tr = translator::translate(kmer_str);
+						//add k-mer
+						if(kmer_str_tr!="*"){
+							graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+						}
 					}
 				}
 
