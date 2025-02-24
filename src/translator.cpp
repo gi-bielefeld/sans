@@ -185,7 +185,7 @@ string translator::translate(string &line) {
         string unit = line.substr(pos, 3);
 		aa=translator::getTranslatedAminoAcid(unit);
         translated+=aa;
-		if(aa=="*") {return "*";}
+		//if(aa=="*") {return "*";}
     }
 
     return translated;

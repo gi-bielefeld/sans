@@ -1217,34 +1217,79 @@ int main(int argc, char* argv[]) {
 				string appendixChars; 
 				string line;    // read the file line by line
 				string kmer_str_tr;
+				string tmp;
 				while (getline(file, line)) {
 					if (line.length() > 0) {
 						if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
 							
-							if (sequence.length()>=3*kmer) {
-								
 								// reading frames for each k-mer
-								for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
-									if (!graph::isAllowedChar(p,sequence)){
-										continue;
-									}
-									string kmer_str = sequence.substr(p,3*kmer);
-									//translate
-									kmer_str_tr = translator::translate(kmer_str);
-									//add k-mer
-									if(kmer_str_tr!="*"){
-										graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
-									}
-									//reverse
-									kmer_str = reverseComplement(kmer_str);
-									//translate
-									kmer_str_tr = translator::translate(kmer_str);
-									//add k-mer
-									if(kmer_str_tr!="*"){
-										graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+								if (sequence.length()>=3*kmer) {
+									// translate reverse complement
+									for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
+										if (!graph::isAllowedChar(p,sequence)){
+											continue;
+										}
+										string kmer_str = sequence.substr(p,3*kmer);
+										//translate
+										kmer_str_tr = translator::translate(kmer_str);
+										//add k-mer
+										if(kmer_str_tr!="*"){
+											graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+										}
+										//reverse
+										kmer_str = reverseComplement(kmer_str);
+										//translate
+										kmer_str_tr = translator::translate(kmer_str);
+										//add k-mer
+										if(kmer_str_tr!="*"){
+											graph::add_kmers(T, kmer_str_tr, genome_ids[i], reverse);
+										}
 									}
 								}
-							}
+// 								// reading frames for the complete sequence
+// 								uint64_t min_stops=-1;
+// 								int frame=0;
+// 								if (sequence.length()>=3*kmer) {
+// 									//reverse complement
+// 									string seq_rc = reverseComplement(sequence);
+// 									// translate reverse complement
+// 									for (uint64_t p=0;p<3; p++){
+// 										string seq_p = sequence.substr(p,sequence.length() - (sequence.length() % 3)+p);
+// 										string seq_rc_p = seq_rc.substr(p,seq_rc.length() - (seq_rc.length() % 3)+p);
+// 										//translate
+// 										string seq_p_tr = translator::translate(seq_p);
+// 										string seq_rc_p_tr = translator::translate(seq_rc_p);
+// 										//  get substring between Stop codons
+// 										int lastPos = 0; // position of the last occurrence of '*'
+// 										// Loop through the string to find occurrences of C
+// 										for (size_t i = 0; i < seq_p_tr.length(); ++i) {
+// 											if (seq_p_tr[i] == '*') {
+// 												// Extract substring between the previous and current occurrence of C.
+// 												int start = lastPos + 1;
+// 												int len = i - start;
+// 												if (len > 300) {  // Only output if the substring is longer than T
+//  													cout << p << "\t" << len << endl;
+// 													tmp=seq_p_tr.substr(start, len);
+// 													graph::add_kmers(T, tmp, genome_ids[i], reverse);
+// 												}
+// 												lastPos = i;
+// 											}
+// 										}
+// 										for (size_t i = 0; i < seq_rc_p_tr.length(); ++i) {
+// 											if (seq_rc_p_tr[i] == '*') {
+// 												// Extract substring between the previous and current occurrence of C.
+// 												int start = lastPos + 1;
+// 												int len = i - start;
+// 												if (len > 300) {  // Only output if the substring is longer than T
+//  													cout << "-" << p << "\t" << len << endl;
+// 													tmp=seq_rc_p_tr.substr(start, len);
+// 													graph::add_kmers(T, tmp, genome_ids[i], reverse);
+// 												}
+// 												lastPos = i;
+// 											}
+// 										}
+// 									}
+// 								}
 							
 							
 							sequence.clear();
@@ -1269,6 +1314,7 @@ int main(int argc, char* argv[]) {
 				
 				// reading frames for each k-mer
 				if (sequence.length()>=3*kmer) {
+					// translate reverse complement
 					for (uint64_t p=0;p<(sequence.length()-(3*kmer)+1); p++){
 						if (!graph::isAllowedChar(p,sequence)){
 							continue;
@@ -1290,6 +1336,50 @@ int main(int argc, char* argv[]) {
 						}
 					}
 				}
+// 				// reading frames for the complete sequence
+// 				uint64_t min_stops=-1;
+// 				int frame=0;
+// 				if (sequence.length()>=3*kmer) {
+// 					//reverse complement
+// 					string seq_rc = reverseComplement(sequence);
+// 					// translate reverse complement
+// 					for (uint64_t p=0;p<3; p++){
+// 						string seq_p = sequence.substr(p,sequence.length() - (sequence.length() % 3)+p);
+// 						string seq_rc_p = seq_rc.substr(p,seq_rc.length() - (seq_rc.length() % 3)+p);
+// 						//translate
+// 						string seq_p_tr = translator::translate(seq_p);
+// 						string seq_rc_p_tr = translator::translate(seq_rc_p);
+// 						//  get substring between Stop codons
+// 						int lastPos = 0; // position of the last occurrence of '*'
+// 						// Loop through the string to find occurrences of C
+// 						for (size_t i = 0; i < seq_p_tr.length(); ++i) {
+// 							if (seq_p_tr[i] == '*') {
+// 								// Extract substring between the previous and current occurrence of C.
+// 								int start = lastPos + 1;
+// 								int len = i - start;
+// 								if (len > 300) {  // Only output if the substring is longer than T
+//  									cout << "." << p << "\t" << len << endl;
+// 									tmp=seq_p_tr.substr(start, len);
+// 									graph::add_kmers(T, tmp , genome_ids[i], reverse);
+// 								}
+// 								lastPos = i;
+// 							}
+// 						}
+// 						for (size_t i = 0; i < seq_rc_p_tr.length(); ++i) {
+// 							if (seq_rc_p_tr[i] == '*') {
+// 								// Extract substring between the previous and current occurrence of C.
+// 								int start = lastPos + 1;
+// 								int len = i - start;
+// 								if (len > 300) {  // Only output if the substring is longer than T
+//  									cout << "." << "-" << p << "\t" << len << endl;
+// 									tmp= seq_rc_p_tr.substr(start, len);
+// 									graph::add_kmers(T,tmp, genome_ids[i], reverse);
+// 								}
+// 								lastPos = i;
+// 							}
+// 						}
+// 					}
+// 				}
 
 				sequence.clear();
 
