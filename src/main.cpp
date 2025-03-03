@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -R, --raw  \t Output both counts per split in TSV file" << endl;
         cout << endl;
-        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, or --core must be provided)" << endl;
+        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, --core, or --raw must be provided)" << endl;
         cout << endl;
         cout << "  Optional arguments:" << endl;
         cout << endl;
@@ -623,8 +623,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name>" << endl;
+    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted) {
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name>" << endl;
         return 1;
     }
 	if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && !core.empty()) {
@@ -1389,7 +1389,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 	
 
 	// if only core-kmers are asked for, no further processing necessary
-	if (!output.empty() || !newick.empty() || !nexus.empty() || !pdf.empty() || !svg.empty()){ 
+	if (!output.empty() || !newick.empty() || !nexus.empty() || !pdf.empty() || !svg.empty() || raw_wanted){ 
 	
 		/*
 		* [graph processing]
@@ -1573,8 +1573,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			cout << "Writing output..." << endl << flush;
 		}
 
-		ofstream file(output);    // output file stream
+		ofstream file;    // output file stream
 		ostream stream(file.rdbuf());
+		if (!output.empty()){
+			file.open(output);
+		}
 
 		ofstream file_bootstrap;
 		ostream stream_bootstrap(file_bootstrap.rdbuf());
@@ -1585,8 +1588,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		ofstream file_nexus; // output for nexus file
 		ostream stream_nexus(file_nexus.rdbuf());
 
-		ofstream file_raw(raw);    // output for raw counts
+		ofstream file_raw;    // output for raw counts
 		ostream stream_raw(file_raw.rdbuf());
+		if(!raw.empty()){
+			file_raw.open(raw);
+		}
 		
 		if(nexus_wanted || pdf_wanted || svg_wanted){
 			if(nexus.empty()){ // temporarily name nexus file to create pdf with it
@@ -1631,7 +1637,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			double weight = split.first;
 			split_color = split.second;
 		// cleanliness.setSmallestWeight(weight, split.second);
-			stream << weight;    // weight of the split
+			if (!output.empty()){
+				stream << weight;    // weight of the split
+			}
 			if (bootstrap_no>0) {
 				stream_bootstrap << ((1.0 * support_values[split.second]) / bootstrap_no);
 				// stream_bootstrap << support_values[split.second];
@@ -1644,7 +1652,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
 				if (split_color.test(pos)) {
 					if (i < denom_names.size()) {
-						stream << '\t' << denom_names[i]; // name of the file
+						if (!output.empty()){
+							stream << '\t' << denom_names[i]; // name of the file
+						}
 						if (bootstrap_no > 0) {
 							stream_bootstrap << '\t' << denom_names[i]; // name of the file
 						}
@@ -1671,8 +1681,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t" << weight << "\t" << split_comp << ",";
 				}
 			}
-
-			stream << endl;
+			if (!output.empty()){
+				stream << endl;
+			}
 			if(bootstrap_no>0){
 				stream_bootstrap<<endl;
 			}
@@ -1691,7 +1702,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
 		//cleanliness.calculateWeightBeforeCounter();
 
-		file.close();
+		if (!output.empty()){
+			file.close();
+		}
 		if(bootstrap_no>0){
 			file_bootstrap.close();
 		}
