@@ -9,7 +9,7 @@
 * Output: phylogenetic splits or tree
 * Features: abundance-filter, bootstrapping, multi-threading, labeled PDF and Nexus output
 
-<img src="clowm.svg" style="border:0;" alt="CloWM icon" width="32" height="32"/>  **NEW**: Launch SANS on [CloWM](https://clowm.bi.denbi.de) (just using your [LifeScience](https://lifescience-ri.eu/) account).
+<img src="clowm.svg" style="border:0;" alt="CloWM icon" width="32" height="32"/>  **NEW**: Launch SANS on [CloWM](https://clowm.bi.denbi.de/workflows/0194b78f-9696-7402-a2b8-858508733618/) (just using your [LifeScience](https://lifescience-ri.eu/) account).
 
 
 ### Dos and Don'ts
