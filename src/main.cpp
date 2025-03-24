@@ -500,7 +500,7 @@ int main(int argc, char* argv[]) {
             }
         }
         // bootsrapping
-        else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--bootstrapping") == 0) {
+        else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--bootstrapping") == 0 || strcmp(argv[i], "--bootstrap") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             catch_failed_stoi_cast(argv[i + 1], argv[i]);
             bootstrap_no = stoi(argv[++i]);
