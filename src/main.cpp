@@ -1080,7 +1080,7 @@ int main(int argc, char* argv[]) {
         }
  
         string sequence;    // read in the sequence files and extract the k-mers
-		char c_name[(blacklistfile).length()]; // Create char array for c compatibilty
+		char c_name[(blacklistfile).length()+1]; // Create char array for c compatibilty
 		strcpy(c_name, (blacklistfile).c_str()); // Transcire to char array
 
 		igzstream file(c_name, ios::in);    // input file stream
@@ -1198,7 +1198,7 @@ int main(int argc, char* argv[]) {
 					file_name=folder+file_name;
 				}
 
-				char c_name[(file_name).length()]; // Create char array for c compatibilty
+				char c_name[(file_name).length()+1]; // Create char array for c compatibilty
 				strcpy(c_name, (file_name).c_str()); // Transcire to char array
 
 				igzstream file(c_name, ios::in);    // input file stream
