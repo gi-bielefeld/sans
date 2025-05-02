@@ -1540,12 +1540,15 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 				// filter original splits by bootstrap value
 				// compose a corresponding split list
 				multimap_<double, color_t> split_list_conf;
+				int max_weight = -1;
 				for (auto& it : graph::split_list){
-					double conf=(1.0*support_values[it.second])/bootstrap_no;
+					int weight = it.first;
 					color_t colors = it.second;
+					if (max_weight == -1){ max_weight = weight; }
+					double conf=(1.0*support_values[it.second]*max_weight)+weight;
 					graph::add_split(conf,colors,split_list_conf);
-	// 				split_list_conf.emplace(conf,it.second);
 				}
+
 				//filter
 	// 			apply_filter(consensus_filter,newick, map, split_list_conf,verbose);
 				apply_filter(consensus_filter,newick, map, split_list_conf,&support_values,bootstrap_no,verbose);
