@@ -66,7 +66,9 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -r, --core  \t Output core k-mers in fasta file" << endl;
         cout << endl;
-        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, or --core must be provided)" << endl;
+        cout << "    -R, --raw  \t Output both counts per split in TSV file" << endl;
+        cout << endl;
+        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, --core, or --raw must be provided)" << endl;
         cout << endl;
         cout << "  Optional arguments:" << endl;
         cout << endl;
@@ -163,6 +165,7 @@ int main(int argc, char* argv[]) {
     string pdf;     // name of PDF output file
     string svg;     // name of SVG output file
     string core;     // name of file for core k-mers
+    string raw;  // name of file for raw count output
     string groups; // name of input file giving groups
     string coloring; // name of input file for using specified color
     string translate; // name of translate file
@@ -204,6 +207,7 @@ int main(int argc, char* argv[]) {
     string consensus_filter; // filter function for filtering after bootstrapping
 	uint32_t bootstrap_no=0; // = no bootstrapping
 	float bootstrap_threshold=0; // threshold to filter low support splits
+	hash_map<color_t, uint32_t> support_values; // hash_map for each original split with zero counts
 
     // qol
     bool verbose = false;    // print messages during execution
@@ -214,6 +218,7 @@ int main(int argc, char* argv[]) {
     bool c_nexus_wanted = false;
     bool pdf_wanted = false;
     bool svg_wanted = false;
+	bool raw_wanted = false;
 	
 	/**
 	* Look-up set for k-mers that are ignored, i.e., not stored, counted etc.
@@ -310,6 +315,15 @@ int main(int argc, char* argv[]) {
             core = argv[++i];    // fasta output file for core k-mers
             if (!util::path_exist(core)){
                 cerr << "Error: output folder does not exist: "<< core << endl;
+                return 1;
+            }
+        }
+        else if (strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "--raw") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            raw = argv[++i];    // tsv output file for raw counts
+            raw_wanted = true;
+            if (!util::path_exist(raw)){
+                cerr << "Error: output folder does not exist: "<< raw << endl;
                 return 1;
             }
         }
@@ -486,7 +500,7 @@ int main(int argc, char* argv[]) {
             }
         }
         // bootsrapping
-        else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--bootstrapping") == 0) {
+        else if (strcmp(argv[i], "-b") == 0 || strcmp(argv[i], "--bootstrapping") == 0 || strcmp(argv[i], "--bootstrap") == 0) {
             catch_missing_dependent_args(argv[i + 1], argv[i]);
             catch_failed_stoi_cast(argv[i + 1], argv[i]);
             bootstrap_no = stoi(argv[++i]);
@@ -610,8 +624,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name>" << endl;
+    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted) {
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name>" << endl;
         return 1;
     }
 	if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && !core.empty()) {
@@ -1067,7 +1081,7 @@ int main(int argc, char* argv[]) {
         }
  
         string sequence;    // read in the sequence files and extract the k-mers
-		char c_name[(blacklistfile).length()]; // Create char array for c compatibilty
+		char c_name[(blacklistfile).length()+1]; // Create char array for c compatibilty
 		strcpy(c_name, (blacklistfile).c_str()); // Transcire to char array
 
 		igzstream file(c_name, ios::in);    // input file stream
@@ -1185,7 +1199,7 @@ int main(int argc, char* argv[]) {
 					file_name=folder+file_name;
 				}
 
-				char c_name[(file_name).length()]; // Create char array for c compatibilty
+				char c_name[(file_name).length()+1]; // Create char array for c compatibilty
 				strcpy(c_name, (file_name).c_str()); // Transcire to char array
 
 				igzstream file(c_name, ios::in);    // input file stream
@@ -1376,7 +1390,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 	
 
 	// if only core-kmers are asked for, no further processing necessary
-	if (!output.empty() || !newick.empty() || !nexus.empty() || !pdf.empty() || !svg.empty()){ 
+	if (!output.empty() || !newick.empty() || !nexus.empty() || !pdf.empty() || !svg.empty() || raw_wanted){ 
 	
 		/*
 		* [graph processing]
@@ -1407,11 +1421,14 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		}
 
 
+		
+		
 
 		/* [split processing]
 		* - compute the splits
 		*/ 
 
+	
 		if (verbose) {
 			cout << "Compile split list..."  << flush;
 		}
@@ -1426,8 +1443,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		* [bootstrap handling]
 		*/
 
-		// for bootstrapping: hash_map for each original split with zero counts
-		hash_map<color_t, uint32_t> support_values;
+
 		if(bootstrap_no==0){ // if bootstrapping -> no initial filtering
 			
 			// NO BOOTSTRAPPING
@@ -1525,12 +1541,15 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 				// filter original splits by bootstrap value
 				// compose a corresponding split list
 				multimap_<double, color_t> split_list_conf;
+				int max_weight = -1;
 				for (auto& it : graph::split_list){
-					double conf=(1.0*support_values[it.second])/bootstrap_no;
+					int weight = it.first;
 					color_t colors = it.second;
+					if (max_weight == -1){ max_weight = weight; }
+					double conf=(1.0*support_values[it.second]*max_weight)+weight;
 					graph::add_split(conf,colors,split_list_conf);
-	// 				split_list_conf.emplace(conf,it.second);
 				}
+
 				//filter
 	// 			apply_filter(consensus_filter,newick, map, split_list_conf,verbose);
 				apply_filter(consensus_filter,newick, map, split_list_conf,&support_values,bootstrap_no,verbose);
@@ -1558,8 +1577,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			cout << "Writing output..." << endl << flush;
 		}
 
-		ofstream file(output);    // output file stream
+		ofstream file;    // output file stream
 		ostream stream(file.rdbuf());
+		if (!output.empty()){
+			file.open(output);
+		}
 
 		ofstream file_bootstrap;
 		ostream stream_bootstrap(file_bootstrap.rdbuf());
@@ -1570,6 +1592,12 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		ofstream file_nexus; // output for nexus file
 		ostream stream_nexus(file_nexus.rdbuf());
 
+		ofstream file_raw;    // output for raw counts
+		ostream stream_raw(file_raw.rdbuf());
+		if(!raw.empty()){
+			file_raw.open(raw);
+		}
+		
 		if(nexus_wanted || pdf_wanted || svg_wanted){
 			if(nexus.empty()){ // temporarily name nexus file to create pdf with it
 				if (!pdf.empty()){
@@ -1613,18 +1641,29 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			double weight = split.first;
 			split_color = split.second;
 		// cleanliness.setSmallestWeight(weight, split.second);
-			stream << weight;    // weight of the split
+			if (!output.empty()){
+				stream << weight;    // weight of the split
+			}
 			if (bootstrap_no>0) {
 				stream_bootstrap << ((1.0 * support_values[split.second]) / bootstrap_no);
 				// stream_bootstrap << support_values[split.second];
+			}
+			if (raw_wanted){
+				array<uint32_t,2> weights = graph::color_table[split_color];
+				stream_raw << weights[0] << '\t' << weights[1];
 			}
 			for (uint64_t i = 0; i < num; ++i) {
 
 				if (split_color.test(pos)) {
 					if (i < denom_names.size()) {
-						stream << '\t' << denom_names[i]; // name of the file
+						if (!output.empty()){
+							stream << '\t' << denom_names[i]; // name of the file
+						}
 						if (bootstrap_no > 0) {
 							stream_bootstrap << '\t' << denom_names[i]; // name of the file
+						}
+						if (raw_wanted){
+							stream_raw << '\t' << denom_names[i];
 						}
 
 						if(nexus_wanted || pdf_wanted || svg_wanted){ // nexus
@@ -1646,10 +1685,14 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t" << weight << "\t" << split_comp << ",";
 				}
 			}
-
-			stream << endl;
+			if (!output.empty()){
+				stream << endl;
+			}
 			if(bootstrap_no>0){
 				stream_bootstrap<<endl;
+			}
+			if(raw_wanted){
+				stream_raw<<endl;
 			}
 		}
 
@@ -1663,9 +1706,14 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
 		//cleanliness.calculateWeightBeforeCounter();
 
-		file.close();
+		if (!output.empty()){
+			file.close();
+		}
 		if(bootstrap_no>0){
 			file_bootstrap.close();
+		}
+		if(raw_wanted){
+			file_raw.close();
 		}
 		if(nexus_wanted || pdf_wanted || svg_wanted){
 			file_nexus.close();
@@ -1694,6 +1742,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			}
 		}
 	}
+
 
 // time measurement
     if (verbose) {

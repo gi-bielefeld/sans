@@ -1,4 +1,4 @@
-# SANS ambages
+# SANS ambages <img src="SANS-logo_100.png" style="border:0;" alt="SANS icon" align="right"/>
 
 **Symmetric Alignment-free phylogeNomic Splits**  
 ***--- phylogenomics with Abundance-filter, Multi-threading and Bootstrapping on Amino-acid or GEnomic Sequences***
@@ -7,12 +7,10 @@
 * Alignment-free
 * Input: assembled genomes / reads, or coding sequences / amino acid sequences
 * Output: phylogenetic splits or tree
-* **NEW:** Abundance-filter
-* **NEW:** Bootstrapping
-* **NEW:** Multi-threading
-* **NEW:** Labeled PDF and Nexus output
-* **NEW:** Better performance by handling singleton k-mers separately
-* **NEW:** Output core k-mers
+* Features: abundance-filter, bootstrapping, multi-threading, labeled PDF and Nexus output
+
+<img src="clowm.svg" style="border:0;" alt="CloWM icon" width="32" height="32"/>  **NEW**: Launch SANS on [CloWM](https://clowm.bi.denbi.de/workflows/0194b78f-9696-7402-a2b8-858508733618/) (just using your [LifeScience](https://lifescience-ri.eu/) account).
+
 
 ### Dos and Don'ts
 
