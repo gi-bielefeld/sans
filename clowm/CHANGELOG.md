@@ -1,5 +1,11 @@
 # SANS Changelog
 
+## v1.0.5 [2025-05-02]
+
+### Fixed
+
+- break ties in consensus filtering by original split weight
+- fix uninitialised variable
 
 
 ## v1.0.4 [2025-02-11]
