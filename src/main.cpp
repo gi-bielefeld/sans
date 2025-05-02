@@ -1609,7 +1609,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			file_nexus.open(nexus);
 			// nexus format stuff
 			stream_nexus << "#nexus\n\nBEGIN Taxa;\nDIMENSIONS ntax=" << denom_file_count << ";\nTAXLABELS" ;
-			for(int i; i < denom_file_count; ++i){
+			for(int i = 0; i < denom_file_count; ++i){
 				string taxa = nexus_color::remove_extensions(denom_names[i]); // cutting off file extension
 				stream_nexus << "\n[" << i+1 << "] '" << taxa << "'";
 			}
