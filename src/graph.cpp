@@ -1734,7 +1734,7 @@ loop:
  * @param split_list list of splits to be filtered
  * @param verbose print progress
  */
-void graph::filter_planar(multimap_<double, color_t>& split_list, bool& verbose) {
+void graph::filter_planar(multimap_<double, color_t>& split_list, bool& verbose, uint64_t& num) {
 
     auto it = split_list.begin();
     color_t split_copy;
@@ -1744,7 +1744,7 @@ void graph::filter_planar(multimap_<double, color_t>& split_list, bool& verbose)
 
     // construct PC-Tree with maxN nodes
     vector<pc_tree::PCNode*> leaves; 
-	pc_tree::PCTree tree(maxN, &leaves);
+	pc_tree::PCTree tree(num, &leaves);
 
    
 loop:

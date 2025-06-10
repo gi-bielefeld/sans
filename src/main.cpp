@@ -1434,7 +1434,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			if(verbose){
 				cout << "Filtering splits..." << flush;
 			}
-			apply_filter(filter,newick, map, graph::split_list,verbose);
+			apply_filter(filter,newick, map, graph::split_list,verbose, num);
 			if (verbose) {
 				end = chrono::high_resolution_clock::now();
 				cout << "\33[2K\r" << "Filtering splits... (" << util::format_time(end - begin) << ")" << endl;
@@ -1479,7 +1479,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 					
 					// create bootstrap replicate
 					multimap_<double, color_t>  split_list_bs = graph::bootstrap(mean);
-					apply_filter(filter,"", map, split_list_bs,verbose);
+					apply_filter(filter,"", map, split_list_bs,verbose, num);
 					
 					// count conserved splits
 					lambda_bootstrap_count(split_list_bs, support_values);
@@ -1519,7 +1519,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
 			if(consensus_filter.empty()) {
 				// filter original splits by weight
-				apply_filter(filter,newick, map, graph::split_list,&support_values,bootstrap_no,verbose);
+				apply_filter(filter,newick, map, graph::split_list,&support_values,bootstrap_no,verbose, num);
 			}else{
 				// filter original splits by bootstrap value
 				// compose a corresponding split list
@@ -1532,7 +1532,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 				}
 				//filter
 	// 			apply_filter(consensus_filter,newick, map, split_list_conf,verbose);
-				apply_filter(consensus_filter,newick, map, split_list_conf,&support_values,bootstrap_no,verbose);
+				apply_filter(consensus_filter,newick, map, split_list_conf,&support_values,bootstrap_no,verbose, num);
 
 				//apply result to original split list
 				graph::split_list.clear();
@@ -1717,11 +1717,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
  * @param verbose print progress
  * 
  */
-void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, bool verbose){
-	apply_filter(filter, newick, map, split_list, nullptr, 0, verbose);
+void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, bool verbose, uint64_t& num){
+	apply_filter(filter, newick, map, split_list, nullptr, 0, verbose, num);
 }
 
-void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool verbose){
+void apply_filter(string filter, string newick, std::function<string(const uint64_t&)> map, multimap_<double, color_t>& split_list, hash_map<color_t, uint32_t>* support_values, const uint32_t& bootstrap_no, bool verbose, uint64_t& num){
 
 		if (!filter.empty()) {    // apply filter
 
@@ -1739,7 +1739,7 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 				graph::filter_weakly(split_list, verbose);
 			}
             else if (filter == "planar") {
-                graph::filter_planar(split_list, verbose);
+                graph::filter_planar(split_list, verbose, num);
             }
 			else if (filter.find("tree") != -1 && filter.substr(filter.find("tree")) == "tree") {
 				if (!newick.empty()) {
