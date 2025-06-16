@@ -461,7 +461,7 @@ public:
      * @param split_list list of splits to be filtered
      * @param verbose print progress
      */
-    static void filter_planar(multimap_<double, color_t>& split_list, bool& verbose);
+    static void filter_planar(multimap_<double, color_t>& split_list, bool& verbose, uint64_t& num);
 
 
     /**
