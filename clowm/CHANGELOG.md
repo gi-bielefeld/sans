@@ -1,5 +1,12 @@
 # SANS Changelog
 
+## v1.0.6 [2025-06-16]
+
+### Fixed
+
+- number of taxa in planar filter handled properly now
+
+
 ## v1.0.5 [2025-05-02]
 
 ### Fixed
