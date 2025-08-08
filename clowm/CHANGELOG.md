@@ -1,5 +1,11 @@
 # SANS Changelog
 
+## v1.0.7 [2025-08-08]
+
+### Changed
+
+- overview table on Usage page
+
 ## v1.0.6 [2025-06-16]
 
 ### Fixed
