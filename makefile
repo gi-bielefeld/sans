@@ -1,5 +1,5 @@
 # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=13 -std=c++17
+CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=100 -std=c++17
 XX = -lpthread -lz
 
 ## IF DEBUG
