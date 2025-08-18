@@ -77,6 +77,12 @@ vector<hash_map<kmerAmino_t, uint16_t>> graph::singleton_kmer_tableAmino;
 uint64_t graph::singleton_counters[maxN];
 spinlock graph::singleton_counters_locks[maxN];
 
+/**
+ * Count unique kmers per genome
+ */
+uint64_t graph::kmer_counters[maxN];
+
+
 
 /**
  * This is a hash set used to filter k-mers for coverage (q > 1).
@@ -474,14 +480,20 @@ void graph::hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 {
     lock[bin].lock();
 	hash_map<kmer_t,color_t>::iterator entry=kmer_table[bin].find(kmer); 
-	// already in the kmer table? -> add
+	// already in the kmer table?
 	if(entry != kmer_table[bin].end()){
-		entry.value().set(color);
+        // check if not seen in this genome before, i.e., count a new (unique) kmer
+         if(!entry.value().test(color)){
+            // add
+            entry.value().set(color);
+            // count
+            kmer_counters[color]++;
+         }
 	}
 	// not yet in the kmer table?
 	else{
-		hash_map<kmer_t,uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
- 		//seen once before? -> add to kmer table / remove from singleton table
+        hash_map<kmer_t,uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
+		//seen once before? -> add to kmer table / remove from singleton table
 		if(s_entry != singleton_kmer_table[bin].end()){
 			if(s_entry.value() != color){
 				kmer_table[bin][kmer].set(s_entry.value());
@@ -490,6 +502,8 @@ void graph::hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 				singleton_counters[s_entry.value()]--;
 				singleton_counters_locks[s_entry.value()].unlock();
 				singleton_kmer_table[bin].erase(s_entry);
+                // count
+                kmer_counters[color]++;
 			}
 		}
 		// not seen before -> add to singleton_table
@@ -498,6 +512,8 @@ void graph::hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 			singleton_counters_locks[color].lock();
 			singleton_counters[color]++;
 			singleton_counters_locks[color].unlock();
+            // count
+            kmer_counters[color]++;
 		}
 	}
     lock[bin].unlock();
@@ -516,12 +532,20 @@ void graph::hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const u
 	hash_map<kmerAmino_t,color_t>::iterator entry=kmer_tableAmino[bin].find(kmer); 
 	// already in the kmer table? -> add
 	if(entry != kmer_tableAmino[bin].end()){
-		entry.value().set(color);
+        // check if not seen in this genome before, i.e., count a new (unique) kmer
+        if(!entry.value().test(color)){
+            // add
+            entry.value().set(color);
+            // count
+            kmer_counters[color]++;
+        }
 	}
 	// not yet in the kmer table?
 	else{
+        // count
+        kmer_counters[color]++;
 		hash_map<kmerAmino_t,uint16_t>::iterator s_entry = singleton_kmer_tableAmino[bin].find(kmer);
- 		//seen once before? -> add to kmer table / remove from singleton table
+		//seen once before? -> add to kmer table / remove from singleton table
 		if(s_entry != singleton_kmer_tableAmino[bin].end()){
 			if(s_entry.value() != color){
 				kmer_tableAmino[bin][kmer].set(s_entry.value());
@@ -1562,6 +1586,27 @@ uint64_t graph::number_singleton_kmers(){
 	for (uint16_t g=0;g<maxN-1;g++){num += singleton_counters[g];}
 	return num;
 }
+
+
+/**
+ * Get the number of singleton k-mers in a given genome.
+ * @param genome the id (rf. denom_names) of the genome
+ * @return number of singleton k-mers read in that genome.
+ */
+uint64_t graph::number_singleton_kmers(uint16_t& genome){
+	return singleton_counters[genome];
+}
+
+
+/**
+ * Get the number of unique k-mers in a given genome.
+ * @param genome the id (rf. denom_names) of the genome
+ * @return number of unique k-mers read in that genome.
+ */
+uint64_t graph::number_kmers(uint16_t& genome){
+	return kmer_counters[genome];
+}
+
 
 
 

@@ -68,7 +68,9 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -R, --raw  \t Output both counts per split in TSV file" << endl;
         cout << endl;
-        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, --core, or --raw must be provided)" << endl;
+        cout << "    -A, --stats  \t Output counts of all (unique) and singleton k-mers per genome in TSV file" << endl;
+        cout << endl;
+        cout << "    (at least --output, --newick, --nexus, --pdf, --svg, --core, --raw, or --stats must be provided)" << endl;
         cout << endl;
         cout << "  Optional arguments:" << endl;
         cout << endl;
@@ -166,6 +168,7 @@ int main(int argc, char* argv[]) {
     string svg;     // name of SVG output file
     string core;     // name of file for core k-mers
     string raw;  // name of file for raw count output
+    string stats;  // name of file for kmer count output
     string groups; // name of input file giving groups
     string coloring; // name of input file for using specified color
     string translate; // name of translate file
@@ -324,6 +327,14 @@ int main(int argc, char* argv[]) {
             raw_wanted = true;
             if (!util::path_exist(raw)){
                 cerr << "Error: output folder does not exist: "<< raw << endl;
+                return 1;
+            }
+        }
+        else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--stats") == 0) {
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            stats = argv[++i];
+            if (!util::path_exist(stats)){
+                cerr << "Error: output folder does not exist: "<< stats << endl;
                 return 1;
             }
         }
@@ -623,13 +634,18 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name>" << endl;
+    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted && stats.empty()) {
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name> or --stats <file_name>" << endl;
         return 1;
     }
 	if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && !core.empty()) {
 		if(!filter.empty() || !consensus_filter.empty() || bootstrap_no>0 || mean != util::geometric_mean2 || top!=-1 ){
 			cerr << "Warning: No output option for a phylogeny given. Only core k-mers are computed. Some given arguments only make sense for phylogeny construction and are redundant." << endl;
+		}
+    }
+	if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && !stats.empty()) {
+		if(!filter.empty() || !consensus_filter.empty() || bootstrap_no>0 || mean != util::geometric_mean2 || top!=-1 ){
+			cerr << "Warning: No output option for a phylogeny given. Only k-mers are counted. Some given arguments only make sense for phylogeny construction and are redundant." << endl;
 		}
     }
 	if (!core.empty() && !splits.empty()) {
@@ -1353,6 +1369,36 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		cout << " (" << s << " / "<< (100*s/all) <<"% singleton k-mers)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
 	}
 
+    // write kmer statistics
+	if(!stats.empty() & ((!input.empty() && splits.empty()) || !graph.empty())){
+
+        if(verbose){
+            cout << "Writing k-mer stats..." << flush;
+        }
+        
+        //open file
+        ofstream file_stats;
+		ostream stream_stats(file_stats.rdbuf());
+		if(!stats.empty()){
+			file_stats.open(stats);
+		}
+		
+		//iterare genomes
+        for(uint16_t i = 0; i < denom_file_count; ++i){
+                uint64_t a=graph::number_kmers(i);
+                uint64_t s=graph::number_singleton_kmers(i);
+				stream_stats << denom_names[i] << "\t" << a << "\t" << s << "\t" << (100*s/a) << "%" << endl;
+        }
+		
+		file_stats.close();
+        
+        if(verbose){
+ 			end = chrono::high_resolution_clock::now();
+			cout << "\33[2K\r" << "Writing k-mer stats... (" << util::format_time(end - begin) << ")" << endl;
+        }
+
+    }
+    
 	///DEBUGING////
 	// 	cout << "\nname_table:" << endl;
 	// 	 for (const auto& pair : name_table) {

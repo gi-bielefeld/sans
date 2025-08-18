@@ -161,7 +161,11 @@ private:
 	static uint64_t singleton_counters[];
 	static spinlock singleton_counters_locks[];
 
-	
+	/**
+     * Count unique kmers per genome
+     */
+    static uint64_t kmer_counters[];
+
 	
     /**
      * This is a hash map used to filter k-mers for coverage (q > 2).
@@ -381,6 +385,25 @@ public:
 	* @return number of k-mers in all singleton tables.
 	*/
 	static uint64_t number_singleton_kmers();
+    
+    
+    /**
+    * Get the number of singleton k-mers in a given genome.
+    * @param genome the id (rf. denom_names) of the genome
+    * @return number of singleton k-mers read in that genome.
+    */
+    static uint64_t number_singleton_kmers(uint16_t& genome);
+    
+
+
+    /**
+    * Get the number of unique k-mers in a given genome.
+    * @param genome the id (rf. denom_names) of the genome
+    * @return number of unique k-mers read in that genome.
+    */
+    static uint64_t number_kmers(uint16_t& genome);
+
+
 
 	/**
      * This function iterates over the hash table and calculates the split weights.
