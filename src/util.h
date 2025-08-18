@@ -10,7 +10,32 @@
 #include <vector>
 #include <regex>
 #include <sys/stat.h>
+#include <iostream>
+#include <mutex>
 
+// Wrapper class for thread-safe output
+struct SafeCout {
+    std::mutex m;
+
+    template <typename T>
+    SafeCout& operator<<(const T& value) {
+        std::lock_guard<std::mutex> lock(m);
+        std::cout << value;
+        return *this;
+    }
+
+    SafeCout& operator<<(std::ostream& (*manip)(std::ostream&)) {
+        std::lock_guard<std::mutex> lock(m);
+        std::cout << manip;
+        return *this;
+    }
+};
+
+// Global object
+inline SafeCout safe_cout;
+
+// Redirect all "cout" references
+#define cout safe_cout
 
 using namespace std;
 
