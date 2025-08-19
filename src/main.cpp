@@ -1192,6 +1192,7 @@ int main(int argc, char* argv[]) {
         auto lambda = [&] (uint64_t T, vector<uint16_t> genome_ids, vector<uint16_t> file_ids){ // This lambda expression wraps the sequence-kmer hashing
             string sequence;    // read in the sequence files and extract the k-mers
             uint64_t i = index_lambda();
+             std::stringstream ss;
             while (i < genome_ids.size()) {
 				string file_name = gen_files[genome_ids[i]][file_ids[i]]; // the filenames corresponding to the target  
 				if(file_name[0]!='/'){ //no absolute path?
@@ -1205,15 +1206,17 @@ int main(int argc, char* argv[]) {
 				if (verbose) {     // print progress
 // 					cout << "\33[2K\r" << file_name;
 					if (q_table.size()>0) {
-						cout <<" q="<<q_table[genome_ids[i]];
+						ss << " q=" << q_table[genome_ids[i]];
 					}
-					cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
+                    ss << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
 					if(genome_ids.size()>gen_files.size()){
-						cout << "; file " << i+1 << "/" << genome_ids.size();
+                        ss << "; file " << i+1 << "/" << genome_ids.size();
 					}
-					cout << ")" << endl;
+					ss << ")" << endl;
+                    cout << ss.str();                    
 				}
 				count::deleteCount();
+
 
 				string appendixChars; 
 				string line;    // read the file line by line
@@ -1349,8 +1352,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		uint64_t s=graph::number_singleton_kmers();
 		uint64_t all=s+graph::number_kmers();
 		end = chrono::high_resolution_clock::now(); 
-		cout << all << " k-mers read." << flush;
-		cout << " (" << s << " / "<< (100*s/all) <<"% singleton k-mers)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
+		cout << all << " k-mers read." << " (" << s << " / "<< (100*s/all) <<"% singleton k-mers)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
 	}
 
 	///DEBUGING////
