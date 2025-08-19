@@ -2,6 +2,38 @@
 
 
 /**
+ * Compute mean of all values in the given array
+ * 
+ * @param values Array of values
+ * @param n lenght of array
+ * @return double mean
+ */
+double util::mean(const uint64_t* values, int n) {
+    long double sum = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        sum += static_cast<long double>(values[i]);
+    }
+    return static_cast<double>(sum / n);
+}
+
+/**
+ * Compute standard deviation of all values in the given array
+ * 
+ * @param values Array of values
+ * @param n lenght of array
+ * @return standard deviation mean
+ */
+double util::stdev(const uint64_t* values, int n) {
+    double mu = mean(values, n);
+    long double sq_sum = 0.0;
+    for (std::size_t i = 0; i < n; ++i) {
+        long double diff = static_cast<long double>(values[i]) - mu;
+        sq_sum += diff * diff;
+    }
+    return static_cast<double>(std::sqrt(sq_sum / n));
+}
+
+/**
  * This function compares the number of input genomes (n) to the compile parameter DmaxN (maxN).
  * Exits (code 3) if they disagree (too much) and a re-compilation is necessary (n>maxN) or recommended (n much smaller maxN).
  *

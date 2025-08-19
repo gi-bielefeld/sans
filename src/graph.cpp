@@ -1316,6 +1316,20 @@ uint64_t graph::number_kmers(uint16_t& genome){
 }
 
 
+/**
+ * @return mean value of number of k-mers per genome
+ */
+double graph::mean_number_kmers(){
+    return util::mean(kmer_counters,maxN);
+}
+
+/**
+ * @return standard deviation of number of k-mers per genome
+ */
+double graph::stdev_number_kmers(){
+    return util::stdev(kmer_counters,maxN);
+}
+
 
 
 

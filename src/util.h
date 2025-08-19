@@ -21,6 +21,26 @@ class util {
 private:
 
 public:
+    
+    /**
+     * Compute mean of all values in the given array
+     * 
+     * @param values Array of values
+     * @param n lenght of array
+     * @return double mean
+     */
+    static double mean(const uint64_t* values, int n);
+
+    /**
+     * Compute standard deviation of all values in the given array
+     * 
+     * @param values Array of values
+     * @param n lenght of array
+     * @return standard deviation mean
+     */
+     static double stdev(const uint64_t* values, int n);
+
+
 
     /**
 	* This function compares the number of input genomes (n) to the compile parameter DmaxN (maxN).
