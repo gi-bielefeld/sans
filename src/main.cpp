@@ -1372,8 +1372,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		uint64_t s=graph::number_singleton_kmers();
 		uint64_t all=s+graph::number_kmers();
 		end = chrono::high_resolution_clock::now(); 
-		cout << all << " k-mers read." << flush;
-		cout << " (" << s << " / "<< (100*s/all) <<"% singleton k-mers)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
+		cout << all << " k-mers read." << " (" << s << " / "<< (100*s/all) <<"% singleton k-mers)" << " (" << util::format_time(end - begin) << ")" << endl << flush;
 	}
 
     // write kmer statistics
