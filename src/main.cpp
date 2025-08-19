@@ -570,10 +570,10 @@ int main(int argc, char* argv[]) {
 
     if (verbose){cout << "Checking for updates" << endl;}
     bool version_checked = false;
-    if (!system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/master/src/main.h | grep -q SANS_VERSION")){
+    if (!system("wget --timeout=1 --tries=1 -qO- https://github.com/gi-bielefeld/sans/raw/master/src/main.h | grep -q SANS_VERSION")){
         version_checked = true;
-        if (system("wget --timeout=1 --tries=1 -qO- https://gitlab.ub.uni-bielefeld.de/gi/sans/raw/master/src/main.h | grep -q " SANS_VERSION)) {
-        cout << "NEW VERSION AVAILABLE: https://gitlab.ub.uni-bielefeld.de/gi/sans" << endl;
+        if (system("wget --timeout=1 --tries=1 -qO- https://github.com/gi-bielefeld/sans/raw/master/src/main.h | grep -q " SANS_VERSION)) {
+        cout << "NEW VERSION AVAILABLE: https://github.com/gi-bielefeld/sans" << endl;
         }
         else if(verbose){cout << "Version up to date" << endl;}
     }
