@@ -1083,7 +1083,12 @@ int main(int argc, char* argv[]) {
     kmer::init(kmer);      // initialize the k-mer length
     kmerAmino::init(kmer); // initialize the k-mer length
     color::init(num);    // initialize the color number
-    graph::init(top, amino, q_table, quality, blacklist, blacklist_amino, threads); // initialize the toplist size and the allowed characters
+    if(stats.empty()){
+        graph::init_noCount(top, amino, q_table, quality, blacklist, blacklist_amino, threads); // initialize the toplist size and the allowed characters
+    }else{
+        graph::init_count(top, amino, q_table, quality, blacklist, blacklist_amino, threads); // initialize the toplist size and the allowed characters
+    }
+        
 
 	
 	/**

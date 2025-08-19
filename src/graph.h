@@ -48,7 +48,8 @@ template <typename K, typename V>
 
 
 #include "color.h"
-
+  
+#pragma once
 
 /**
  * A tree structure that is needed for generating a NEWICK string.
@@ -202,6 +203,7 @@ public:
      *
      * @param top list size
      * @param isAmino use amino processing
+     * @param count_kmers count k_mers per genome
      * @param q_table coverage threshold
 	 * @param quality global q or maximum among all q values
 	 * @param blacklist k-mers to be ignored
@@ -209,8 +211,204 @@ public:
      * @param bins hash_tables to use for parallel processing
      * @param thread_count the number of threads used for processing
      */
-    static void init(uint64_t& top_size, bool isAmino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count);
+template<bool count_kmers>
+static void init(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count) {
+    t = top_size;
+    isAmino = amino;
+    if(!isAmino){
 
+        // Automatic table count
+        //    table_count = 45 * thread_count - 33; // Estimated scaling
+        //    table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
+        table_count = (0b1u << 14) + 1;
+        
+
+        // Init base tables
+	    kmer_table = vector<hash_map<kmer_t, color_t>> (table_count);
+	    singleton_kmer_table = vector<hash_map<kmer_t, uint16_t>> (table_count);
+
+        // Init the lock vector
+	    lock = vector<spinlock> (table_count);
+
+        // Precompute the period for fast shift update kmer binning in bitset representation 
+        #if (maxK > 32)     
+        uint_fast32_t last = 1 % table_count;
+        for (int i = 1; i <= 2*(kmer::k); i++)
+        {
+            // cout << last << endl;
+	        period.push_back(last);
+	        last = (2 * last) % table_count;
+        }
+        #endif
+
+	    graph::allowedChars.push_back('A');
+        graph::allowedChars.push_back('C');
+        graph::allowedChars.push_back('G');
+        graph::allowedChars.push_back('T');
+    }else{
+        // Automatic table count
+        //    table_count = 33 * thread_count + 33; // Estimated scaling
+        //    table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
+        table_count = (0b1u << 14) + 1;
+
+        // Init amino tables
+        kmer_tableAmino = vector<hash_map<kmerAmino_t, color_t>> (table_count);
+        singleton_kmer_tableAmino = vector<hash_map<kmerAmino_t, uint16_t>> (table_count);
+		
+        // Init the mutex lock vector
+        lock = vector<spinlock> (table_count);
+
+        // Precompute the period for fast shift update kmer binning in bitset representation 
+        #if (maxK > 12)     
+        uint64_t last = 1 % table_count;
+        for (int i = 1; i <= 5*(kmerAmino::k); i++)
+        {
+	        period.push_back(last);
+	        last = (2 * last) % table_count;
+        }
+        #endif
+
+        graph::allowedChars.push_back('A');
+        //graph::allowedChars.push_back('B');
+        graph::allowedChars.push_back('C');
+        graph::allowedChars.push_back('D');
+        graph::allowedChars.push_back('E');
+        graph::allowedChars.push_back('F');
+        graph::allowedChars.push_back('G');
+        graph::allowedChars.push_back('H');
+        graph::allowedChars.push_back('I');
+        //graph::allowedChars.push_back('J');
+        graph::allowedChars.push_back('K');
+        graph::allowedChars.push_back('L');
+        graph::allowedChars.push_back('M');
+        graph::allowedChars.push_back('N');
+        graph::allowedChars.push_back('O');
+        graph::allowedChars.push_back('P');
+        graph::allowedChars.push_back('Q');
+        graph::allowedChars.push_back('R');
+        graph::allowedChars.push_back('S');
+        graph::allowedChars.push_back('T');
+        graph::allowedChars.push_back('U');
+        graph::allowedChars.push_back('V');
+        graph::allowedChars.push_back('W');
+        //graph::allowedChars.push_back('X');
+        graph::allowedChars.push_back('Y');
+        //graph::allowedChars.push_back('Z');
+        graph::allowedChars.push_back('*');
+    }
+
+    graph::quality = quality;
+    graph::q_table = q_table;
+	graph::blacklist = blacklist;
+	graph::blacklist_amino = blacklist_amino;
+    switch (quality) {
+    case 1:
+	case 0: /* no quality check */
+        emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+            hash_kmer<count_kmers>(bin, kmer, color);
+        };
+        emplace_kmer_amino_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+            hash_kmer_amino<count_kmers>(bin, kmer, color);
+        };
+        break;
+
+    case 2:
+        isAmino ? quality_setAmino.resize(thread_count) : quality_set.resize(thread_count);
+        if (q_table.size()>0){
+            emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+                if (q_table[color]==1){
+                    hash_kmer<count_kmers>(bin, kmer, color);
+                } else if (quality_set[T].find(kmer) == quality_set[T].end()) {
+                    quality_set[T].emplace(kmer);
+                } else {
+                    quality_set[T].erase(kmer);
+                    hash_kmer<count_kmers>(bin, kmer, color);
+                }
+            };
+            emplace_kmer_amino_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+                if (q_table[color]==1){
+                    hash_kmer_amino<count_kmers>(bin, kmer, color);
+                } else if (quality_setAmino[T].find(kmer) == quality_setAmino[T].end()) {
+                    quality_setAmino[T].emplace(kmer);
+                } else {
+                    quality_setAmino[T].erase(kmer);
+                    hash_kmer_amino<count_kmers>(bin, kmer, color);
+                }
+            };
+        } else { // global quality value (one if-clause fewer)
+            emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+                if (quality_set[T].find(kmer) == quality_set[T].end()) {
+                    quality_set[T].emplace(kmer);
+                } else {
+                    quality_set[T].erase(kmer);
+                    hash_kmer<count_kmers>(bin, kmer, color);
+                }
+            };
+            emplace_kmer_amino_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+                if (quality_setAmino[T].find(kmer) == quality_setAmino[T].end()) {
+                    quality_setAmino[T].emplace(kmer);
+                } else {
+                    quality_setAmino[T].erase(kmer);
+                    hash_kmer_amino<count_kmers>(bin, kmer, color);
+                }
+            };
+        }
+        break;
+    default:
+        isAmino ? quality_mapAmino.resize(thread_count) : quality_map.resize(thread_count);
+        if (q_table.size()>0){
+            emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+                if (quality_map[T][kmer] < q_table[color]-1) {
+                    quality_map[T][kmer]++;
+                } else {
+                    quality_map[T].erase(kmer);
+                    hash_kmer<count_kmers>(bin, kmer, color);
+                }
+            };
+            emplace_kmer_amino_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+                if (quality_mapAmino[T][kmer] < q_table[color]-1) {
+                    quality_mapAmino[T][kmer]++;
+                } else {
+                    quality_mapAmino[T].erase(kmer);
+                    hash_kmer_amino<count_kmers>(bin, kmer, color);
+                }
+            };
+        }else { // global quality value
+            emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+                if (quality_map[T][kmer] < quality-1) {
+                    quality_map[T][kmer]++;
+                } else {
+                    quality_map[T].erase(kmer);
+                    hash_kmer<count_kmers>(bin, kmer, color);
+                }
+            };
+            emplace_kmer_amino_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+                if (quality_mapAmino[T][kmer] < quality-1) {
+                    quality_mapAmino[T][kmer]++;
+                } else {
+                    quality_mapAmino[T].erase(kmer);
+                    hash_kmer_amino<count_kmers>(bin, kmer, color);
+                }
+            };
+
+        }
+        break;
+    }
+	emplace_kmer = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
+		emplace_kmer_tmp(T, bin, kmer, color);
+	};
+	emplace_kmer_amino = [&] (const uint64_t& T, uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color) {
+		emplace_kmer_amino_tmp(T, bin, kmer, color);
+	};
+}
+
+static void init_count(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count) {
+  init<true>(top_size, amino, q_table, quality, blacklist, blacklist_amino, thread_count);
+}
+
+static void init_noCount(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count) {
+  init<false>(top_size, amino, q_table, quality, blacklist, blacklist_amino, thread_count);
+}
 
 
     /**
@@ -247,21 +445,106 @@ public:
      */
     static uint_fast32_t compute_amino_bin(const kmerAmino_t& kmer);
 
-    /**
-     * This function hashes a base k-mer and stores it in the corresponding hash table
-     *  @param bin   Index of the target hash map 
-     *  @param kmer  The k-mer to store
-     *  @param color The color to store 
-     */
-    static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color);
+/**
+* This function hashes a k-mer and stores it in the correstponding hash table.
+* The corresponding table is chosen by the carry of the encoded k-mer given the number of tables as module.
+*  @param kmer The kmer to store
+*  @param color The color to store 
+*/
+template<bool count_kmers>
+static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color)
+{
+    lock[bin].lock();
+	hash_map<kmer_t,color_t>::iterator entry=kmer_table[bin].find(kmer); 
+	// already in the kmer table?
+	if(entry != kmer_table[bin].end()){
+        // check if not seen in this genome before, i.e., count a new (unique) kmer
+         if(!entry.value().test(color)){
+            // add
+            entry.value().set(color);
+            // count
+            kmer_counters[color]++;
+         }
+	}
+	// not yet in the kmer table?
+	else{
+        hash_map<kmer_t,uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
+		//seen once before? -> add to kmer table / remove from singleton table
+		if(s_entry != singleton_kmer_table[bin].end()){
+			if(s_entry.value() != color){
+				kmer_table[bin][kmer].set(s_entry.value());
+				kmer_table[bin][kmer].set(color);
+				singleton_counters_locks[s_entry.value()].lock();
+				singleton_counters[s_entry.value()]--;
+				singleton_counters_locks[s_entry.value()].unlock();
+				singleton_kmer_table[bin].erase(s_entry);
+                // count
+                kmer_counters[color]++;
+			}
+		}
+		// not seen before -> add to singleton_table
+		else{
+			singleton_kmer_table[bin][kmer]=color;
+			singleton_counters_locks[color].lock();
+			singleton_counters[color]++;
+			singleton_counters_locks[color].unlock();
+            // count
+            kmer_counters[color]++;
+		}
+	}
+    lock[bin].unlock();
+}
 
-    /**
-     * This function hashes an amino k-mer and stores it in the correstponding hash table
-     *  @param t_id The id of the current thread
-     *  @param kmer The kmer to store
-     *  @param color The color to store 
-     */
-    static void hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color);
+
+
+/**
+ * This function hashes an amino k-mer and stores it in the corresponding hash table.
+ * The correspontind table is chosen by the carry of the encoded k-mer bitset by the bit-module function.
+ * @param kmer The kmer to store
+ * @param color The color to store
+ */
+template<bool count_kmers>
+static void hash_kmer_amino(uint_fast32_t& bin, const kmerAmino_t& kmer, const uint16_t& color)
+{
+    lock[bin].lock();
+	hash_map<kmerAmino_t,color_t>::iterator entry=kmer_tableAmino[bin].find(kmer); 
+	// already in the kmer table? -> add
+	if(entry != kmer_tableAmino[bin].end()){
+        // check if not seen in this genome before, i.e., count a new (unique) kmer
+        if(!entry.value().test(color)){
+            // add
+            entry.value().set(color);
+            // count
+            kmer_counters[color]++;
+        }
+	}
+	// not yet in the kmer table?
+	else{
+        // count
+        kmer_counters[color]++;
+		hash_map<kmerAmino_t,uint16_t>::iterator s_entry = singleton_kmer_tableAmino[bin].find(kmer);
+		//seen once before? -> add to kmer table / remove from singleton table
+		if(s_entry != singleton_kmer_tableAmino[bin].end()){
+			if(s_entry.value() != color){
+				kmer_tableAmino[bin][kmer].set(s_entry.value());
+				kmer_tableAmino[bin][kmer].set(color);
+				singleton_counters_locks[s_entry.value()].lock();
+				singleton_counters[s_entry.value()]--;
+				singleton_counters_locks[s_entry.value()].unlock();
+				singleton_kmer_tableAmino[bin].erase(s_entry);
+			}
+		}
+		// not seen before -> add to singleton_table
+		else{
+			singleton_kmer_tableAmino[bin][kmer]=color;
+			singleton_counters_locks[color].lock();
+			singleton_counters[color]++;
+			singleton_counters_locks[color].unlock();
+		}
+	}	
+    lock[bin].unlock();
+}
+
 
     /**
      * This function searches the bit-wise corresponding hash table for the given kmer
