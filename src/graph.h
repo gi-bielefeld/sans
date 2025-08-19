@@ -458,12 +458,15 @@ static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 	hash_map<kmer_t,color_t>::iterator entry=kmer_table[bin].find(kmer); 
 	// already in the kmer table?
 	if(entry != kmer_table[bin].end()){
-        // check if not seen in this genome before, i.e., count a new (unique) kmer
-         if(!entry.value().test(color)){
-            // add
-            entry.value().set(color);
+         // add
+         entry.value().set(color);
+    
+         if(count_kmers){
+           // check if not seen in this genome before, i.e., count a new (unique) kmer
+           if(!entry.value().test(color)){
             // count
             kmer_counters[color]++;
+           }
          }
 	}
 	// not yet in the kmer table?
@@ -478,8 +481,10 @@ static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 				singleton_counters[s_entry.value()]--;
 				singleton_counters_locks[s_entry.value()].unlock();
 				singleton_kmer_table[bin].erase(s_entry);
-                // count
-                kmer_counters[color]++;
+                if(count_kmers){
+                  // count
+                  kmer_counters[color]++;
+                }
 			}
 		}
 		// not seen before -> add to singleton_table
@@ -488,8 +493,10 @@ static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& co
 			singleton_counters_locks[color].lock();
 			singleton_counters[color]++;
 			singleton_counters_locks[color].unlock();
-            // count
-            kmer_counters[color]++;
+            if(count_kmers){
+              // count
+              kmer_counters[color]++;
+            }
 		}
 	}
     lock[bin].unlock();
