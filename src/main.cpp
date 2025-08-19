@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -R, --raw  \t Output both counts per split in TSV file" << endl;
         cout << endl;
-        cout << "    -A, --stats  \t Output counts of all (unique) and singleton k-mers per genome in TSV file" << endl;
+        cout << "    -A, --stats  \t Output counts of all (different) and singleton k-mers per genome in TSV file" << endl;
         cout << endl;
         cout << "    (at least --output, --newick, --nexus, --pdf, --svg, --core, --raw, or --stats must be provided)" << endl;
         cout << endl;
@@ -1213,6 +1213,7 @@ int main(int argc, char* argv[]) {
         auto lambda = [&] (uint64_t T, vector<uint16_t> genome_ids, vector<uint16_t> file_ids){ // This lambda expression wraps the sequence-kmer hashing
             string sequence;    // read in the sequence files and extract the k-mers
             uint64_t i = index_lambda();
+            std::stringstream ss;
             while (i < genome_ids.size()) {
 				string file_name = gen_files[genome_ids[i]][file_ids[i]]; // the filenames corresponding to the target  
 				if(file_name[0]!='/'){ //no absolute path?
@@ -1226,13 +1227,14 @@ int main(int argc, char* argv[]) {
 				if (verbose) {     // print progress
 // 					cout << "\33[2K\r" << file_name;
 					if (q_table.size()>0) {
-						cout <<" q="<<q_table[genome_ids[i]];
+						ss << " q=" << q_table[genome_ids[i]];
 					}
-					cout << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
+                    ss << " (genome " << genome_ids[i]+1 << "/" << denom_file_count;
 					if(genome_ids.size()>gen_files.size()){
-						cout << "; file " << i+1 << "/" << genome_ids.size();
+                        ss << "; file " << i+1 << "/" << genome_ids.size();
 					}
-					cout << ")" << endl;
+					ss << ")" << endl;
+                    cout << ss.str();                    
 				}
 				count::deleteCount();
 
@@ -1392,7 +1394,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         for(uint16_t i = 0; i < denom_file_count; ++i){
                 uint64_t a=graph::number_kmers(i);
                 uint64_t s=graph::number_singleton_kmers(i);
-				stream_stats << denom_names[i] << "\t" << a << "\t" << s << "\t" << (100*s/a) << "%" << endl;
+				stream_stats << denom_names[i] << "\t" << a << "\t" << s  << endl;
         }
 		
 		file_stats.close();
