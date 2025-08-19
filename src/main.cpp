@@ -1192,8 +1192,8 @@ int main(int argc, char* argv[]) {
         auto lambda = [&] (uint64_t T, vector<uint16_t> genome_ids, vector<uint16_t> file_ids){ // This lambda expression wraps the sequence-kmer hashing
             string sequence;    // read in the sequence files and extract the k-mers
             uint64_t i = index_lambda();
-             std::stringstream ss;
             while (i < genome_ids.size()) {
+                std::stringstream ss;
 				string file_name = gen_files[genome_ids[i]][file_ids[i]]; // the filenames corresponding to the target  
 				if(file_name[0]!='/'){ //no absolute path?
 					file_name=folder+file_name;
