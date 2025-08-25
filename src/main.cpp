@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -r, --core  \t Output core k-mers in fasta file" << endl;
         cout << endl;
-        cout << "    -R, --raw  \t Output both counts per split in TSV file" << endl;
+        cout << "    -R, --raw  \t\t Output both counts per split in TSV file" << endl;
         cout << endl;
         cout << "    -A, --stats  \t Output k-mer counts per genome in TSV file: genome, (different) k-mers, singleton k-mers, std devs from mean" << endl;
         cout << endl;
