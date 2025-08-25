@@ -20,11 +20,11 @@ double util::mean(const uint64_t* values, int n) {
  * Compute standard deviation of all values in the given array
  * 
  * @param values Array of values
+ * @param mu mean of values
  * @param n lenght of array
  * @return standard deviation mean
  */
-double util::stdev(const uint64_t* values, int n) {
-    double mu = mean(values, n);
+double util::stdev(const uint64_t* values, double mu, int n) {
     long double sq_sum = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
         long double diff = static_cast<long double>(values[i]) - mu;

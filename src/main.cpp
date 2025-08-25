@@ -1383,8 +1383,8 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         }
         
         //statistics
-        double mu = graph::mean_number_kmers();
-        double sigma = graph::stdev_number_kmers();
+        double mu = graph::mean_number_kmers(denom_file_count);
+        double sigma = graph::stdev_number_kmers(mu,denom_file_count);
         double max_z=0;
         
         //open file

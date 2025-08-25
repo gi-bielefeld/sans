@@ -695,14 +695,17 @@ public:
     static uint64_t number_kmers(uint16_t& genome);
 
     /**
+     * @param n number of genomes
      * @return mean value of number of k-mers per genome
      */
-    static double mean_number_kmers();
+    static double mean_number_kmers(int n);
 
     /**
+     * @param mu mean value
+     * @param n number of genomes
      * @return standard deviation of number of k-mers per genome
      */
-    static double stdev_number_kmers();
+    static double stdev_number_kmers(double mu, int n);
 
 	/**
      * This function iterates over the hash table and calculates the split weights.
