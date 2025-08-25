@@ -1399,7 +1399,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 uint64_t a=graph::number_kmers(i);
                 uint64_t s=graph::number_singleton_kmers(i);
                 double z = (static_cast<double>(a) - mu) / sigma;
-                if (z>max_z){max_z=z;}
+                if (abs(z)>abs(max_z)){max_z=z;}
 				stream_stats << denom_names[i] << "\t" << a << "\t" << s << "\t" << z << endl;
         }
 		
