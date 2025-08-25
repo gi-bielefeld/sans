@@ -27,7 +27,7 @@ using namespace std;
 // SANS ambages
 // Symmetric Alignment-free phylogeNomic Splits
 // phylogenomics with Abundance-filter, Multi-threading and Bootstrapping on Amino-acid or GEnomic Sequences
-#define SANS_VERSION "2.8_1"    // SANS ambages
+#define SANS_VERSION "2.8_2"    // SANS ambages
 
 /**
  * This is the entry point of the program.
