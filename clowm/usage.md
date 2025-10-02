@@ -52,6 +52,7 @@ You can also transfer data using an S3 management software such as [S3cmd](https
 * `sans_tree.tsv` analog to the tsv file above but containing only the tree splits.
 
 * `sans.log` shows the logging output of the SANS run including the actual parameter settings.
+* `sans.stats` contains k-mer counts per input genome (observed k-mers, singleton k-mers, standard deviations from mean)
 
 #### Download
 
