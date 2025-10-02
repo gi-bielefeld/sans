@@ -679,11 +679,6 @@ int main(int argc, char* argv[]) {
             cerr << splitstree_path << " is not in the PATH." << endl;
         }
     }
-    if (amino && quality > 1) {
-        cerr << "Error: using --qualify with --amino is (currently) not supported" << endl;
-        cerr << "       Please send us a message if you have this special use case" << endl;
-        return 1;
-    }
     if (!graph.empty()) {
         if (quality > 1) {
             cerr << "Warning: input from graph with --qualify can produce unexpected results" << endl;

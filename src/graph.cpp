@@ -1018,8 +1018,8 @@ void graph::iupac_shift_amino(hash_set<kmerAmino_t>& prev, hash_set<kmerAmino_t>
 void graph::clear_thread(uint64_t& T) {
     switch (quality) {
         case 1:  case 0: break;
-        case 2:  quality_set[T].clear(); break;
-        default: quality_map[T].clear(); break;
+        case 2:  isAmino ? quality_setAmino[T].clear() : quality_set[T].clear(); break;
+        default: isAmino ? quality_mapAmino[T].clear() : quality_map[T].clear(); break;
     }
 }
 
