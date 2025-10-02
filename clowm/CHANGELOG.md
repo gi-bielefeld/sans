@@ -1,5 +1,16 @@
 # SANS Changelog
 
+## v1.0.8 [2025-10-02]
+
+### Fixed
+
+- abundance thresholds (--quality) for amino acid input
+
+### Added
+
+- output k-mer statistics
+
+
 ## v1.0.7 [2025-08-08]
 
 ### Changed

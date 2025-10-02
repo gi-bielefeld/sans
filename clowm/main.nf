@@ -34,6 +34,7 @@ process sans {
     path 'sans_core.fasta', optional: true
     path 'sans.log', optional: true
     path 'sans.err', optional: true
+    path 'sans.stats', optional: true
     
 
   script:
@@ -121,7 +122,8 @@ process sans {
   ${ params.core ? "--core sans_core.fasta" : "" } \
   ${ blacklist.name != 'NO_FILE4' ? "--blacklist $blacklist" : "" } \
   --verbose \
-  --threads ${ task.cpus }\"
+  --threads ${ task.cpus } \
+  --stats sans.stats\"
 
   echo SANS \$SANS_PARAMS >> sans.log
 
