@@ -155,32 +155,32 @@ process UNZIP {
 
     script:
     """
-    #!/usr/local/bin/python
+    #!/usr/bin/env python
 
     import zipfile
-    with zipfile.ZipFile("${zipgenomes}", 'r') as z:
+    with zipfile.ZipFile("${zipgenomes}") as z:
         z.extractall("output")
     """
 }
 
 // --------------------------------------------------
-// TAR.GZ extractor
+// TAR extractor
 // --------------------------------------------------
-process UNTARGZ {
+process UNTAR {
     container 'python:3.14-slim'
 
     input:
-    path tarball
+    path targenomes
 
     output:
     path 'output/*', emit: untarred
 
     script:
     """
-    #!/usr/local/bin/python
+    #!/usr/bin/env python
 
     import tarfile
-    with tarfile.open("${tarball}") as t:
+    with tarfile.open("${targenomes}") as t:
         t.extractall("output")
     """
 }
@@ -207,8 +207,8 @@ workflow {
         SANS(UNZIP.out.unzipped, opt_label, opt_label_colors, opt_fof, opt_blacklist)
     }
     else if (params.input.endsWith(".tar.gz")) {
-        UNTARGZ(file(params.input, checkIfExists: true))
-        SANS(UNTARGZ.out.untarred, opt_label, opt_label_colors, opt_fof, opt_blacklist)
+        UNTAR(file(params.input, checkIfExists: true))
+        SANS(UNTAR.out.untarred, opt_label, opt_label_colors, opt_fof, opt_blacklist)
     }
     else {
         inputChannel = Channel
