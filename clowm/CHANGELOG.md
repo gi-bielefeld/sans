@@ -1,5 +1,12 @@
 # SANS Changelog
 
+## v1.0.9 [2026-01-12]
+
+### Changed
+
+ - make workflow compatible with Nextflow 25.10 (strict syntax, workflow output definition)
+ - update Python container in workflow pre-step
+
 ## v1.0.8 [2025-10-02]
 
 ### Fixed
