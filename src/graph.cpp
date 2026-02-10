@@ -1546,6 +1546,21 @@ loop:
                 
 
     }
+////////////////////////// HERE NEW
+    std::cerr << "tree.currentLeafOrder():" << endl;
+    
+    
+    for (auto* leaf : tree.currentLeafOrder()) {
+        auto it = std::find(leaves.begin(), leaves.end(), leaf);
+        if (it != leaves.end()) {
+            size_t index = std::distance(leaves.begin(), it);
+            std::cerr << index << " ";  // append index followed by a space
+        } else {
+            std::cerr << "Leaf not found!" << std::endl;
+        }
+    }
+
+    std::cerr << std::endl;
     
 }
 

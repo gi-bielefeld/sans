@@ -1798,7 +1798,17 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		}
 	}
 
+//TEST PD
 
+    for(int i = 0; i < denom_file_count; ++i){
+        for(int j = i+1; j < denom_file_count; ++j){
+            vector<int> taxa = {i, j};
+            cerr << i << "," << j << ": " << denom_names[i] << "," << denom_names[j] << ": " << pd::pd_value(graph::split_list,taxa) << endl;
+        }
+    }
+
+	
+	
 // time measurement
     if (verbose) {
         if (!filter.empty()) {
