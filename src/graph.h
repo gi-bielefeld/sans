@@ -21,6 +21,9 @@
 #include "tsl/sparse_map.h"
 #include "tsl/sparse_set.h"
 
+#include "pctree/PCTree.h"
+
+
 using namespace std;
 
 template <typename K, typename V>
@@ -788,7 +791,7 @@ public:
      * @param split_list list of splits to be filtered
      * @param verbose print progress
      */
-    static void filter_planar(multimap_<double, color_t>& split_list, bool& verbose, uint64_t& num);
+    static pc_tree::PCTree filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num);
 
 
     /**

@@ -1,6 +1,5 @@
 #include "graph.h"
 #include "util.h"
-#include "pctree/PCTree.h"
 #include <mutex>
 #include <thread>
 #include <algorithm>
@@ -1504,7 +1503,7 @@ loop:
  * @param split_list list of splits to be filtered
  * @param verbose print progress
  */
-void graph::filter_planar(multimap_<double, color_t>& split_list, bool& verbose, uint64_t& num) {
+pc_tree::PCTree graph::filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num) {
 
     auto it = split_list.begin();
     color_t split_copy;
@@ -1546,22 +1545,8 @@ loop:
                 
 
     }
-////////////////////////// HERE NEW
-    std::cerr << "tree.currentLeafOrder():" << endl;
     
-    
-    for (auto* leaf : tree.currentLeafOrder()) {
-        auto it = std::find(leaves.begin(), leaves.end(), leaf);
-        if (it != leaves.end()) {
-            size_t index = std::distance(leaves.begin(), it);
-            std::cerr << index << " ";  // append index followed by a space
-        } else {
-            std::cerr << "Leaf not found!" << std::endl;
-        }
-    }
-
-    std::cerr << std::endl;
-    
+    return tree;
 }
 
 

@@ -133,6 +133,13 @@ int main(int argc, char* argv[]) {
         cout << "                  \t color (rgb values, e.g. 90 0 255) (tab separated)" << endl;
         cout << "                  \t Only applicable together with -X or -p " << endl;
         cout << endl;
+        cout << "    -P, --partition\t Partition genomes into clusters" << endl;
+        cout << "                  \t Specify number of clusters, e.g. -P 5 file_prefix, " << endl;
+        cout << "                  \t or a range of numbers, e.g., -P 5,10 file_prefix" << endl;
+        cout << "                  \t Generates file_prefix_k.tsv per cluster number k" << endl;
+        cout << "                  \t (which could be provied as label file  in another run)." << endl;
+        cout << "                  \t If option --pdf, --svg or --nexus are provided, additional files" << endl;
+        cout << "                  \t file_prefix_k.pdf, .svg or .nexus are generated." << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -T, --threads \t The number of threads to spawn (default is all)" << endl;
@@ -172,6 +179,7 @@ int main(int argc, char* argv[]) {
     string groups; // name of input file giving groups
     string coloring; // name of input file for using specified color
     string translate; // name of translate file
+    string partitions_pref;//prefix for clusterings
 
     // input
     uint64_t num = 0;    // number of input files
@@ -222,7 +230,12 @@ int main(int argc, char* argv[]) {
     bool pdf_wanted = false;
     bool svg_wanted = false;
 	bool raw_wanted = false;
-	
+    bool core_wanted = false;
+	bool newick_wanted = false;
+    vector<int> partition_nums;
+    bool stats_wanted = false;
+    
+    
 	/**
 	* Look-up set for k-mers that are ignored, i.e., not stored, counted etc.
 	*/
@@ -297,45 +310,53 @@ int main(int argc, char* argv[]) {
 			}
         }
         else if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--newick") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            newick = argv[++i];    // Output newick file
-            if (!util::path_exist(newick)){
-				cerr << "Error: output folder does not exist: "<< newick << endl;
-                return 1;
-			}
+            newick_wanted = true;
+            if(i<argc && argv[i+1][0]!='-'){
+                newick = argv[++i];    // Output newick file
+                if (!util::path_exist(newick)){
+                    cerr << "Error: output folder does not exist: "<< newick << endl;
+                    return 1;
+                }
+            }
         }
         else if (strcmp(argv[i], "-X") == 0 || strcmp(argv[i], "--nexus") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            nexus = argv[++i];    // Nexus output file
             nexus_wanted = true;
-            if (!util::path_exist(nexus)){
-                cerr << "Error: output folder does not exist: "<< nexus << endl;
-                return 1;
+            if(i<argc && argv[i+1][0]!='-'){
+                nexus = argv[++i];    // Nexus output file
+                if (!util::path_exist(nexus)){
+                    cerr << "Error: output folder does not exist: "<< nexus << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--core") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            core = argv[++i];    // fasta output file for core k-mers
-            if (!util::path_exist(core)){
-                cerr << "Error: output folder does not exist: "<< core << endl;
-                return 1;
+            core_wanted=true;
+            if(i<argc && argv[i+1][0]!='-'){
+                core = argv[++i];    // fasta output file for core k-mers
+                if (!util::path_exist(core)){
+                    cerr << "Error: output folder does not exist: "<< core << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "--raw") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            raw = argv[++i];    // tsv output file for raw counts
             raw_wanted = true;
-            if (!util::path_exist(raw)){
-                cerr << "Error: output folder does not exist: "<< raw << endl;
-                return 1;
+            if(i<argc && argv[i+1][0]!='-'){
+                raw = argv[++i];    // tsv output file for raw counts
+                if (!util::path_exist(raw)){
+                    cerr << "Error: output folder does not exist: "<< raw << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--stats") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            stats = argv[++i];
-            if (!util::path_exist(stats)){
-                cerr << "Error: output folder does not exist: "<< stats << endl;
-                return 1;
+            stats_wanted=true;
+            if(i<argc && argv[i+1][0]!='-'){
+                stats = argv[++i];
+                if (!util::path_exist(stats)){
+                    cerr << "Error: output folder does not exist: "<< stats << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-l") == 0 || strcmp(argv[i], "--label") == 0) {
@@ -449,21 +470,23 @@ int main(int argc, char* argv[]) {
             quality = stoi(argv[++i]);    // Discard k-mers below a min. coverage threshold
         }
         else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--pdf") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            pdf = argv[++i];    // PDF output file
             pdf_wanted = true;    // Output of tree as pdf
-            if (!util::path_exist(pdf)){
-                cerr << "Error: output folder does not exist: "<< pdf << endl;
-                return 1;
+            if(i<argc && argv[i+1][0]!='-'){
+                pdf = argv[++i];    // PDF output file
+                if (!util::path_exist(pdf)){
+                    cerr << "Error: output folder does not exist: "<< pdf << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--svg") == 0) {
-            catch_missing_dependent_args(argv[i + 1], argv[i]);
-            svg = argv[++i];    // SVG output file
             svg_wanted = true;    // Output of tree as svg
-            if (!util::path_exist(svg)){
-                cerr << "Error: output folder does not exist: "<< svg << endl;
-                return 1;
+            if(i<argc && argv[i+1][0]!='-'){
+                svg = argv[++i];    // SVG output file
+                if (!util::path_exist(svg)){
+                    cerr << "Error: output folder does not exist: "<< svg << endl;
+                    return 1;
+                }
             }
         }
         else if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--norev") == 0) {
@@ -565,14 +588,93 @@ int main(int argc, char* argv[]) {
 				consensus_filter="SameAsFilter"; // set to the same as --filter later because --filter might not be set yet.
 			}
 
+        } else if (strcmp(argv[i], "-P") == 0 || strcmp(argv[i], "--partition") == 0){ 
+            catch_missing_dependent_args(argv[i + 1], argv[i]);
+            string nums=argv[++i];
+            if (nums.find(',') != std::string::npos) {
+                char comma;
+                std::stringstream ss(nums);
+                string a,b;
+                if (std::getline(ss, a, ',') && std::getline(ss, b)) {
+                    catch_failed_stoi_cast(a,argv[i - 1]);
+                    catch_failed_stoi_cast(b,argv[i - 1]);
+                    for (int x = stoi(a); x <= stoi(b); ++x) partition_nums.push_back(x);
+                }
+            } else { // single value
+                catch_failed_stoi_cast(nums,argv[i - 1]);
+                partition_nums.push_back(stoi(nums));
+            }
+            //file  names prefix
+            if (i+1 < argc && argv[i+1][0]!='-') {
+				partitions_pref = argv[++i];
+            } 
         }
+
         else {
             cerr << "Error: unknown argument: " << argv[i] <<  "\t type --help" << endl;
             return 1;
         }
     }
 
+    // create filenames if not provided
+    if( nexus_wanted && nexus.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or nexus file name." << endl;
+            return 1;
+        } 
+        else {nexus=output+".nexus";}
+    }
+    if( pdf_wanted && pdf.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or pdf file name." << endl;
+            return 1;
+        } 
+        else {pdf=output+".pdf";}
+    }
+    if( svg_wanted && svg.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or svg file name." << endl;
+            return 1;
+        } 
+        else {svg=output+".svg";}
+    }
+    if( raw_wanted && raw.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or file name for raw output." << endl;
+            return 1;
+        } 
+        else {raw=output+".raw";}
+    }
+    if( core_wanted && core.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or file name for core k-mer output." << endl;
+            return 1;
+        } 
+        else {core=output+".svg";}
+    }
+    if( newick_wanted && newick.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or newick file name." << endl;
+            return 1;
+        } 
+        else {newick=output+".newick";}
+    }
+    if( partition_nums.size()>0 && partitions_pref.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or file prefix for partition output." << endl;
+            return 1;
+        } 
+        else {partitions_pref=output;}
+    }
+    if( stats_wanted && stats.empty()) { 
+        if (output.empty()) {
+            cerr << "Error: Provide output file name and/or file name for stats output." << endl;
+            return 1;
+        } 
+        else {stats=output+".stats";}
+    }
 
+    
     
     /**
      *   [version check]
@@ -634,8 +736,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted && stats.empty()) {
-        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name> or --stats <file_name>" << endl;
+    if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && core.empty() && !raw_wanted && stats.empty() && partitions_pref.empty()) {
+        cerr << "Error: missing argument: --output <file_name> or --newick <file_name> or --nexus <file_name> or --pdf <file_name> or --svg <file_name> or --core <file_name> or --raw <file_name> --stats <file_name> or --partitions k <file_name>" << endl;
         return 1;
     }
 	if (output.empty() && newick.empty() && nexus.empty() && pdf.empty() && svg.empty() && !core.empty()) {
@@ -652,8 +754,16 @@ int main(int argc, char* argv[]) {
 		cerr << "Error: From splits as input, no core k-mers can be determined." << endl;
 		return 1;
     }
-	if (!blacklist.empty() && input.empty() && graph.empty()) {
+	if (!blacklist.empty() && !splits.empty()) {
 		cerr << "Error: Blacklist can only be applied when reading sequences as input, i.e. -i or -g." << endl;
+		return 1;
+    }
+	if (stats_wanted && !splits.empty()) {
+		cerr << "Error: k-mer statistics can only be determined when reading sequences as input, i.e. -i or -g." << endl;
+		return 1;
+    }
+ 	if (raw_wanted && !splits.empty()) {
+		cerr << "Error: Raw split weights can only be determined when computing splits, i.e., when reading sequences as input, i.e. -i or -g." << endl;
 		return 1;
     }
     if (kmer > maxK && splits.empty()) {
@@ -1796,18 +1906,44 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 				//remove(modded_file.c_str());
 			}
 		}
+        if(verbose){
+            end = chrono::high_resolution_clock::now();
+			cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
+        }
+
 	}
 
-//TEST PD
+//Partitioning
+    if(!partitions_pref.empty()){
+        
+        if(verbose) cout << "Partitioning..." << endl << flush;
+    
+        pd my_pd=pd(graph::split_list,num);
+        for (int k:partition_nums){
 
-    for(int i = 0; i < denom_file_count; ++i){
-        for(int j = i+1; j < denom_file_count; ++j){
-            vector<int> taxa = {i, j};
-            cerr << i << "," << j << ": " << denom_names[i] << "," << denom_names[j] << ": " << pd::pd_value(graph::split_list,taxa) << endl;
+            if(verbose) cout << k << flush;
+            
+     		ofstream part_file;    // output file stream
+            ostream part_stream(part_file.rdbuf());
+            part_file.open(partitions_pref+"cluster_"+to_string(k));
+
+           vector<int> max_set=my_pd.pd_set(k);
+            double score;
+            vector<int> p=my_pd.partition(max_set,score);
+            if(verbose) cout << " (PD score "<<score << "), " << flush;
+            
+            part_stream<<"#Total_PD: "<<score<<endl;
+            for(int i=0;i<num;i++){
+                part_stream << denom_names[i] << "\t" << p[i] << endl;
+            }
+            
+            part_file.close();
+        }
+        if(verbose){
+            end = chrono::high_resolution_clock::now();
+			cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
         }
     }
-
-	
 	
 // time measurement
     if (verbose) {
