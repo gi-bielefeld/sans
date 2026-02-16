@@ -311,7 +311,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-N") == 0 || strcmp(argv[i], "--newick") == 0) {
             newick_wanted = true;
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 newick = argv[++i];    // Output newick file
                 if (!util::path_exist(newick)){
                     cerr << "Error: output folder does not exist: "<< newick << endl;
@@ -321,7 +321,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-X") == 0 || strcmp(argv[i], "--nexus") == 0) {
             nexus_wanted = true;
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 nexus = argv[++i];    // Nexus output file
                 if (!util::path_exist(nexus)){
                     cerr << "Error: output folder does not exist: "<< nexus << endl;
@@ -331,7 +331,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-r") == 0 || strcmp(argv[i], "--core") == 0) {
             core_wanted=true;
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 core = argv[++i];    // fasta output file for core k-mers
                 if (!util::path_exist(core)){
                     cerr << "Error: output folder does not exist: "<< core << endl;
@@ -341,7 +341,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-R") == 0 || strcmp(argv[i], "--raw") == 0) {
             raw_wanted = true;
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 raw = argv[++i];    // tsv output file for raw counts
                 if (!util::path_exist(raw)){
                     cerr << "Error: output folder does not exist: "<< raw << endl;
@@ -351,7 +351,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-A") == 0 || strcmp(argv[i], "--stats") == 0) {
             stats_wanted=true;
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 stats = argv[++i];
                 if (!util::path_exist(stats)){
                     cerr << "Error: output folder does not exist: "<< stats << endl;
@@ -471,7 +471,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-p") == 0 || strcmp(argv[i], "--pdf") == 0) {
             pdf_wanted = true;    // Output of tree as pdf
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 pdf = argv[++i];    // PDF output file
                 if (!util::path_exist(pdf)){
                     cerr << "Error: output folder does not exist: "<< pdf << endl;
@@ -481,7 +481,7 @@ int main(int argc, char* argv[]) {
         }
         else if (strcmp(argv[i], "-S") == 0 || strcmp(argv[i], "--svg") == 0) {
             svg_wanted = true;    // Output of tree as svg
-            if(i<argc && argv[i+1][0]!='-'){
+            if(i+1<argc && argv[i+1][0]!='-'){
                 svg = argv[++i];    // SVG output file
                 if (!util::path_exist(svg)){
                     cerr << "Error: output folder does not exist: "<< svg << endl;
@@ -618,7 +618,7 @@ int main(int argc, char* argv[]) {
 
     // create filenames if not provided
     if( nexus_wanted && nexus.empty()) { 
-        if (output.empty()) {
+         if (output.empty()) {
             cerr << "Error: Provide output file name and/or nexus file name." << endl;
             return 1;
         } 
@@ -1742,170 +1742,8 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 			cout << "Writing output..." << endl << flush;
 		}
 
-		ofstream file;    // output file stream
-		ostream stream(file.rdbuf());
-		if (!output.empty()){
-			file.open(output);
-		}
-
-		ofstream file_bootstrap;
-		ostream stream_bootstrap(file_bootstrap.rdbuf());
-		if (bootstrap_no>0){
-			file_bootstrap.open(output+".bootstrap");    // output file stream
-		}
-
-		ofstream file_nexus; // output for nexus file
-		ostream stream_nexus(file_nexus.rdbuf());
-
-		ofstream file_raw;    // output for raw counts
-		ostream stream_raw(file_raw.rdbuf());
-		if(!raw.empty()){
-			file_raw.open(raw);
-		}
+		generate_output(num, graph::split_list, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, c_nexus_wanted, pdf_wanted, svg_wanted, raw_wanted, groups, coloring, bootstrap_no, &support_values, denom_names, denom_file_count, verbose);
 		
-		if(nexus_wanted || pdf_wanted || svg_wanted){
-			if(nexus.empty()){ // temporarily name nexus file to create pdf with it
-				if (!pdf.empty()){
-					nexus = pdf + ".nex";
-				}else {
-					nexus = svg + ".nex";
-				}
-				
-			}
-			file_nexus.open(nexus);
-			// nexus format stuff
-			stream_nexus << "#nexus\n\nBEGIN Taxa;\nDIMENSIONS ntax=" << denom_file_count << ";\nTAXLABELS" ;
-			for(int i = 0; i < denom_file_count; ++i){
-				string taxa = nexus_color::remove_extensions(denom_names[i]); // cutting off file extension
-				stream_nexus << "\n[" << i+1 << "] '" << taxa << "'";
-			}
-			stream_nexus << "\n;\nEND; [TAXA]\n";
-			if(bootstrap_no>0){ // confidence values
-				stream_nexus << "\nBEGIN Splits;\nDIMENSIONS ntax=" << denom_file_count << " nsplits=" << graph::split_list.size() << ";\nFORMAT CONFIDENCES=YES;\nMATRIX";
-			} else {
-				stream_nexus << "\nBEGIN Splits;\nDIMENSIONS ntax=" << denom_file_count << " nsplits=" << graph::split_list.size() << ";\nMATRIX";
-			}
-		}
-
-		uint64_t pos = 0;
-		//cleanliness.setFilteredCount(graph::split_list.size());
-		color_t split_color;
-
-		int split_num = 0; // number of split
-		int split_size; // #taxa in split
-		string split_comp = ""; // save split components/taxa
-
-		for (auto& split : graph::split_list) {
-
-			if(nexus_wanted || pdf_wanted || svg_wanted){ // nexus
-				++split_num;
-				split_size = 0; // reset split size
-				split_comp = ""; // reset split components
-			}
-
-			double weight = split.first;
-			split_color = split.second;
-		// cleanliness.setSmallestWeight(weight, split.second);
-			if (!output.empty()){
-				stream << weight;    // weight of the split
-			}
-			if (bootstrap_no>0) {
-				stream_bootstrap << ((1.0 * support_values[split.second]) / bootstrap_no);
-				// stream_bootstrap << support_values[split.second];
-			}
-			if (raw_wanted){
-				array<uint32_t,2> weights = graph::color_table[split_color];
-				stream_raw << weights[0] << '\t' << weights[1];
-			}
-			for (uint64_t i = 0; i < num; ++i) {
-
-				if (split_color.test(pos)) {
-					if (i < denom_names.size()) {
-						if (!output.empty()){
-							stream << '\t' << denom_names[i]; // name of the file
-						}
-						if (bootstrap_no > 0) {
-							stream_bootstrap << '\t' << denom_names[i]; // name of the file
-						}
-						if (raw_wanted){
-							stream_raw << '\t' << denom_names[i];
-						}
-
-						if(nexus_wanted || pdf_wanted || svg_wanted){ // nexus
-							++split_size;
-							if(split_size > 1) split_comp += " "; // " " only if not first value
-							split_comp += to_string(i+1);
-						}
-
-					}
-				}
-				split_color >>= 01u;
-			}
-
-			if(nexus_wanted || pdf_wanted || svg_wanted){
-				if(bootstrap_no>0){ // Adding bootstrap values
-					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t";
-					stream_nexus << weight << "\t" << ((1.0 * support_values[split.second]) / bootstrap_no) << "\t" << split_comp << ",";
-				} else {
-					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t" << weight << "\t" << split_comp << ",";
-				}
-			}
-			if (!output.empty()){
-				stream << endl;
-			}
-			if(bootstrap_no>0){
-				stream_bootstrap<<endl;
-			}
-			if(raw_wanted){
-				stream_raw<<endl;
-			}
-		}
-
-		if (nexus_wanted || pdf_wanted || svg_wanted){ // nexus
-			stream_nexus << "\n;\nEND; [Splits]\n";
-			// filter = strict (=greedy),  weakly (=greedyWC), tree (=?greedy)
-			string fltr = "none"; // filter used for SplitsTree
-			stream_nexus << "\nBEGIN st_Assumptions;\nuptodate;\nsplitstransform=EqualAngle UseWeights = true RunConvexHull = true DaylightIterations = 0\nOptimizeBoxesIterations = 0 SpringEmbedderIterations = 0;\nSplitsPostProcess filter=";
-			stream_nexus << fltr << ";\nexclude no missing;\nautolayoutnodelabels;\nEND; [st_Assumptions]";
-		}
-
-		//cleanliness.calculateWeightBeforeCounter();
-
-		if (!output.empty()){
-			file.close();
-		}
-		if(bootstrap_no>0){
-			file_bootstrap.close();
-		}
-		if(raw_wanted){
-			file_raw.close();
-		}
-		if(nexus_wanted || pdf_wanted || svg_wanted){
-			file_nexus.close();
-			// naming modified nexus output file
-			//string modded_file = nexus_color::modify_filename(nexus, "labeled_");
-			// scale weights to 0-1
-			nexus_color::scale_nexus(nexus, verbose, nexus_wanted);
-
-			if(c_nexus_wanted){
-				// use scaled file to open, mod and save in SplitsTree
-				nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, true, nexus);
-
-				if(verbose) cout << "Adding color..." << endl << flush;
-				nexus_color::color_nexus(nexus, groups, coloring);
-				if(pdf_wanted || svg_wanted){
-					nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, false);
-				}
-			} else if(pdf_wanted || svg_wanted){
-				nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, true, nexus);
-			}
-
-			// Delete nexus file if only pdf wanted
-			if(!nexus_wanted){
-				remove(nexus.c_str());
-				//remove(modded_file.c_str());
-			}
-		}
         if(verbose){
             end = chrono::high_resolution_clock::now();
 			cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
@@ -1918,6 +1756,8 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         
         if(verbose) cout << "Partitioning..." << endl << flush;
     
+        groups=""; coloring="";
+        multimap_<double, color_t> planar_splits;
         pd my_pd=pd(graph::split_list,num);
         for (int k:partition_nums){
 
@@ -1925,7 +1765,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             
      		ofstream part_file;    // output file stream
             ostream part_stream(part_file.rdbuf());
-            part_file.open(partitions_pref+"cluster_"+to_string(k));
+            part_file.open(partitions_pref+"cluster_"+to_string(k)+".tsv");
 
            vector<int> max_set=my_pd.pd_set(k);
             double score;
@@ -1936,8 +1776,17 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             for(int i=0;i<num;i++){
                 part_stream << denom_names[i] << "\t" << p[i] << endl;
             }
-            
             part_file.close();
+            
+            planar_splits=my_pd.get_planar_splits();
+            
+            nexus=partitions_pref+"cluster_"+to_string(k)+".nexus";
+            pdf=partitions_pref+"cluster_"+to_string(k)+".pdf";
+            svg=partitions_pref+"cluster_"+to_string(k)+".svg";
+            groups=partitions_pref+"cluster_"+to_string(k)+".tsv";
+            
+            generate_output(num, planar_splits, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
+
         }
         if(verbose){
             end = chrono::high_resolution_clock::now();
@@ -2005,4 +1854,171 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 			}
 		}	
 
+}
+
+void generate_output(const uint64_t& num, multimap_<double, color_t>& split_list, hash_map<color_t, array<uint32_t,2>>& color_table, const string output, string nexus, const string pdf, const string svg, const string raw, const bool nexus_wanted, const bool c_nexus_wanted, const bool pdf_wanted, const bool svg_wanted, const bool raw_wanted, const string groups, const string coloring, const uint32_t& bootstrap_no, hash_map<color_t, uint32_t>* support_values, vector<string> denom_names, const int denom_file_count, const bool verbose){
+		ofstream file;    // output file stream
+		ostream stream(file.rdbuf());
+		if (!output.empty()){
+			file.open(output);
+		}
+
+		ofstream file_bootstrap;
+		ostream stream_bootstrap(file_bootstrap.rdbuf());
+		if (bootstrap_no>0){
+			file_bootstrap.open(output+".bootstrap");    // output file stream
+		}
+
+		ofstream file_nexus; // output for nexus file
+		ostream stream_nexus(file_nexus.rdbuf());
+
+		ofstream file_raw;    // output for raw counts
+		ostream stream_raw(file_raw.rdbuf());
+		if(!raw.empty()){
+			file_raw.open(raw);
+		}
+		
+		if(nexus_wanted || pdf_wanted || svg_wanted){
+			if(nexus.empty()){ // temporarily name nexus file to create pdf with it
+				if (!pdf.empty()){
+					nexus = pdf + ".nex";
+				}else {
+					nexus = svg + ".nex";
+				}
+				
+			}
+			file_nexus.open(nexus);
+			// nexus format stuff
+			stream_nexus << "#nexus\n\nBEGIN Taxa;\nDIMENSIONS ntax=" << denom_file_count << ";\nTAXLABELS" ;
+			for(int i = 0; i < denom_file_count; ++i){
+				string taxa = nexus_color::remove_extensions(denom_names[i]); // cutting off file extension
+				stream_nexus << "\n[" << i+1 << "] '" << taxa << "'";
+			}
+			stream_nexus << "\n;\nEND; [TAXA]\n";
+			if(bootstrap_no>0){ // confidence values
+				stream_nexus << "\nBEGIN Splits;\nDIMENSIONS ntax=" << denom_file_count << " nsplits=" << split_list.size() << ";\nFORMAT CONFIDENCES=YES;\nMATRIX";
+			} else {
+				stream_nexus << "\nBEGIN Splits;\nDIMENSIONS ntax=" << denom_file_count << " nsplits=" << split_list.size() << ";\nMATRIX";
+			}
+		}
+
+		uint64_t pos = 0;
+		//cleanliness.setFilteredCount(split_list.size());
+		color_t split_color;
+
+		int split_num = 0; // number of split
+		int split_size; // #taxa in split
+		string split_comp = ""; // save split components/taxa
+
+		for (auto& split : split_list) {
+
+			if(nexus_wanted || pdf_wanted || svg_wanted){ // nexus
+				++split_num;
+				split_size = 0; // reset split size
+				split_comp = ""; // reset split components
+			}
+
+			double weight = split.first;
+			split_color = split.second;
+		// cleanliness.setSmallestWeight(weight, split.second);
+			if (!output.empty()){
+				stream << weight;    // weight of the split
+			}
+			if (bootstrap_no>0) {
+				stream_bootstrap << ((1.0 * support_values->at(split.second)) / bootstrap_no);
+				// stream_bootstrap << support_values[split.second];
+			}
+			if (raw_wanted){
+				array<uint32_t,2> weights = color_table[split_color];
+				stream_raw << weights[0] << '\t' << weights[1];
+			}
+			for (uint64_t i = 0; i < num; ++i) {
+
+				if (split_color.test(pos)) {
+					if (i < denom_names.size()) {
+						if (!output.empty()){
+							stream << '\t' << denom_names[i]; // name of the file
+						}
+						if (bootstrap_no > 0) {
+							stream_bootstrap << '\t' << denom_names[i]; // name of the file
+						}
+						if (raw_wanted){
+							stream_raw << '\t' << denom_names[i];
+						}
+
+						if(nexus_wanted || pdf_wanted || svg_wanted){ // nexus
+							++split_size;
+							if(split_size > 1) split_comp += " "; // " " only if not first value
+							split_comp += to_string(i+1);
+						}
+
+					}
+				}
+				split_color >>= 01u;
+			}
+
+			if(nexus_wanted || pdf_wanted || svg_wanted){
+				if(bootstrap_no>0){ // Adding bootstrap values
+					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t";
+					stream_nexus << weight << "\t" << ((1.0 * support_values->at(split.second)) / bootstrap_no) << "\t" << split_comp << ",";
+				} else {
+					stream_nexus << "\n[" << split_num << ", size=" << split_size << "]\t" << weight << "\t" << split_comp << ",";
+				}
+			}
+			if (!output.empty()){
+				stream << endl;
+			}
+			if(bootstrap_no>0){
+				stream_bootstrap<<endl;
+			}
+			if(raw_wanted){
+				stream_raw<<endl;
+			}
+		}
+
+		if (nexus_wanted || pdf_wanted || svg_wanted){ // nexus
+			stream_nexus << "\n;\nEND; [Splits]\n";
+			// filter = strict (=greedy),  weakly (=greedyWC), tree (=?greedy)
+			string fltr = "none"; // filter used for SplitsTree
+			stream_nexus << "\nBEGIN st_Assumptions;\nuptodate;\nsplitstransform=EqualAngle UseWeights = true RunConvexHull = true DaylightIterations = 0\nOptimizeBoxesIterations = 0 SpringEmbedderIterations = 0;\nSplitsPostProcess filter=";
+			stream_nexus << fltr << ";\nexclude no missing;\nautolayoutnodelabels;\nEND; [st_Assumptions]";
+		}
+
+		//cleanliness.calculateWeightBeforeCounter();
+
+		if (!output.empty()){
+			file.close();
+		}
+		if(bootstrap_no>0){
+			file_bootstrap.close();
+		}
+		if(raw_wanted){
+			file_raw.close();
+		}
+		if(nexus_wanted || pdf_wanted || svg_wanted){
+			file_nexus.close();
+			// naming modified nexus output file
+			//string modded_file = nexus_color::modify_filename(nexus, "labeled_");
+			// scale weights to 0-1
+			nexus_color::scale_nexus(nexus, verbose, nexus_wanted);
+
+			if(c_nexus_wanted){
+				// use scaled file to open, mod and save in SplitsTree
+				nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, true, nexus);
+
+				if(verbose) cout << "Adding color..." << endl << flush;
+				nexus_color::color_nexus(nexus, groups, coloring);
+				if(pdf_wanted || svg_wanted){
+					nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, false);
+				}
+			} else if(pdf_wanted || svg_wanted){
+				nexus_color::open_in_splitstree(nexus, pdf, svg, verbose, true, nexus);
+			}
+
+			// Delete nexus file if only pdf wanted
+			if(!nexus_wanted){
+				remove(nexus.c_str());
+				//remove(modded_file.c_str());
+			}
+		}
 }

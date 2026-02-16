@@ -15,11 +15,12 @@ class pd {
 		}
 	};
  
-    multimap_<double, color_t> planar_splits;
    int n;
+   multimap_<double, color_t> planar_splits;
    vector<int> cycle;
    vector<vector<double>> pd_pair_vals;
    unordered_map<std::pair<int,int>,double,PairHash> pd_cycle_vals;
+   double min;
    
    double pd_value_lookup(int l, int r);
    void partition_dp(int start, vector<int> pos, double& local_min_pd, vector<int>& local_min_seps);
@@ -29,7 +30,9 @@ class pd {
    
  public:
 
-   /**
+    multimap_<double, color_t> get_planar_splits();
+
+    /**
     * Contructor
     * @param split_list split list with weights and colors
     * @param n number of taxa

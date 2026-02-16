@@ -14,8 +14,16 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 	
 	pc_tree::PCTree tree = graph::filter_planar(planar_splits,false,color::n);
 	pc_tree::IntrusiveList<pc_tree::PCNode> leaves=tree.getLeaves();
-	        
-    for (auto* leaf : tree.currentLeafOrder()) {
+	
+	//minimum split weight for truncating leaf edges
+	auto it = planar_splits.begin();
+	min=-1;
+	while (it != planar_splits.end()) {
+		if(min=-1 or it->first<min) min=it->first;
+		it++;
+	}
+
+	for (auto* leaf : tree.currentLeafOrder()) {
 		cycle.push_back(leaf->index()-1);
     }
 
@@ -34,14 +42,19 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 
 }
 
-
+multimap_<double, color_t> pd::get_planar_splits(){
+	return planar_splits;
+}
 
 double pd::pd_value(const vector<int>& taxa) {
 	double val=0.0;
+	if (taxa.size()<=1) return val;
+	
 	// represent taxa as colors
 	color_t tax_col = 0;
 	for (int t : taxa) {
 		tax_col.set(t);
+		val+=min;
 	}
 	
 	// Iterating over all splits and check if disjoint with taxa
@@ -50,12 +63,14 @@ double pd::pd_value(const vector<int>& taxa) {
 
 		double weight = it->first;
 		color_t colors = it->second;
+		it++;
+		
+		//if (color::is_singleton(colors)) {/*val+=min; */continue;}
 		
 		//separating split?
-		if( ((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
+		if( !color::is_singleton(colors) && ((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
 			val+=weight;
 		}
-		it++;
 	}
 
 	return val;
@@ -171,7 +186,14 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 	//other columns
 	unordered_map<int, double> prev_col = c_min_tab;
 	for (int col=1;col<k-1;col++){
+		c_min_tab.clear();
 		c_argmin_tab.clear();
+// 		cerr << "prevcol " << endl;
+// 		for (auto it = prev_col.begin(); it != prev_col.end(); ++it) {
+// 			cerr << it->first << "->" << it->second << " ";
+// 		}
+// 		cerr << endl;
+
 		//rows = different seperation points
 		for (int sep=pos[col]+1;sep<=pos[col+1];sep++){
 			double pd_min=-1;
@@ -195,6 +217,12 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 		min_tab[col]=c_min_tab;
 		argmin_tab[col]=c_argmin_tab;
 		prev_col = c_min_tab;
+// 		cerr << "col " << col << endl;
+// 		for (auto it = argmin_tab[col].begin(); it != argmin_tab[col].end(); ++it) {
+// 			cerr << it->first << "->" << it->second << " ";
+// 		}
+// 		cerr << endl;
+
 	}
 	
 	// closing the cycle
@@ -211,13 +239,24 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 			pd_argmin=prev_sep;
 		}
 	}
-
+	
+// 	for (int i=0;i<k;i++){
+// 		cerr << i << ": ";
+// 	}
+	
+	
 	// compose optimum (backtracing from sep to start)
  	local_min_pd=pd_min;
 	int sep=pd_argmin;
 	local_min_seps[k-1]=sep;
 	for(int i=k-2;i>0;i--){
+// 		cerr << "SEP: " << sep << endl;
+// 		for (auto it = argmin_tab[i].begin(); it != argmin_tab[i].end(); ++it) {
+// 			cerr << it->first << "->" << it->second << " ";
+// 		}
+// 		cerr << endl;
 		sep=argmin_tab[i][sep];
+// 		cerr << "NEW SEP: " << sep << endl;
 		local_min_seps[i]=sep;
 	}
 	local_min_seps[0]=start;
@@ -237,7 +276,6 @@ vector<int> pd::partition(vector<int> representatives, double& score){
 	vector<int> pos(k);
 	for (int i=0;i<k;i++){
 		pos[i]=inv_cycle[representatives[i]];
-// 		cerr << "pos[" << i << "] = " << pos[i] << endl;
 	}
 
 	// sorted positions
@@ -264,7 +302,7 @@ vector<int> pd::partition(vector<int> representatives, double& score){
 // 		cerr << "["<<global_min_seps[i]<<","<<global_min_seps[(i+1)%k]<<"): " << pd_value_lookup(global_min_seps[i],global_min_seps[(i+1)%k]) << endl;
 // 	}
 // 	cerr<<endl;
-	
+
 	//compose mapping tax_id->cluster_id
 	vector<int> mapping(n);
 	for(int cluster=0;cluster<k;cluster++){
