@@ -5,16 +5,28 @@
 #include <iomanip> // für std::setw und std::right
 
 
+/**
+* Contructor
+* A given set of splits is copied and filtered to a planar split system.
+* The resulting cycle (cyclic taxa order along the planar graph) is stored as well.
+* The minimum split weight is determined for later use in pd::pd_value. 
+* 
+* @param split_list split list with weights and colors
+* @param n number of taxa
+* 
+*/
 pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 
 	// determine cycle
 	for (auto& it : split_list){
 		planar_splits.insert({it.first,it.second});
 	}
-	
 	pc_tree::PCTree tree = graph::filter_planar(planar_splits,false,color::n);
 	pc_tree::IntrusiveList<pc_tree::PCNode> leaves=tree.getLeaves();
-	
+	for (auto* leaf : tree.currentLeafOrder()) {
+		cycle.push_back(leaf->index()-1);
+    }
+
 	//minimum split weight for truncating leaf edges
 	auto it = planar_splits.begin();
 	min=-1;
@@ -23,11 +35,9 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 		it++;
 	}
 
-	for (auto* leaf : tree.currentLeafOrder()) {
-		cycle.push_back(leaf->index()-1);
-    }
-
-    vector<vector<double>> x(n,vector<double>(n));
+	//PD value for a pair of taxa on the cycle (not for an interval!)
+	//needed for the DP algo in pd::pd_set
+	vector<vector<double>> x(n,vector<double>(n));
 	pd_pair_vals=x;
 	for (int i=0;i<n;i++){
 		for (int j=i+1;j<n;j++){
@@ -35,17 +45,25 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 			pd_pair_vals[i][j]=pd_value(taxa);
 		}
 	}
-
-//  std::cerr << "tree.currentLeafOrder(): ";
-// 	for(int i : cycle){std::cerr<<i<<" ";}
-// 	std::cerr << endl;
-
 }
 
+
+/*
+ * Simple getter method.
+ */
 multimap_<double, color_t> pd::get_planar_splits(){
 	return planar_splits;
 }
 
+
+/**
+* Compute PD score, i.e., total weight of all splits that separate a given set of taxa.
+* Trivial splits (leaf edges) are fixed to a minimum weight.
+* 
+* @param taxa list of taxa to compute score of, IDs w.r.t. denom_names (not pos in cycle)
+* @return pd value of above list of taxa
+* 
+*/
 double pd::pd_value(const vector<int>& taxa) {
 	double val=0.0;
 	if (taxa.size()<=1) return val;
@@ -54,20 +72,20 @@ double pd::pd_value(const vector<int>& taxa) {
 	color_t tax_col = 0;
 	for (int t : taxa) {
 		tax_col.set(t);
-		val+=min;
+		// Trivial splits (leaf edges) are fixed to a minimum weight and ignored below.
+		val+=0.5*min;
 	}
 	
 	// Iterating over all splits and check if disjoint with taxa
+	// Trivial splits (leaf edges) are excluded here / considered above
 	auto it = planar_splits.begin();
 	while (it != planar_splits.end()) {
 
 		double weight = it->first;
 		color_t colors = it->second;
 		it++;
-		
-		//if (color::is_singleton(colors)) {/*val+=min; */continue;}
-		
-		//separating split?
+				
+		//separating split? (and non-trivial)
 		if( !color::is_singleton(colors) && ((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
 			val+=weight;
 		}
@@ -78,6 +96,15 @@ double pd::pd_value(const vector<int>& taxa) {
 
 
 
+/**
+* Determine set of k taxa of maximum pd value.
+* 
+* DP algo in DOI:10.1093/sysbio/syp058
+* 
+* @param k size of set
+* @return list of IDs (w.r.t. denom_names) of k taxa
+* 
+*/
 vector<int> pd::pd_set(const int k) {
 
 	
@@ -94,6 +121,7 @@ vector<int> pd::pd_set(const int k) {
 		}
 	}
 	
+	//larger k
 	for (int i=3;i<=k;i++) {
 		for (int u=0; u<=n-i+1; u++){
 			for (int v=u+i-1; v<n; v++){
@@ -146,32 +174,53 @@ vector<int> pd::pd_set(const int k) {
 	return max_set;
 }
 
-
-// including l, excluding r: [l,r)
-// l and r are positions in cycle
+/**
+* Get the PD value for an interval [l,r[ of taxa (along the cycle).
+* If the value has been calculated before, it is looked up in pd_cycle_vals.
+* If not, it is calculated and stored.
+* 
+* @param l left interval boundary (inclusive) in the cycle
+* @param r right interval boundary (exclusive)  in the cycle
+* @return PD value of all taxa in the interval [l,r[ of the cycle.
+* 
+*/
 double pd::pd_value_lookup(int l, int r){
+	//stored in the table already?
 	auto it=pd_cycle_vals.find({l,r});
+	// Yes: look up
 	if(it!=pd_cycle_vals.end()){
 		return it->second;
-	} else {
+	} else { //No: compute from scratch
+		//collect taxa
 		vector<int> taxa;
 		for(int i=l%n;i!=r;i=(i+1)%n){
 			taxa.push_back(cycle[i]);
 		}
+		//compute, store, return
 		double v = pd_value(taxa);
 		pd_cycle_vals[{l,r}]=v;
 		return v;
 	}
 }
 
-
+/**
+* Helper function for partition.
+* Find a combination of further partition boundaries such as:
+* - first partition starts on given left boundary,
+* - each partition includes exactly one represenative/seed taxon,
+* - sum of PD values over all partitions is minimal.
+* Dynamic programming.
+* 
+* @param start a coordinate on the cycle that is fixed as the first interval boundary
+* @param pos list of positions of represenatives/seeds along the cycle
+* @param local_min_pd optimal PD value for given start coordinate is stored in this variable
+* @param local_min_seps interval/partition boundaries (left coordinate on cycle each) leading to optimal PD value
+*/
 void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<int>& local_min_seps){
 	
 	int k=pos.size();
 	vector<unordered_map<int, double>> min_tab(k);
 	vector<unordered_map<int, int>> argmin_tab(k);
-	
-// 	for(int i=0;i<k;i++){cerr<<" "<<pos[i];}cerr<<endl;
 	
 	//first column
 	unordered_map<int, double> c_min_tab;
@@ -188,11 +237,6 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 	for (int col=1;col<k-1;col++){
 		c_min_tab.clear();
 		c_argmin_tab.clear();
-// 		cerr << "prevcol " << endl;
-// 		for (auto it = prev_col.begin(); it != prev_col.end(); ++it) {
-// 			cerr << it->first << "->" << it->second << " ";
-// 		}
-// 		cerr << endl;
 
 		//rows = different seperation points
 		for (int sep=pos[col]+1;sep<=pos[col+1];sep++){
@@ -217,11 +261,6 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 		min_tab[col]=c_min_tab;
 		argmin_tab[col]=c_argmin_tab;
 		prev_col = c_min_tab;
-// 		cerr << "col " << col << endl;
-// 		for (auto it = argmin_tab[col].begin(); it != argmin_tab[col].end(); ++it) {
-// 			cerr << it->first << "->" << it->second << " ";
-// 		}
-// 		cerr << endl;
 
 	}
 	
@@ -240,29 +279,29 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 		}
 	}
 	
-// 	for (int i=0;i<k;i++){
-// 		cerr << i << ": ";
-// 	}
-	
-	
 	// compose optimum (backtracing from sep to start)
  	local_min_pd=pd_min;
 	int sep=pd_argmin;
 	local_min_seps[k-1]=sep;
 	for(int i=k-2;i>0;i--){
-// 		cerr << "SEP: " << sep << endl;
-// 		for (auto it = argmin_tab[i].begin(); it != argmin_tab[i].end(); ++it) {
-// 			cerr << it->first << "->" << it->second << " ";
-// 		}
-// 		cerr << endl;
 		sep=argmin_tab[i][sep];
-// 		cerr << "NEW SEP: " << sep << endl;
 		local_min_seps[i]=sep;
 	}
 	local_min_seps[0]=start;
 }
 
-vector<int> pd::partition(vector<int> representatives, double& score){
+/**
+* Partition the set of all taxa into subsets containing one representative/seed taxon each 
+* such as to minimize the sum of PD values of all partitions.
+* 
+* @param representatives list of represenative/seed taxa (w.r.t. denom_names)
+* @param score varibale to store result: optimal total PD value (sum over all partitions)
+* @param min_score varibale to store result: minimum PD value among partitions
+* @param max_score varibale to store result: maximum PD value among partitions
+* @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+* 
+*/
+vector<int> pd::partition(vector<int> representatives, double& score, double& min_score, double& max_score){
 	
 	int k=representatives.size();
 	
@@ -293,20 +332,19 @@ vector<int> pd::partition(vector<int> representatives, double& score){
                 global_min_pd=local_min_pd;
                 global_min_seps=local_min_seps;
 		}
-// 		cerr << start << ": " << local_min_pd << endl;
 	}
 	
 	score=global_min_pd;
 
-// 	for (int i=0;i<k;i++){
-// 		cerr << "["<<global_min_seps[i]<<","<<global_min_seps[(i+1)%k]<<"): " << pd_value_lookup(global_min_seps[i],global_min_seps[(i+1)%k]) << endl;
-// 	}
-// 	cerr<<endl;
-
 	//compose mapping tax_id->cluster_id
+	min_score=-1;
+	max_score=-1;
 	vector<int> mapping(n);
 	for(int cluster=0;cluster<k;cluster++){
 		int sep=global_min_seps[cluster];
+		double s=pd_value_lookup(sep,global_min_seps[(cluster+1)%k]);
+		if(min_score==-1 or s<min_score){min_score=s;}
+		if(max_score==-1 or s>max_score){max_score=s;}
 		for(int t=sep%n;t!=global_min_seps[(cluster+1)%k];t=(t+1)%n){
 			mapping[cycle[t]]=cluster;
 		}

@@ -1758,34 +1758,42 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
     
         groups=""; coloring="";
         multimap_<double, color_t> planar_splits;
+        //initiate a PD object
         pd my_pd=pd(graph::split_list,num);
+        //for each number of partitions requested...
         for (int k:partition_nums){
 
             if(verbose) cout << k << flush;
             
-     		ofstream part_file;    // output file stream
+     		ofstream part_file;    // output tsv file stream
             ostream part_stream(part_file.rdbuf());
-            part_file.open(partitions_pref+"cluster_"+to_string(k)+".tsv");
-
-           vector<int> max_set=my_pd.pd_set(k);
-            double score;
-            vector<int> p=my_pd.partition(max_set,score);
-            if(verbose) cout << " (PD score "<<score << "), " << flush;
+            part_file.open(partitions_pref+"_cluster_"+to_string(k)+".tsv");
+            //find set of representative/seed taxa that have maximum PD score
+            vector<int> max_set=my_pd.pd_set(k);
+            //find optimal partitioning
+            double tot_score; 
+            double min_score; 
+            double max_score;
+            vector<int> p=my_pd.partition(max_set,tot_score, min_score, max_score);
+            if(verbose) cout << " (PD score "<<tot_score << "), " << flush;
             
-            part_stream<<"#Total_PD: "<<score<<endl;
+            part_stream<<"#Total_PD: "<<tot_score<<" min_score: "<<min_score<<" max_score: " << max_score<<endl;
             for(int i=0;i<num;i++){
                 part_stream << denom_names[i] << "\t" << p[i] << endl;
+            }
+            for(int i=0;i<k;i++){
+                part_stream << "#" << denom_names[max_set[i]] << "\tcl_repr" << endl;
             }
             part_file.close();
             
             planar_splits=my_pd.get_planar_splits();
             
-            nexus=partitions_pref+"cluster_"+to_string(k)+".nexus";
-            pdf=partitions_pref+"cluster_"+to_string(k)+".pdf";
-            svg=partitions_pref+"cluster_"+to_string(k)+".svg";
-            groups=partitions_pref+"cluster_"+to_string(k)+".tsv";
+            string nexus_c = partitions_pref+"_cluster_"+to_string(k)+".nexus";
+            string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
+            string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
+            groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
             
-            generate_output(num, planar_splits, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
+            generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
         }
         if(verbose){
