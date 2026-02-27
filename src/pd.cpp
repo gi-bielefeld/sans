@@ -3,6 +3,7 @@
 
 #include <utility>
 #include <iomanip> // für std::setw und std::right
+#include <algorithm>
 
 
 /**
@@ -34,7 +35,9 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 		if(min=-1 or it->first<min) min=it->first;
 		it++;
 	}
-
+	
+// 	cerr<<"pd.cpp, l39: truncate leaf edges to " << 0.5*min << endl;
+	
 	//PD value for a pair of taxa on the cycle (not for an interval!)
 	//needed for the DP algo in pd::pd_set
 	vector<vector<double>> x(n,vector<double>(n));
@@ -290,18 +293,35 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 	local_min_seps[0]=start;
 }
 
+
+
 /**
 * Partition the set of all taxa into subsets containing one representative/seed taxon each 
 * such as to minimize the sum of PD values of all partitions.
 * 
 * @param representatives list of represenative/seed taxa (w.r.t. denom_names)
-* @param score varibale to store result: optimal total PD value (sum over all partitions)
-* @param min_score varibale to store result: minimum PD value among partitions
-* @param max_score varibale to store result: maximum PD value among partitions
 * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
 * 
 */
-vector<int> pd::partition(vector<int> representatives, double& score, double& min_score, double& max_score){
+vector<int> pd::partition(vector<int> representatives){
+	return partition(representatives, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+}
+
+
+/**
+* Same as above storing some cluster statistics.
+* 
+* @param representatives list of represenative/seed taxa (w.r.t. denom_names)
+* @param pd varibale to store result: optimal total PD value (sum over all partitions)
+* @param min_pd varibale to store result: minimum PD value among partitions
+* @param max_pd varibale to store result: maximum PD value among partitions
+* @param max_pd_normalized varibale to store result of max_pd_normalized
+* @param intra_cluster varibale to store result of intra_cluster
+* @param inter_cluster varibale to store result of inter_cluster
+* @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+* 
+*/
+vector<int> pd::partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* max_pd_normalized, double* intra_cluster, double* inter_cluster){
 	
 	int k=representatives.size();
 	
@@ -324,7 +344,7 @@ vector<int> pd::partition(vector<int> representatives, double& score, double& mi
 	double global_min_pd=-1;
 	vector<int> global_min_seps(k);
 	// consider interval that contains the end/start of cycle: (rep_k,rep_0]
-	for (int start=(pos[k-1]+1)%n; start!=pos[0]; start=(start+1)%n) {
+	for (int start=(pos[k-1]+1)%n; start!=(pos[0]+1)%n; start=(start+1)%n) {
 		double local_min_pd=-1;
 		vector<int> local_min_seps(k);
 		partition_dp(start,pos,local_min_pd,local_min_seps);
@@ -334,22 +354,114 @@ vector<int> pd::partition(vector<int> representatives, double& score, double& mi
 		}
 	}
 	
-	score=global_min_pd;
-
 	//compose mapping tax_id->cluster_id
-	min_score=-1;
-	max_score=-1;
 	vector<int> mapping(n);
 	for(int cluster=0;cluster<k;cluster++){
 		int sep=global_min_seps[cluster];
-		double s=pd_value_lookup(sep,global_min_seps[(cluster+1)%k]);
-		if(min_score==-1 or s<min_score){min_score=s;}
-		if(max_score==-1 or s>max_score){max_score=s;}
 		for(int t=sep%n;t!=global_min_seps[(cluster+1)%k];t=(t+1)%n){
 			mapping[cycle[t]]=cluster;
 		}
 	}
+	
+	//statistics if asked for
+	if(pd){*pd=global_min_pd;}
+	if(min_pd or max_pd){
+		if(min_pd){*min_pd=-1;}
+		if(max_pd){*max_pd=0;}
+		for(int cluster=0;cluster<k;cluster++){
+			int sep=global_min_seps[cluster];
+			double s=pd_value_lookup(sep,global_min_seps[(cluster+1)%k]);
+			if(min_pd and (*min_pd==-1 or s<*min_pd)){*min_pd=s;}
+			if(max_pd and s>*max_pd){*max_pd=s;}
+		}
+	}
+	if(max_pd_normalized){*max_pd_normalized=pd::max_pd_normalized(global_min_seps);}
+	if(intra_cluster){*intra_cluster=pd::intra_cluster(global_min_seps);}
+	if(inter_cluster){*inter_cluster=pd::inter_cluster(global_min_seps);}
+	
 	return mapping;
 	
 }
 
+
+/**
+* Maximum PD value among all subsets normalized by subset size.
+* (Might be interpreted as an intra-cluster distance.)
+* 
+* @param partition_boundaries the left boundaries of a partitioning
+*/
+double pd::max_pd_normalized(vector<int> partition_boundaries){
+	int k=partition_boundaries.size();
+	double max=0;
+	//maximize over all clusters
+	for(int cluster=0;cluster<k;cluster++){
+		int curr=partition_boundaries[cluster];
+		int next=partition_boundaries[(cluster+1)%k];
+		//PD value for cluster
+		double s=pd_value_lookup(curr,next);
+		//cluster size
+		int size=(next>curr)?(next-curr):(next+n-curr);
+		//normalize
+		s/=size;
+		if(s>max){max=s;}
+	}
+	return max;
+}
+
+
+/**
+* Maximum pairwise PD value within any subset.
+* 
+* @param partition_boundaries the left boundaries of a partitioning
+*/
+double pd::intra_cluster(vector<int> partition_boundaries){
+	int k=partition_boundaries.size();
+	double max=0;
+	int argmax_i, argmax_j;
+	//maximize over all clusters
+	for(int cluster=0;cluster<k;cluster++){
+		int curr=partition_boundaries[cluster];
+		int next=partition_boundaries[(cluster+1)%k];
+		//maximize over all pairs
+		for(int i=curr; (i+1)%n!=next; i=(i+1)%n){
+			for(int j=(i+1)%n; j!=next; j=(j+1)%n){
+				//PD value (considered as "distance" here)
+				int l = std::min(i,j);
+				int r = std::max(i,j) ;
+				double s=pd_pair_vals[l][r];
+				//max?
+				if(s>max){
+					max=s;
+					argmax_i=l;
+					argmax_j=r;
+				}
+			}
+		}
+	}
+	return max;
+}
+
+
+
+/**
+* Minimum pairwise PD value between any subsets.
+* 
+* @param partition_boundaries the left boundaries of a partitioning
+*/
+double pd::inter_cluster(vector<int> partition_boundaries){
+	int k=partition_boundaries.size();
+	double min=-1;
+	//minimize over all neighboring clusters
+	for(int cluster=0;cluster<k;cluster++){
+		//PD of gap between clusters
+		int sep=partition_boundaries[cluster];
+		int l = std::min(sep,(sep-1));
+		int r = std::max(sep,(sep-1));
+		if(l<0){l=0;r=n-1;}
+		double s=pd_pair_vals[l][r];
+		if(min==-1 or s<min){
+			min=s;
+		}
+	}	
+	return min;
+}

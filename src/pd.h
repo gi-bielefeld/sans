@@ -82,15 +82,53 @@ class pd {
      * such as to minimize the sum of PD values of all partitions.
      * 
      * @param representatives list of represenative/seed taxa (w.r.t. denom_names)
-     * @param score varibale to store result: optimal total PD value (sum over all partitions)
-     * @param min_score varibale to store result: minimum PD value among partitions
-     * @param max_score varibale to store result: maximum PD value among partitions
      * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
      * 
      */
-    vector<int> partition(vector<int> representatives, double& score, double& min_score, double& max_score);
+    vector<int> partition(vector<int> representatives);
+
+    /**
+     * Same as above storing some cluster statistics.
+     * 
+     * @param representatives list of represenative/seed taxa (w.r.t. denom_names)
+     * @param pd varibale to store result: optimal total PD value (sum over all partitions)
+     * @param min_pd varibale to store result: minimum PD value among partitions
+     * @param max_pd varibale to store result: maximum PD value among partitions
+     * @param max_pd_normalized varibale to store result of max_pd_normalized
+     * @param intra_cluster varibale to store result of intra_cluster
+     * @param inter_cluster varibale to store result of inter_cluster
+     * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+     * 
+     */
+    vector<int> partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* max_pd_normalized, double* intra_cluster, double* inter_cluster);
+
+    
+    /**
+     * Maximum PD value among all subsets normalized by subset size.
+     * (Might be interpreted as an intra-cluster distance.)
+     * 
+     * @param partition_boundaries the left boundaries of a partitioning
+     */
+    double max_pd_normalized(vector<int> partition_boundaries);
 
 
+    /**
+     * Maximum pairwise PD value within any subset.
+     * 
+     * @param partition_boundaries the left boundaries of a partitioning
+     */
+    double intra_cluster(vector<int> partition_boundaries);
+
+
+
+    /**
+     * Minimum pairwise PD value between any subsets.
+     * 
+     * @param partition_boundaries the left boundaries of a partitioning
+     */
+    double inter_cluster(vector<int> partition_boundaries);
+
+    
     
  protected:
 

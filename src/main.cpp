@@ -1754,9 +1754,14 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 //Partitioning
     if(!partitions_pref.empty()){
         
+        //cluster statistics (header)
+        cout << "k\tmin_score\tmax_score\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
+        
         if(verbose) cout << "Partitioning..." << endl << flush;
     
         groups=""; coloring="";
+        double max_dunn_index=0;
+        int argmax_dunn_index;
         multimap_<double, color_t> planar_splits;
         //initiate a PD object
         pd my_pd=pd(graph::split_list,num);
@@ -1774,7 +1779,10 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             double tot_score; 
             double min_score; 
             double max_score;
-            vector<int> p=my_pd.partition(max_set,tot_score, min_score, max_score);
+            double max_pd_normalized;
+            double intra_cluster;
+            double inter_cluster;
+            vector<int> p=my_pd.partition(max_set,&tot_score, &min_score, &max_score,  &max_pd_normalized, &intra_cluster, &inter_cluster);
             if(verbose) cout << " (PD score "<<tot_score << "), " << flush;
             
             part_stream<<"#Total_PD: "<<tot_score<<" min_score: "<<min_score<<" max_score: " << max_score<<endl;
@@ -1795,7 +1803,17 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             
             generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
+            //cluster statistics (for this k)
+            double dunn=inter_cluster/intra_cluster;
+            cout << k << "\t" << min_score<< "\t" << max_score << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;
+            //max. Dunn index
+            if(dunn>=max_dunn_index){
+                argmax_dunn_index=k;
+                max_dunn_index=dunn;
+            }
+            
         }
+        cout << "Maximal Dunn index:" << max_dunn_index << " for k=" << argmax_dunn_index << endl;
         if(verbose){
             end = chrono::high_resolution_clock::now();
 			cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
