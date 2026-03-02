@@ -1036,7 +1036,7 @@ int main(int argc, char* argv[]) {
 					}
 					else
 					{
-						cout << "Warning: " << denom << " exists in input and graph. It is treated as one sequence" << endl;
+						cerr << "Warning: " << denom << " exists in input and graph. It is treated as one sequence" << endl;
 					}
 
 					line = line.substr(line.find_first_of(":") + 2, line.npos); // cut off the dataset-id
@@ -1088,7 +1088,7 @@ int main(int argc, char* argv[]) {
 									denom_names.push_back(denom); // set denom name
 								} else
 								{
-									cout << "Warning: " << denom << " exists in input and graph. It is treated as one sequence" << endl;
+									cerr << "Warning: " << denom << " exists in input and graph. It is treated as one sequence" << endl;
 								}
 								is_first = false;
 							}
@@ -1132,7 +1132,7 @@ int main(int argc, char* argv[]) {
 				}
 				else
 				{
-					cout << "Warning: " << col_name << " exists in input and graph. It is treated as one sequence" << endl;
+					cerr << "Warning: " << col_name << " exists in input and graph. It is treated as one sequence" << endl;
 				}
 			}
 		}
@@ -1165,8 +1165,8 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     if (maxN-num>=100) {
-		cout << "Warning: number of input genomes ("<<num<<") much lower than -DmaxN=" << maxN << endl;
-		cout << "Recommendation: modify -DmaxN in makefile, run make, run SANS; or use SANS-autoN.sh." << endl;
+		cerr << "Warning: number of input genomes ("<<num<<") much lower than -DmaxN=" << maxN << endl;
+		cerr << "Recommendation: modify -DmaxN in makefile, run make, run SANS; or use SANS-autoN.sh." << endl;
 	}
 
 
@@ -1741,6 +1741,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 		if (verbose) {
 			cout << "Writing output..." << endl << flush;
 		}
+        if(c_nexus_wanted || nexus_wanted) {
+            cerr << "Attention: For a reliable visualization using SplitsTree, split weights in the Nexus file have been scaled "
+                "to the range 0 to 1 by division by the maximum split weight." << endl;
+        }
+
 
 		generate_output(num, graph::split_list, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, c_nexus_wanted, pdf_wanted, svg_wanted, raw_wanted, groups, coloring, bootstrap_no, &support_values, denom_names, denom_file_count, verbose);
 		
@@ -1773,8 +1778,10 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
      		ofstream part_file;    // output tsv file stream
             ostream part_stream(part_file.rdbuf());
             part_file.open(partitions_pref+"_cluster_"+to_string(k)+".tsv");
+
             //find set of representative/seed taxa that have maximum PD score
             vector<int> max_set=my_pd.pd_set(k);
+
             //find optimal partitioning
             double tot_score; 
             double min_score; 
@@ -1784,24 +1791,25 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             double intra_cluster;
             double inter_cluster;
             vector<int> p=my_pd.partition(max_set,&tot_score, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+            // without all the measures, it would just be: vector<int> p=my_pd.partition(max_set);
             if(verbose) cout << " (PD score "<<tot_score << "), " << flush;
-            
+
+            // output partitioning (for this k)
             part_stream<<"#Total_PD: "<<tot_score<<" min_score: "<<min_score<<" max_score: " << max_score<<endl;
             for(int i=0;i<num;i++){
                 part_stream << denom_names[i] << "\t" << p[i] << endl;
             }
-            for(int i=0;i<k;i++){
-                part_stream << "#" << denom_names[max_set[i]] << "\tcl_repr" << endl;
+            for(int i=0;i<k;i++){ // Add representatives as "optional group" to tsv file.
+                part_stream << "#\t" << denom_names[max_set[i]] << "\tcl_repr" << endl;
             }
             part_file.close();
             
+            //generate further output (for this k)
             planar_splits=my_pd.get_planar_splits();
-            
             string nexus_c = partitions_pref+"_cluster_"+to_string(k)+".nexus";
             string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
             string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
             groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
-            
             generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
             //cluster statistics (for this k)
