@@ -94,15 +94,23 @@ class pd {
      * @param pd varibale to store result: optimal total PD value (sum over all partitions)
      * @param min_pd varibale to store result: minimum PD value among partitions
      * @param max_pd varibale to store result: maximum PD value among partitions
+     * @param min_pd_normalized varibale to store result of min_pd_normalized
      * @param max_pd_normalized varibale to store result of max_pd_normalized
      * @param intra_cluster varibale to store result of intra_cluster
      * @param inter_cluster varibale to store result of inter_cluster
      * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
      * 
      */
-    vector<int> partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* max_pd_normalized, double* intra_cluster, double* inter_cluster);
+    vector<int> partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* min_pd_normalized, double* max_pd_normalized, double* intra_cluster, double* inter_cluster);
 
     
+    /**
+     * Minimum PD value among all subsets normalized by subset size.
+     * 
+     * @param partition_boundaries the left boundaries of a partitioning
+     */
+    double min_pd_normalized(vector<int> partition_boundaries);
+
     /**
      * Maximum PD value among all subsets normalized by subset size.
      * (Might be interpreted as an intra-cluster distance.)

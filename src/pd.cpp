@@ -304,7 +304,7 @@ void pd::partition_dp(int start, vector<int> pos, double& local_min_pd, vector<i
 * 
 */
 vector<int> pd::partition(vector<int> representatives){
-	return partition(representatives, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+	return partition(representatives, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
 }
 
 
@@ -315,13 +315,14 @@ vector<int> pd::partition(vector<int> representatives){
 * @param pd varibale to store result: optimal total PD value (sum over all partitions)
 * @param min_pd varibale to store result: minimum PD value among partitions
 * @param max_pd varibale to store result: maximum PD value among partitions
+* @param min_pd_normalized varibale to store result of min_pd_normalized
 * @param max_pd_normalized varibale to store result of max_pd_normalized
 * @param intra_cluster varibale to store result of intra_cluster
 * @param inter_cluster varibale to store result of inter_cluster
 * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
 * 
 */
-vector<int> pd::partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* max_pd_normalized, double* intra_cluster, double* inter_cluster){
+vector<int> pd::partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* min_pd_normalized, double* max_pd_normalized, double* intra_cluster, double* inter_cluster){
 	
 	int k=representatives.size();
 	
@@ -375,6 +376,7 @@ vector<int> pd::partition(vector<int> representatives, double* pd, double* min_p
 			if(max_pd and s>*max_pd){*max_pd=s;}
 		}
 	}
+	if(min_pd_normalized){*min_pd_normalized=pd::min_pd_normalized(global_min_seps);}
 	if(max_pd_normalized){*max_pd_normalized=pd::max_pd_normalized(global_min_seps);}
 	if(intra_cluster){*intra_cluster=pd::intra_cluster(global_min_seps);}
 	if(inter_cluster){*inter_cluster=pd::inter_cluster(global_min_seps);}
@@ -383,6 +385,28 @@ vector<int> pd::partition(vector<int> representatives, double* pd, double* min_p
 	
 }
 
+/**
+* Minimum PD value among all subsets normalized by subset size.
+* 
+* @param partition_boundaries the left boundaries of a partitioning
+*/
+double pd::min_pd_normalized(vector<int> partition_boundaries){
+	int k=partition_boundaries.size();
+	double min=-1;
+	//maximize over all clusters
+	for(int cluster=0;cluster<k;cluster++){
+		int curr=partition_boundaries[cluster];
+		int next=partition_boundaries[(cluster+1)%k];
+		//PD value for cluster
+		double s=pd_value_lookup(curr,next);
+		//cluster size
+		int size=(next>curr)?(next-curr):(next+n-curr);
+		//normalize
+		s/=size;
+		if(min==-1 or s<min){min=s;}
+	}
+	return min;
+}
 
 /**
 * Maximum PD value among all subsets normalized by subset size.

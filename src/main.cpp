@@ -1755,7 +1755,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
     if(!partitions_pref.empty()){
         
         //cluster statistics (header)
-        cout << "k\tmin_score\tmax_score\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
+        cout << "k\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
         
         if(verbose) cout << "Partitioning..." << endl << flush;
     
@@ -1780,9 +1780,10 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             double min_score; 
             double max_score;
             double max_pd_normalized;
+            double min_pd_normalized;
             double intra_cluster;
             double inter_cluster;
-            vector<int> p=my_pd.partition(max_set,&tot_score, &min_score, &max_score,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+            vector<int> p=my_pd.partition(max_set,&tot_score, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
             if(verbose) cout << " (PD score "<<tot_score << "), " << flush;
             
             part_stream<<"#Total_PD: "<<tot_score<<" min_score: "<<min_score<<" max_score: " << max_score<<endl;
@@ -1805,7 +1806,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
             //cluster statistics (for this k)
             double dunn=inter_cluster/intra_cluster;
-            cout << k << "\t" << min_score<< "\t" << max_score << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;
+            cout << k << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;
             //max. Dunn index
             if(dunn>=max_dunn_index){
                 argmax_dunn_index=k;
