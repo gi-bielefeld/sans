@@ -16,7 +16,12 @@ class pd {
       }
    };
 
-
+   /**
+    * Convert a given list of partition boundaries (left boundaries w.r.t. cycle) into a mapping assigning a partition ID to each taxon: result[tax_id]=part_id
+    * @param seps
+    * @return
+    */
+   vector<int> seps2map(vector<int>& seps);
    
  private:
  
@@ -32,7 +37,8 @@ class pd {
    unordered_map<std::pair<int,int>,double,PairHash> pd_cycle_vals;
    //minimum observed weight of leaf edge; used to truncate leaf edges when calculating PD values
    double min;
-
+   //last computes partitioning
+   vector<int> partition_boundaries;
    
    
  public:
@@ -88,22 +94,32 @@ class pd {
     vector<int> partition(vector<int> representatives);
 
     /**
-     * Same as above storing some cluster statistics.
+     * Split the partition with largest PD score into two subsets with minimum sum of PD scores.
+     * Input (so to say) is the previously computed partitioning.
+     * If no partitioning has been computed yet, an initial bipartition is computed.
+     *
+     * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+     *
+     */
+    vector<int> greedily_split();
+    vector<int> greedily_split_by_dunn();
+
+    /**
+     * Determine cluster statistics of previously computed partitioning.
      * 
-     * @param representatives list of represenative/seed taxa (w.r.t. denom_names)
      * @param pd varibale to store result: optimal total PD value (sum over all partitions)
+     * @param pd_list varibale to store result: PD value per cluster
      * @param min_pd varibale to store result: minimum PD value among partitions
      * @param max_pd varibale to store result: maximum PD value among partitions
      * @param min_pd_normalized varibale to store result of min_pd_normalized
      * @param max_pd_normalized varibale to store result of max_pd_normalized
-     * @param intra_cluster varibale to store result of intra_cluster
-     * @param inter_cluster varibale to store result of inter_cluster
-     * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+     * @param intra_cluster variable to store result of intra_cluster
+     * @param inter_cluster variable to store result of inter_cluster
      * 
      */
-    vector<int> partition(vector<int> representatives, double* pd, double* min_pd, double* max_pd, double* min_pd_normalized, double* max_pd_normalized, double* intra_cluster, double* inter_cluster);
+    void partition_statistics(double* pd, vector<double>* pd_list, double* min_pd, double* max_pd, double* min_pd_normalized, double* max_pd_normalized, double* intra_cluster, double* inter_cluster);
 
-    
+
     /**
      * Minimum PD value among all subsets normalized by subset size.
      * 

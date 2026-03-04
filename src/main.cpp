@@ -179,7 +179,8 @@ int main(int argc, char* argv[]) {
     string groups; // name of input file giving groups
     string coloring; // name of input file for using specified color
     string translate; // name of translate file
-    string partitions_pref;//prefix for clusterings
+    string partitions_pref; //prefix for clusterings
+    string partition_representatives; //name of file for optional specification of representatives
 
     // input
     uint64_t num = 0;    // number of input files
@@ -601,8 +602,22 @@ int main(int argc, char* argv[]) {
                     for (int x = stoi(a); x <= stoi(b); ++x) partition_nums.push_back(x);
                 }
             } else { // single value
-                catch_failed_stoi_cast(nums,argv[i - 1]);
-                partition_nums.push_back(stoi(nums));
+                bool numerical=true;
+                try {stoi(argv[i]);}
+                catch( invalid_argument &excp ){
+                    numerical=false;
+                    // file name with representatives given?
+                    partition_representatives=argv[i];
+                    ifstream file_stream(partition_representatives);
+                    if (!file_stream.good()) { // catch unreadable file
+                        cout << "\33[2K\r" << "\u001b[31m" << "(ERR)" << " Could not read file " <<  "<" << partition_representatives << ">" << "\u001b[0m" << endl;
+                        file_stream.close();
+                        return 1;
+                    } else { file_stream.close();}
+                }
+                if(numerical){
+                    partition_nums.push_back(stoi(nums));
+                }
             }
             //file  names prefix
             if (i+1 < argc && argv[i+1][0]!='-') {
@@ -659,7 +674,7 @@ int main(int argc, char* argv[]) {
         } 
         else {newick=output+".newick";}
     }
-    if( partition_nums.size()>0 && partitions_pref.empty()) { 
+    if( (partition_nums.size()>0 or !partition_representatives.empty()) && partitions_pref.empty()) {
         if (output.empty()) {
             cerr << "Error: Provide output file name and/or file prefix for partition output." << endl;
             return 1;
@@ -758,8 +773,8 @@ int main(int argc, char* argv[]) {
 		cerr << "Error: Blacklist can only be applied when reading sequences as input, i.e. -i or -g." << endl;
 		return 1;
     }
-	if (stats_wanted && !splits.empty()) {
-		cerr << "Error: k-mer statistics can only be determined when reading sequences as input, i.e. -i or -g." << endl;
+    if (stats_wanted && !splits.empty() && partitions_pref.empty()) {
+        cerr << "Error: statistics can only be determined for k-mers and/r partitionings, i.e., whith reading sequences as input (-i or -g) or partitioning requested (-P)." << endl;
 		return 1;
     }
  	if (raw_wanted && !splits.empty()) {
@@ -1757,75 +1772,148 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 	}
 
 //Partitioning
-    if(!partitions_pref.empty()){
-        
-        //cluster statistics (header)
-        cout << "k\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
-        
+    if(!partitions_pref.empty() or !partition_representatives.empty()){
+
         if(verbose) cout << "Partitioning..." << endl << flush;
-    
+
+        //cluster statistics (header)
+        ofstream stats_file;    // output tsv file stream
+        ostream stats_stream(stats_file.rdbuf());
+        if(stats_wanted){
+            stats_file.open(stats+"_partitioning");
+            stats_stream << "k\ttotal_score\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
+        }
+        if(verbose){cout << "k\ttotal_score\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;}
+
         groups=""; coloring="";
         double max_dunn_index=0;
         int argmax_dunn_index;
         multimap_<double, color_t> planar_splits;
         //initiate a PD object
         pd my_pd=pd(graph::split_list,num);
-        //for each number of partitions requested...
-        for (int k:partition_nums){
-
-            if(verbose) cout << k << flush;
-            
-     		ofstream part_file;    // output tsv file stream
-            ostream part_stream(part_file.rdbuf());
-            part_file.open(partitions_pref+"_cluster_"+to_string(k)+".tsv");
-
-            //find set of representative/seed taxa that have maximum PD score
-            vector<int> max_set=my_pd.pd_set(k);
+        if(not partition_representatives.empty()){
+            //read representatives and transform to list of indices
+            ifstream file(partition_representatives);
+            string line;
+            vector<int> representatives;
+            int k=0;
+            while(getline(file, line)){
+                k++;
+                // find integer of that genome ID
+                for(int i=0; i<denom_names.size(); i++){
+                    if(denom_names[i]==line){
+                        representatives.push_back(i);
+                    }
+                }
+                if(k!=representatives.size()){
+                    cerr<< "ERROR while reading the cluster representatives: "<<line<<" not in split input."<< endl;
+                    exit(1);
+                }
+             }
 
             //find optimal partitioning
-            double tot_score; 
-            double min_score; 
+            double tot_score;
+            vector<double> scores;
+            double min_score;
             double max_score;
             double max_pd_normalized;
             double min_pd_normalized;
             double intra_cluster;
             double inter_cluster;
-            vector<int> p=my_pd.partition(max_set,&tot_score, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
-            // without all the measures, it would just be: vector<int> p=my_pd.partition(max_set);
-            if(verbose) cout << " (PD score "<<tot_score << "), " << flush;
+            vector<int> p=my_pd.partition(representatives);
+            my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+
+            ofstream part_file;    // output tsv file stream
+            ostream part_stream(part_file.rdbuf());
+            part_file.open(partitions_pref+"_cluster.tsv");
 
             // output partitioning (for this k)
-            part_stream<<"#Total_PD: "<<tot_score<<" min_score: "<<min_score<<" max_score: " << max_score<<endl;
             for(int i=0;i<num;i++){
-                part_stream << denom_names[i] << "\t" << p[i] << endl;
+                part_stream << denom_names[i] << "\t" << p[i] << "_" << scores[p[i]] << endl;
             }
             for(int i=0;i<k;i++){ // Add representatives as "optional group" to tsv file.
-                part_stream << "#\t" << denom_names[max_set[i]] << "\tcl_repr" << endl;
+                part_stream << "#\t" << denom_names[representatives[i]] <<  "\tcl_repr" << endl; //"\t" << max_set[i] << endl;
             }
             part_file.close();
-            
+
             //generate further output (for this k)
             planar_splits=my_pd.get_planar_splits();
-            string nexus_c = partitions_pref+"_cluster_"+to_string(k)+".nexus";
-            string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
-            string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
-            groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
+            string nexus_c = partitions_pref+"_cluster.nexus";
+            string pdf_c = partitions_pref+"_cluster.pdf";
+            string svg_c = svg_wanted?(output+"_cluster.svg"):"";
+            groups=partitions_pref+"_cluster.tsv";
             generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
-            //cluster statistics (for this k)
+
+            //cluster statistics
             double dunn=inter_cluster/intra_cluster;
-            cout << k << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;
-            //max. Dunn index
-            if(dunn>=max_dunn_index){
-                argmax_dunn_index=k;
-                max_dunn_index=dunn;
+            if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+            if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+        } else{
+            vector<int> seps;
+
+            //for greedy partinioning, always start from 2
+            for(int k=2;k<partition_nums[0];k++){
+//                my_pd.greedily_split();
+                my_pd.greedily_split_by_dunn();
             }
-            
-        }
-        cout << "Maximal Dunn index:" << max_dunn_index << " for k=" << argmax_dunn_index << endl;
-        if(verbose){
-            end = chrono::high_resolution_clock::now();
-			cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
+
+            //for each number of partitions requested...
+            for (int k:partition_nums){
+
+                ofstream part_file;    // output tsv file stream
+                ostream part_stream(part_file.rdbuf());
+                part_file.open(partitions_pref+"_cluster_"+to_string(k)+".tsv");
+
+                //find set of representative/seed taxa that have maximum PD score
+//                vector<int> max_set=my_pd.pd_set(k);
+
+                //find optimal partitioning
+                double tot_score;
+                vector<double> scores;
+                double min_score;
+                double max_score;
+                double max_pd_normalized;
+                double min_pd_normalized;
+                double intra_cluster;
+                double inter_cluster;
+//                vector<int> p=my_pd.partition(max_set);
+//                vector<int> p=my_pd.greedily_split();
+                vector<int> p=my_pd.greedily_split_by_dunn();
+                my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+
+                // output partitioning (for this k)
+                for(int i=0;i<num;i++){
+                    part_stream << denom_names[i] << "\t" << p[i] << "_" << scores[p[i]] << endl;
+                }
+//                for(int i=0;i<k;i++){ // Add representatives as "optional group" to tsv file.
+//                    part_stream << "#\t" << denom_names[max_set[i]] <<  "\tcl_repr" << endl; //"\t" << max_set[i] << endl;
+//                }
+                part_file.close();
+
+                //generate further output (for this k)
+                planar_splits=my_pd.get_planar_splits();
+                string nexus_c = partitions_pref+"_cluster_"+to_string(k)+".nexus";
+                string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
+                string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
+                groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
+                generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
+
+                //cluster statistics (for this k)
+                double dunn=inter_cluster/intra_cluster;
+                if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+                if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+                //max. Dunn index
+                if(dunn>=max_dunn_index){
+                    argmax_dunn_index=k;
+                    max_dunn_index=dunn;
+                }
+            }
+            if(verbose) cout << "Maximal Dunn index:" << max_dunn_index << " for k=" << argmax_dunn_index << endl;
+            if(verbose){
+                end = chrono::high_resolution_clock::now();
+                cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
+            }
         }
     }
 	
