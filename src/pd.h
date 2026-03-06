@@ -102,7 +102,6 @@ class pd {
      *
      */
     vector<int> greedily_split();
-    vector<int> greedily_split_by_dunn();
 
     /**
      * Determine cluster statistics of previously computed partitioning.

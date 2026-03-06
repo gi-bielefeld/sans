@@ -76,7 +76,7 @@ double pd::pd_value(const vector<int>& taxa) {
 	for (int t : taxa) {
 		tax_col.set(t);
 		// Trivial splits (leaf edges) are fixed to a minimum weight and ignored below.
-        val+=0.5*min;
+//        val+=0.5*min;
 	}
 	
 	// Iterating over all splits and check if disjoint with taxa
@@ -92,6 +92,9 @@ double pd::pd_value(const vector<int>& taxa) {
         if( !color::is_singleton(colors) && ((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
             val+=weight;
 		}
+        if( color::is_singleton(colors) ){
+            val+=std::min(0.5*min,weight);
+        }
 	}
 
 	return val;
@@ -356,7 +359,7 @@ vector<int> pd::greedily_split(){
                 double s1=pd_value_lookup(i,j);
                 double s2=pd_value_lookup(j,i);
                 //save current optimum
-                if(min==-1 or s1+s2<min){
+                  if(min==-1 or (s1+s2)<min){
                     min=s1+s2;
                     partition_boundaries[0]=i;
                     partition_boundaries[1]=j;
@@ -375,8 +378,7 @@ vector<int> pd::greedily_split(){
             }
         }
         // ... find optimal split point ...
-        double min_l=-1;
-        double min_r=-1;
+        double min=-1;
         int argmin;
         int l=partition_boundaries[argmax];
         int r=partition_boundaries[(argmax+1)%k];
@@ -385,9 +387,8 @@ vector<int> pd::greedily_split(){
             double s1=pd_value_lookup(l,i);
             double s2=pd_value_lookup(i,r);
             //save current optimum
-            if(min_l==-1 or (s1+s2)<(min_l+min_r)){
-                min_l=s1;
-                min_r=s2;
+            if(min==-1 or (s1+s2) < min){
+                min=s1+s2;
                 argmin=i;
             }
         }
@@ -401,70 +402,6 @@ vector<int> pd::greedily_split(){
 }
 
 
-
-vector<int> pd::greedily_split_by_dunn(){
-    int k=partition_boundaries.size();
-    //if no paritioning (seps) is given, initial split into two partitions
-    if(k<2){
-        vector<int> partition_opt;
-        double opt=-1;
-        //try all bipartitions
-        for(int i=0;i<n;i++){
-            for(int j=i+1;j<n;j++){
-                vector<int> p(2);
-                p[0]=i;
-                p[1]=j;
-                partition_boundaries=p;
-                //dunn index?
-                double intra;
-                double inter;
-                double v;
-                partition_statistics(nullptr,nullptr,nullptr,nullptr,nullptr,&v,&intra,&inter);
-                v=-inter/intra;
-                //cerr << intra << " " << inter << endl;
-                //save current optimum
-                if(opt==-1 or v<opt){
-                    opt=v;
-                    partition_opt=p;
-                }
-            }
-        }
-        partition_boundaries=partition_opt;
-    } else {
-        vector<int> partition_opt;
-        double opt=-1;
-        //else try each partition ...
-        vector<int> orig=partition_boundaries;
-        for(int c=0;c<k;c++){
-            //try each split
-            int l=orig[c];
-            int r=orig[(c+1)%k];
-            for(int i=(l+1)%n;i!=r;i=(i+1)%n){
-                vector<int> p=orig;
-                p.insert(p.begin() + c+1, i);
-                partition_boundaries=p;
-                //dunn index?
-                double intra;
-                double inter;
-                double v;
-                partition_statistics(nullptr,nullptr,nullptr,nullptr,nullptr,&v,&intra,&inter);
-                v=-inter/intra;
-                //save current optimum
-                if(opt==-1 or v<opt){
-                    opt=v;
-                    partition_opt=p;
-                }
-
-            }
-        }
-        partition_boundaries=partition_opt;
-        //for(int i=0;i<partition_boundaries.size();i++){cout << partition_boundaries[i] << ", ";}cout << endl;
-    }
-
-    //for(int i=0;i<partition_boundaries.size();i++){cout << partition_boundaries[i] << ", ";}cout << endl;
-    //compose mapping tax_id->cluster_id
-    return seps2map(partition_boundaries);
-}
 
 
 
@@ -541,12 +478,10 @@ double pd::min_pd_normalized(vector<int> partition_boundaries){
 *
 * @param partition_boundaries the left boundaries of a partitioning
 */
-//TODO: max<->avg
 double pd::max_pd_normalized(vector<int> partition_boundaries){
 	int k=partition_boundaries.size();
 	double max=0;
-    int cnt=0;
-	//maximize over all clusters
+    //maximize over all clusters
 	for(int cluster=0;cluster<k;cluster++){
 		int curr=partition_boundaries[cluster];
 		int next=partition_boundaries[(cluster+1)%k];
@@ -554,19 +489,13 @@ double pd::max_pd_normalized(vector<int> partition_boundaries){
 		double s=pd_value_lookup(curr,next);
 		//cluster size
         int size=(next>curr)?(next-curr):(next+n-curr);
-        if(size>1 and s>max){
-            //normalize
-            s/=(size-1);
+        //normalize
+        s/=size;
+        if(s>max){
             max=s;
         }
-//        if(size>1){
-//            //normalize
-//            s/=(size-1);
-//            max+=s;
-//            cnt++;
-//        }
 	}
-    return max;// /cnt;
+    return max;
 }
 
 
@@ -577,9 +506,8 @@ double pd::max_pd_normalized(vector<int> partition_boundaries){
 */
 double pd::intra_cluster(vector<int> partition_boundaries){
 	int k=partition_boundaries.size();
-    double tot=0;
-    int cnt=0;
-    //avg over all clusters
+    double max=0;
+    //max over all clusters
 	for(int cluster=0;cluster<k;cluster++){
 		int curr=partition_boundaries[cluster];
 		int next=partition_boundaries[(cluster+1)%k];
@@ -596,9 +524,12 @@ double pd::intra_cluster(vector<int> partition_boundaries){
                 cnt_c++;
 			}
 		}
-        if(cnt_c>0) {tot+=tot_c/cnt_c; cnt++;}
+        if(cnt_c>0) {tot_c/=cnt_c;}
+        if(tot_c>max){
+            max+=tot_c;
+        }
     }
-    return tot/cnt;
+    return max;
 }
 
 
@@ -610,16 +541,27 @@ double pd::intra_cluster(vector<int> partition_boundaries){
 */
 double pd::inter_cluster(vector<int> partition_boundaries){
 	int k=partition_boundaries.size();
-    double tot=0;
+    double min=-1;
     //minimize over all neighboring clusters
 	for(int cluster=0;cluster<k;cluster++){
 		//PD of gap between clusters
-		int sep=partition_boundaries[cluster];
-		int l = std::min(sep,(sep-1));
-		int r = std::max(sep,(sep-1));
-		if(l<0){l=0;r=n-1;}
-		double s=pd_pair_vals[l][r];
-        tot+=s;
+        int sep=partition_boundaries[cluster];
+        int l = std::min(sep,(sep-1));
+        int r = std::max(sep,(sep-1));
+        if(l<0){l=0;r=n-1;}
+        double s=pd_pair_vals[l][r];
+
+//        // different calculation
+//        double pd_t=pd_value_lookup(partition_boundaries[(cluster+k-1)%k],partition_boundaries[(cluster+1)%k]);
+//        double pd_l=pd_value_lookup(partition_boundaries[(cluster+k-1)%k],partition_boundaries[cluster]);
+//        double pd_r=pd_value_lookup(partition_boundaries[cluster],partition_boundaries[(cluster+1)%k]);
+//        double s_alt=pd_t-pd_l-pd_r;
+
+        if(min==-1 or s<min){
+//      if(min==-1 or s_alt<min){
+            min=s;//_alt;
+        }
+
 	}	
-    return tot/k;
+    return min;
 }

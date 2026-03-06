@@ -1781,9 +1781,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         ostream stats_stream(stats_file.rdbuf());
         if(stats_wanted){
             stats_file.open(stats+"_partitioning");
-            stats_stream << "k\ttotal_score\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;
+            stats_stream << "k\ttotal_score\tmin_score\tmax_score\tinter_cluster\tdunn_index" << endl;
         }
-        if(verbose){cout << "k\ttotal_score\tmin_score\tmax_score\tmin_pd_normalized\tmax_pd_normalized\tintra_cluster\tinter_cluster\tdunn_index" << endl;}
+        if(verbose){cout << "k\ttotal_score\tmin_score\tmax_score\tinter_cluster\tdunn_index" << endl;}
 
         groups=""; coloring="";
         double max_dunn_index=0;
@@ -1847,15 +1847,14 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
             //cluster statistics
             double dunn=inter_cluster/intra_cluster;
-            if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
-            if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+            if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
+            if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
         } else{
             vector<int> seps;
 
             //for greedy partinioning, always start from 2
             for(int k=2;k<partition_nums[0];k++){
-//                my_pd.greedily_split();
-                my_pd.greedily_split_by_dunn();
+                my_pd.greedily_split();
             }
 
             //for each number of partitions requested...
@@ -1878,8 +1877,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 double intra_cluster;
                 double inter_cluster;
 //                vector<int> p=my_pd.partition(max_set);
-//                vector<int> p=my_pd.greedily_split();
-                vector<int> p=my_pd.greedily_split_by_dunn();
+                vector<int> p=my_pd.greedily_split();
                 my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
 
                 // output partitioning (for this k)
@@ -1900,9 +1898,9 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
                 //cluster statistics (for this k)
-                double dunn=inter_cluster/intra_cluster;
-                if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
-                if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << min_pd_normalized << "\t" << max_pd_normalized << "\t" << intra_cluster << "\t" << inter_cluster << "\t" << dunn << endl;}
+                double dunn=inter_cluster/max_score;
+                if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
+                if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << "\t" << inter_cluster << "\t" << dunn << endl;}
                 //max. Dunn index
                 if(dunn>=max_dunn_index){
                     argmax_dunn_index=k;
