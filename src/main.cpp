@@ -1781,13 +1781,11 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         ostream stats_stream(stats_file.rdbuf());
         if(stats_wanted){
             stats_file.open(stats+"_partitioning");
-            stats_stream << "k\ttotal_score\tmin_score\tmax_score\tinter_cluster\tdunn_index" << endl;
+            stats_stream << "k\ttot_PD\tmin_PD\tmax_PD  \tinter\tdunn_ind" << endl;
         }
-        if(verbose){cout << "k\ttotal_score\tmin_score\tmax_score\tinter_cluster\tdunn_index" << endl;}
+        if(verbose){cout << "k\ttot_PD\tmin_PD\tmax_PD  \tinter\tdunn_ind" << endl;}
 
         groups=""; coloring="";
-        double max_dunn_index=0;
-        int argmax_dunn_index;
         multimap_<double, color_t> planar_splits;
         //initiate a PD object
         pd my_pd=pd(graph::split_list,num);
@@ -1850,12 +1848,16 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
             if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
         } else{
-            vector<int> seps;
 
             //for greedy partinioning, always start from 2
             for(int k=2;k<partition_nums[0];k++){
                 my_pd.greedily_split();
             }
+
+            double max_dunn_index=0;
+            int argmax_dunn_index;
+            bool dunn_increasing=true;
+            double prev_dunn=0;
 
             //for each number of partitions requested...
             for (int k:partition_nums){
@@ -1868,21 +1870,13 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 //                vector<int> max_set=my_pd.pd_set(k);
 
                 //find optimal partitioning
-                double tot_score;
-                vector<double> scores;
-                double min_score;
-                double max_score;
-                double max_pd_normalized;
-                double min_pd_normalized;
-                double intra_cluster;
-                double inter_cluster;
 //                vector<int> p=my_pd.partition(max_set);
                 vector<int> p=my_pd.greedily_split();
-                my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+
 
                 // output partitioning (for this k)
                 for(int i=0;i<num;i++){
-                    part_stream << denom_names[i] << "\t" << p[i] << "_" << scores[p[i]] << endl;
+                    part_stream << denom_names[i] << "\t" << p[i] << endl;
                 }
 //                for(int i=0;i<k;i++){ // Add representatives as "optional group" to tsv file.
 //                    part_stream << "#\t" << denom_names[max_set[i]] <<  "\tcl_repr" << endl; //"\t" << max_set[i] << endl;
@@ -1898,17 +1892,51 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
 
                 //cluster statistics (for this k)
+                double tot_score;
+                vector<double> scores;
+                double min_score;
+                double max_score;
+                double max_pd_normalized;
+                double min_pd_normalized;
+                double intra_cluster;
+                double inter_cluster;
+                my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
                 double dunn=inter_cluster/max_score;
-                if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
-                if(verbose){ cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << "\t" << inter_cluster << "\t" << dunn << endl;}
                 //max. Dunn index
                 if(dunn>=max_dunn_index){
                     argmax_dunn_index=k;
                     max_dunn_index=dunn;
                 }
+                //local optimum?
+                bool local_opt=false;
+                if(dunn>=prev_dunn){
+                    dunn_increasing=true;
+                }else{
+                    //decreasing dunn
+                    if(dunn_increasing and prev_dunn>0.1){
+                        //local max
+                        local_opt=true;
+                    }
+                    dunn_increasing=false;
+                }
+                prev_dunn=dunn;
+                if(verbose){
+                    //append * to previous line to mark local optimum?
+                    if(local_opt){
+                        if(partition_nums.size()>1 and k==partition_nums[1]){
+                            cout << " ?" << endl;
+                        } else {
+                            cout << " *" << endl;
+                        }
+                    } else if (k!=partition_nums[0]){
+                        cout << endl;
+                    }
+                    cout  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << "\t" << inter_cluster << "\t" << dunn;
+                }
+                if(stats_wanted){ stats_stream  << k << "\t" << tot_score << "\t" << min_score<< "\t" << max_score << "\t" << inter_cluster << "\t" << dunn << endl;}
             }
-            if(verbose) cout << "Maximal Dunn index:" << max_dunn_index << " for k=" << argmax_dunn_index << endl;
-            if(verbose){
+            if(verbose) {
+                cout << ((dunn_increasing and prev_dunn>0.1)?" ?":"") << "\n" << "Maximal Dunn index: " << max_dunn_index << " for k=" << argmax_dunn_index << endl;
                 end = chrono::high_resolution_clock::now();
                 cout <<  "(" <<util::format_time(end - begin) << ")" << endl << flush;
             }
