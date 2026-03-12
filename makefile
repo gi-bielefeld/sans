@@ -69,7 +69,7 @@ $(BUILDDIR)/translator.o: $(SRCDIR)/translator.cpp $(SRCDIR)/translator.h $(SRCD
 $(BUILDDIR)/cleanliness.o: $(SRCDIR)/cleanliness.cpp $(SRCDIR)/cleanliness.h
 	$(CC) -c $(SRCDIR)/cleanliness.cpp -o $(BUILDDIR)/cleanliness.o
 
-$(BUILDDIR)/pd.o: $(SRCDIR)/pd.cpp $(SRCDIR)/pd.h $(SRCDIR)/graph.o
+$(BUILDDIR)/pd.o: $(SRCDIR)/pd.cpp $(SRCDIR)/pd.h $(BUILDDIR)/graph.o
 	$(CC) -c $(SRCDIR)/pd.cpp  -o $(BUILDDIR)/pd.o
 
 $(BUILDDIR)/gzstream.o: $(SRCDIR)/gz/gzstream.C $(SRCDIR)/gz/gzstream.h	
