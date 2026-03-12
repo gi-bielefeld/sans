@@ -40,12 +40,12 @@ endif
 all: makefile start SANS done
 
 SANS: makefile $(BUILDDIR)/main.o
-	$(CC) -o SANS $(BUILDDIR)/nexus_color.o $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o  $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o $(XX)
+	$(CC) -o SANS $(BUILDDIR)/nexus_color.o $(BUILDDIR)/main.o $(BUILDDIR)/graph.o $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/util.o $(BUILDDIR)/translator.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o  $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o $(BUILDDIR)/pd.o $(XX)
 
-$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o
+$(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o $(BUILDDIR)/pd.o
 	$(CC) -c $(SRCDIR)/main.cpp -o $(BUILDDIR)/main.o
 
-$(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o
+$(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o
 	$(CC) -c $(SRCDIR)/graph.cpp -o $(BUILDDIR)/graph.o
 
 $(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h $(BUILDDIR)/util.o
@@ -68,6 +68,9 @@ $(BUILDDIR)/translator.o: $(SRCDIR)/translator.cpp $(SRCDIR)/translator.h $(SRCD
 
 $(BUILDDIR)/cleanliness.o: $(SRCDIR)/cleanliness.cpp $(SRCDIR)/cleanliness.h
 	$(CC) -c $(SRCDIR)/cleanliness.cpp -o $(BUILDDIR)/cleanliness.o
+
+$(BUILDDIR)/pd.o: $(SRCDIR)/pd.cpp $(SRCDIR)/pd.h $(SRCDIR)/graph.o
+	$(CC) -c $(SRCDIR)/pd.cpp  -o $(BUILDDIR)/pd.o
 
 $(BUILDDIR)/gzstream.o: $(SRCDIR)/gz/gzstream.C $(SRCDIR)/gz/gzstream.h	
 	$(CFLAGS) -c $(SRCDIR)/gz/gzstream.C  -o $(BUILDDIR)/gzstream.o
