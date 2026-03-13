@@ -348,6 +348,76 @@ std::ostream& PCTree::uniqueID(std::ostream& os,
 	return os;
 }
 
+std::ostream& PCTree::uniqueIDRooted(std::ostream& os,
+		const std::function<void(std::ostream& os, PCNode*, int)>& printNode,
+		const std::function<bool(PCNode*, PCNode*)>& compareNodes, bool print_root) {
+	if (m_rootNode == nullptr) {
+		return os << "empty";
+	}
+	int pos = 0;
+	std::stack<std::variant<PCNode*, std::string>> stack;
+	std::vector<PCNode*> children;
+	stack.push(m_rootNode);
+	while (!stack.empty()) {
+		auto next = stack.top();
+		stack.pop();
+
+		if (std::holds_alternative<std::string>(next)) {
+			os << std::get<std::string>(next);
+			continue;
+		}
+
+		PCNode* node = std::get<PCNode*>(next);
+		printNode(os, node, pos);
+		pos++;
+		if (node->m_nodeType == PCNodeType::CNode) {
+			os << "[";
+			stack.push("]");
+			children.assign(node->children().begin(), node->children().end());
+			if (compareNodes(children.back(), children.front())) {
+				std::reverse(children.begin(), children.end());
+			}
+		} else if (node->m_nodeType == PCNodeType::PNode) {
+			if (node->getDegree() <= 3) {
+				os << "[";
+				stack.push("]");
+			} else {
+				os << "(";
+				stack.push(")");
+			}
+			children.assign(node->children().begin(), node->children().end());
+			std::sort(children.begin(), children.end(), compareNodes);
+		} else {
+			OGDF_ASSERT(node->m_nodeType == PCNodeType::Leaf);
+			if (print_root && node == m_rootNode) {
+				printNode(os, node, pos);
+				pos++;
+				os << "{";
+				stack.push("}");
+			}
+			if (node->getChildCount() > 0) {
+				OGDF_ASSERT(node == m_rootNode);
+				stack.push(node->getOnlyChild());
+			}
+			continue;
+		}
+		OGDF_ASSERT(!compareNodes(children.back(), children.front()));
+
+		bool space = false;
+		for (PCNode* child : children) {
+			if (space) {
+				stack.push(", ");
+			}
+			OGDF_ASSERT(child != nullptr);
+			stack.push(child);
+			space = true;
+		}
+		children.clear();
+	}
+
+	return os;
+}
+
 std::ostream& operator<<(std::ostream& os, const PCNodeType t) {
 	switch (t) {
 	case PCNodeType::Leaf:
@@ -617,7 +687,7 @@ void PCTree::getRestrictions(std::vector<std::vector<PCNode*>>& restrictions,
 			continue;
 		}
 		subtreeLeaves[leaf].push_back(leaf);
-		PCNode* next = leaf == m_rootNode ? leaf->m_child1 : leaf->getParent();
+		PCNode* next = leaf == m_rootNode ? leaf->getOnlyChild() : leaf->getParent();
 		if ((readyChildren[next] += 1) == next->getDegree() - 1) {
 			todo.push(next);
 		}
@@ -628,6 +698,7 @@ void PCTree::getRestrictions(std::vector<std::vector<PCNode*>>& restrictions,
 	while (!todo.empty()) {
 		PCNode* node = todo.front();
 		todo.pop();
+		OGDF_ASSERT(node);
 		OGDF_ASSERT(node != fixedLeaf);
 
 		PCNode* next = nullptr;

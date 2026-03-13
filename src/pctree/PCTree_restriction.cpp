@@ -455,9 +455,10 @@ bool PCTree::findTerminalPath() {
 			OGDF_ASSERT(s);
 			OGDF_ASSERT(m_apexCandidate == oldApex);
 #endif
-		} else if (node == m_rootNode || parent->getLabel() == NodeLabel::Full) {
-			// we can't ascend from the root node or if our parent is full
-			log << "can't ascend from root / node with full parent!" << std::endl;
+		} else if (node == m_rootNode || parent->getLabel() == NodeLabel::Full
+				|| (parent == m_rootNode && parent->isLeaf())) {
+			// we can't ascend from the root node or if our parent is full or a leaf
+			log << "can't ascend from root / node with full/leaf parent!" << std::endl;
 			if (!setApexCandidate(node, false)) {
 				return false;
 			}

@@ -131,13 +131,8 @@ public:
 	//! Destructor. Unregisters all associated arrays.
 	virtual ~RegistryBase() noexcept { unregisterArrays(); }
 
-	RegistryBase(const RegistryBase& copy) = delete;
-
-	RegistryBase(RegistryBase&& move) noexcept = delete;
-
-	RegistryBase& operator=(const RegistryBase& other) = delete;
-
-	RegistryBase& operator=(RegistryBase&& other) noexcept = delete;
+	OGDF_NO_MOVE(RegistryBase)
+	OGDF_NO_COPY(RegistryBase)
 
 	//! Registers a new array with this registry.
 	/**
@@ -261,22 +256,20 @@ public:
 	RegisteredArrayBase() = default;
 
 	//! Creates a registered array associated with the same registry as \p copy.
-	RegisteredArrayBase(const RegisteredArrayBase<Registry>& copy) { reregister(copy.m_pRegistry); }
+	OGDF_COPY_CONSTR(RegisteredArrayBase) { reregister(copy.m_pRegistry); }
 
 	//! Moves the registration of \p move_from to this registered array.
-	RegisteredArrayBase(RegisteredArrayBase<Registry>&& move_from) noexcept {
-		moveRegister(move_from);
-	}
+	OGDF_MOVE_CONSTR(RegisteredArrayBase) { moveRegister(move); }
 
 	//! Assignment operator.
-	RegisteredArrayBase& operator=(const RegisteredArrayBase<Registry>& copy) {
+	OGDF_COPY_OP(RegisteredArrayBase) {
 		reregister(copy.m_pRegistry);
 		return *this;
 	}
 
 	//! Assignment operator (move semantics).
-	RegisteredArrayBase& operator=(RegisteredArrayBase<Registry>&& move_from) noexcept {
-		moveRegister(move_from);
+	OGDF_MOVE_OP(RegisteredArrayBase) {
+		moveRegister(move);
 		return *this;
 	}
 

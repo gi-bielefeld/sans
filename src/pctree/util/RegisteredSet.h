@@ -83,8 +83,9 @@ public:
 	 */
 	void insert(element_type v) {
 		iter_type& itV = m_it[v];
-		if (!itV.valid()) {
-			itV = m_elements.pushBack(v);
+		if (itV == iter_type()) {
+			m_elements.push_back(v);
+			itV = --m_elements.end();
 		}
 	}
 
@@ -97,8 +98,8 @@ public:
 	 */
 	bool remove(element_type v) {
 		iter_type& itV = m_it[v];
-		if (itV.valid()) {
-			m_elements.del(itV);
+		if (itV != iter_type()) {
+			m_elements.erase(itV);
 			itV = iter_type();
 			return true;
 		} else {
@@ -133,7 +134,7 @@ public:
 	 *
 	 * \pre \p v is an element in the associated registry.
 	 */
-	bool isMember(element_type v) const { return m_it[v].valid(); }
+	bool isMember(element_type v) const { return m_it[v] != iter_type(); }
 
 	//! Returns the same as isMember() to use an RegisteredSet instance as filter function.
 	bool operator()(element_type v) const { return isMember(v); }
