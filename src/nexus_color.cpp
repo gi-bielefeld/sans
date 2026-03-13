@@ -104,8 +104,8 @@ void create_maps(unordered_map<string, string>& map, const string& filename, uno
     while (getline(infile, line)){
         // String stream to split and read line
         istringstream iss(line);
-        string key, value; // two fields, tab separated (taxon and group)
-        if (getline(iss, key, '\t') && getline(iss, value)) {
+        string key, value, extra; // two fields (no third), tab separated (taxon and group)
+        if (getline(iss, key, '\t') && getline(iss, value, '\t') && !getline(iss, extra)) {
             key = nexus_color::remove_extensions(key);
 
             if(map.find(key) != map.end()){ // taxon has already been assigned to group
@@ -329,10 +329,10 @@ void nexus_color::scale_nexus(const string& unopened_nexus_file, bool verbose, b
     //either rename or return name of the scaled nexus file
     std::rename(temp_file.c_str(), unopened_nexus_file.c_str());
 
-    if(scale_notification) {
-        cerr << "Attention: For a reliable visualization using SplitsTree, split weights in the Nexus file have been scaled "
-            "to the range 0 to 1 by division by the maximum split weight " << max_weight << endl;
-    }
+//     if(scale_notification) {
+//         cerr << "Attention: For a reliable visualization using SplitsTree, split weights in the Nexus file have been scaled "
+//             "to the range 0 to 1 by division by the maximum split weight " << max_weight << endl;
+//     }
 }
 
 

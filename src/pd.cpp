@@ -22,9 +22,9 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 	for (auto& it : split_list){
 		planar_splits.insert({it.first,it.second});
 	}
-	pc_tree::PCTree tree = graph::filter_planar(planar_splits,false,color::n);
-	pc_tree::IntrusiveList<pc_tree::PCNode> leaves=tree.getLeaves();
-	for (auto* leaf : tree.currentLeafOrder()) {
+    pc_tree::PCTree* tree = graph::filter_planar(planar_splits,false,color::n);
+    pc_tree::IntrusiveList<pc_tree::PCNode> leaves=tree->getLeaves();
+    for (auto* leaf : tree->currentLeafOrder()) {
 		cycle.push_back(leaf->index()-1);
     }
 
@@ -340,6 +340,121 @@ vector<int> pd::partition(vector<int> representatives){
 		}
 	}
 	
+    //compose mapping tax_id->cluster_id
+    return seps2map(partition_boundaries);
+
+}
+
+
+
+/**
+ * Helper function for partition.
+ * Find a combination of k partition boundaries such as:
+ * - first partition starts on given left boundary,
+ * - sum of PD values over all partitions is minimal.
+ *
+ * @param start a coordinate on the cycle that is fixed as the first interval boundary
+ * @param k number of partitions
+ * @param local_min_pd optimal PD value for given start coordinate is stored in this variable
+ * @param local_min_seps interval/partition boundaries (left coordinate on cycle each) leading to optimal PD value
+ */
+void pd::partition_dp(int start, const int k, double& local_min_pd, vector<int>& local_min_seps){
+    vector<unordered_map<int, double>> min_tab(k);
+    vector<unordered_map<int, int>> argmin_tab(k);
+
+    //first column
+    unordered_map<int, double> c_min_tab;
+    unordered_map<int, int> c_argmin_tab;
+    int end=start-k+2;
+    if(end<0)end+=n;
+    for (int sep=start+1;sep!=end;sep=(sep+1)%n){
+        c_min_tab[sep]=pd_value_lookup(start,sep);
+        c_argmin_tab[sep]=start;
+    }
+    min_tab.push_back(c_min_tab);
+    argmin_tab.push_back(c_argmin_tab);
+
+    //other columns
+    unordered_map<int, double> prev_col = c_min_tab;
+    for (int col=1;col<k-1;col++){
+        c_min_tab.clear();
+        c_argmin_tab.clear();
+
+        //rows = different seperation points
+        int end=start-k+col;
+        if(end<0)end+=n;
+        for (int sep=start+2;sep!=end;sep=(sep+1)%n){
+            double pd_min=-1;
+            int pd_argmin=-1;
+            // minimize over all previous seperation points
+            for (auto it = prev_col.begin(); it != prev_col.end(); ++it) {
+                int prev_sep = it->first;
+                double prev_pd = it->second;
+                double additional_pd =  pd_value_lookup(prev_sep,sep);
+                double sum = prev_pd + additional_pd;
+                if (pd_min==-1 or sum < pd_min){ // new min
+                    pd_min=sum;
+                    pd_argmin=prev_sep;
+                }
+            }
+            // extend current column
+            c_min_tab[sep]=pd_min;
+            c_argmin_tab[sep]=pd_argmin;
+        }
+        // done with this column
+        min_tab[col]=c_min_tab;
+        argmin_tab[col]=c_argmin_tab;
+        prev_col = c_min_tab;
+
+    }
+
+    // closing the cycle
+    double pd_min=-1;
+    int pd_argmin=-1;
+    // minimize over all previous seperation points
+    for (auto it = prev_col.begin(); it != prev_col.end(); ++it) {
+        int prev_sep = it->first;
+        double prev_pd = it->second;
+        double additional_pd =  pd_value_lookup(prev_sep,start);
+        double sum = prev_pd + additional_pd;
+        if (pd_min==-1 or sum < pd_min){ // new min
+            pd_min=sum;
+            pd_argmin=prev_sep;
+        }
+    }
+
+    // compose optimum (backtracing from sep to start)
+    local_min_pd=pd_min;
+    int sep=pd_argmin;
+    local_min_seps[k-1]=sep;
+    for(int i=k-2;i>0;i--){
+        sep=argmin_tab[i][sep];
+        local_min_seps[i]=sep;
+    }
+    local_min_seps[0]=start;
+}
+
+/**
+ * Partition the set of all taxa into k subsets
+ * such as to minimize the sum of PD values of all partitions.
+ *
+ * @param k number of partitions
+ * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+ *
+ */
+vector<int> pd::partition(const int k){
+    // call algo for any possible starting point
+    double global_min_pd=-1;
+    for (int start=0; start<=n-k; start++) {
+        double local_min_pd=-1;
+        vector<int> local_min_seps(k);
+        partition_dp(start,k,local_min_pd,local_min_seps);
+        if (global_min_pd==-1 or local_min_pd < global_min_pd) {
+                global_min_pd=local_min_pd;
+                partition_boundaries=local_min_seps;
+        }
+    }
+
     //compose mapping tax_id->cluster_id
     return seps2map(partition_boundaries);
 

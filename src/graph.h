@@ -791,7 +791,7 @@ public:
      * @param split_list list of splits to be filtered
      * @param verbose print progress
      */
-    static pc_tree::PCTree filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num);
+    static pc_tree::PCTree* filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num);
 
 
     /**

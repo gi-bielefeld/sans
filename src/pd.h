@@ -94,6 +94,16 @@ class pd {
     vector<int> partition(vector<int> representatives);
 
     /**
+     * Partition the set of all taxa into k subsets
+     * such as to minimize the sum of PD values of all partitions.
+     *
+     * @param k number of partitions
+     * @return vector assigning a partition ID to each taxon: result[tax_id]=part_id
+     *
+     */
+    vector<int> partition(const int k);
+
+    /**
      * Split the partition with largest PD score into two subsets with minimum sum of PD scores.
      * Input (so to say) is the previously computed partitioning.
      * If no partitioning has been computed yet, an initial bipartition is computed.
@@ -169,7 +179,7 @@ class pd {
     
     
     /**
-     * Helper function for partition.
+     * Helper function for partition(reps).
      * Find a combination of further partition boundaries such as:
      * - first partition starts on given left boundary,
      * - each partition includes exactly one represenative/seed taxon,
@@ -183,4 +193,19 @@ class pd {
      */
     void partition_dp(int start, vector<int> pos, double& local_min_pd, vector<int>& local_min_seps);
     
+
+    /**
+     * Helper function for partition.
+     * Find a combination of k partition boundaries such as:
+     * - first partition starts on given left boundary,
+     * - sum of PD values over all partitions is minimal.
+     *
+     * @param start a coordinate on the cycle that is fixed as the first interval boundary
+     * @param k number of partitions
+     * @param local_min_pd optimal PD value for given start coordinate is stored in this variable
+     * @param local_min_seps interval/partition boundaries (left coordinate on cycle each) leading to optimal PD value
+     */
+    void partition_dp(int start, const int k, double& local_min_pd, vector<int>& local_min_seps);
+
+
 };

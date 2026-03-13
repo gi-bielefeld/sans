@@ -135,11 +135,12 @@ int main(int argc, char* argv[]) {
         cout << endl;
         cout << "    -P, --partition\t Partition genomes into clusters" << endl;
         cout << "                  \t Specify number of clusters, e.g. -P 5 file_prefix, " << endl;
-        cout << "                  \t or a range of numbers, e.g., -P 5,10 file_prefix" << endl;
+        cout << "                  \t or a range of numbers, e.g., -P 5,10 file_prefix," << endl;
+        cout << "                  \t or provide a list of genome identifyiers as cluster seeds, e.g., -P seeds.txt file_prefix." << endl;
         cout << "                  \t Generates file_prefix_k.tsv per cluster number k" << endl;
         cout << "                  \t (which could be provied as label file  in another run)." << endl;
-        cout << "                  \t If option --pdf, --svg or --nexus are provided, additional files" << endl;
-        cout << "                  \t file_prefix_k.pdf, .svg or .nexus are generated." << endl;
+        cout << "                  \t If option --stats, --pdf, --svg or --nexus are provided, additional files" << endl;
+        cout << "                  \t file_prefix.stats, file_prefix_k.pdf, .svg or .nexus are generated." << endl;
         cout << "    -v, --verbose \t Print information messages during execution" << endl;
         cout << endl;
         cout << "    -T, --threads \t The number of threads to spawn (default is all)" << endl;
@@ -1762,7 +1763,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         }
 
 
-		generate_output(num, graph::split_list, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, c_nexus_wanted, pdf_wanted, svg_wanted, raw_wanted, groups, coloring, bootstrap_no, &support_values, denom_names, denom_file_count, verbose);
+        generate_output(num, graph::split_list, graph::color_table, output, nexus, pdf, svg, raw, nexus_wanted, c_nexus_wanted, pdf_wanted, svg_wanted, raw_wanted, groups, coloring, bootstrap_no, &support_values, denom_names, denom_file_count, false);
 		
         if(verbose){
             end = chrono::high_resolution_clock::now();
@@ -1780,10 +1781,10 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
         ofstream stats_file;    // output tsv file stream
         ostream stats_stream(stats_file.rdbuf());
         if(stats_wanted){
-            stats_file.open(stats+"_partitioning");
-            stats_stream << "k\ttot_PD\tmin_PD\tmax_PD  \tinter\tdunn_ind" << endl;
+            stats_file.open(partitions_pref+"_clustering.stats");
+            stats_stream << "k\ttot_PD\tmin_PD\tmax_PD\tinter\tdunn_idx" << endl;
         }
-        if(verbose){cout << "k\ttot_PD\tmin_PD\tmax_PD  \tinter\tdunn_ind" << endl;}
+        if(verbose){cout << "k\ttot_PD\tmin_PD\tmax_PD\tinter\tdunn_idx" << endl;}
 
         groups=""; coloring="";
         multimap_<double, color_t> planar_splits;
@@ -1872,7 +1873,8 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 //find optimal partitioning
 //                vector<int> p=my_pd.partition(max_set);
                 vector<int> p=my_pd.greedily_split();
-
+//                my_pd=pd(graph::split_list,num);
+//                vector<int> p=my_pd.partition(k);
 
                 // output partitioning (for this k)
                 for(int i=0;i<num;i++){
@@ -1889,7 +1891,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
                 string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
                 groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
-                generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, verbose);
+                generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, false);
 
                 //cluster statistics (for this k)
                 double tot_score;

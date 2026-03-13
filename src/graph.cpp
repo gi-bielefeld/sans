@@ -1503,7 +1503,7 @@ loop:
  * @param split_list list of splits to be filtered
  * @param verbose print progress
  */
-pc_tree::PCTree graph::filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num) {
+pc_tree::PCTree* graph::filter_planar(multimap_<double, color_t>& split_list, const bool& verbose, const uint64_t& num) {
 
     auto it = split_list.begin();
     color_t split_copy;
@@ -1513,7 +1513,7 @@ pc_tree::PCTree graph::filter_planar(multimap_<double, color_t>& split_list, con
 
     // construct PC-Tree with maxN nodes
     vector<pc_tree::PCNode*> leaves; 
-	pc_tree::PCTree tree(num, &leaves);
+    pc_tree::PCTree* tree = new pc_tree::PCTree(num, &leaves);
 
    
 loop:
@@ -1536,7 +1536,7 @@ loop:
         }
 
         // if possible, insert the new split in pc-tree
-        if (tree.makeConsecutive(consecutiveLeaves)) { 
+        if (tree->makeConsecutive(consecutiveLeaves)) {
             ++it; goto loop;
         }
 
