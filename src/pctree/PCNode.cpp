@@ -29,10 +29,12 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#include "PCNode.h" 
+#include "PCNode.h"
 #include "PCTree.h"
 #include "PCTreeForest.h"
 #include "PCTreeIterators.h"
+
+#include <random>
 
 using namespace pc_tree;
 
@@ -498,6 +500,72 @@ void PCNode::rotateChildOutside(bool child1) {
 	OGDF_ASSERT(parent->m_child1->isOuterChild());
 	OGDF_ASSERT(parent->m_child2->isOuterChild());
 	OGDF_ASSERT(isOuterChild());
+}
+
+void PCNode::randomEmbedding(uint32_t seed) {
+	std::vector<PCNode*> order(children().begin(), children().end());
+	std::default_random_engine g(seed);
+	std::shuffle(order.begin(), order.end(), g);
+	setChildOrder(order.begin(), order.end());
+}
+
+void PCNode::firstEmbedding() {
+	if (getDegree() < 3) { // also covers leaves
+		return;
+	} else if (getNodeType() == PCNodeType::CNode) {
+		// if the R-node were reversed in former steps
+		// then reverse it to its original embedding
+		if (getChild1()->index() > getChild2()->index()) {
+			flip();
+		}
+		return;
+	} else {
+		std::vector<PCNode*> order(children().begin(), children().end());
+		std::sort(order.begin(), order.end(), uid_utils::compareNodesByID);
+		setChildOrder(order.begin(), order.end());
+	}
+}
+
+bool PCNode::nextEmbedding() {
+	if (getDegree() < 3) { // also covers leaves
+		return false;
+	} else if (getNodeType() == PCNodeType::CNode) {
+		// compute the next embedding (might be the first embedding)
+		flip();
+		// if next embedding = first embedding then return false
+		return getChild1()->index() > getChild2()->index();
+	} else {
+		std::vector<PCNode*> order(children().begin(), children().end());
+		auto first = order.begin();
+		if (getParent() == nullptr) {
+			// fix the first (lowest ID) child as first for the root
+			++first;
+		}
+		bool res = std::next_permutation(first, order.end(), uid_utils::compareNodesByID);
+		setChildOrder(order.begin(), order.end());
+		return res;
+	}
+}
+
+void PCTree::randomEmbedding(uint32_t seed) {
+	for (auto n : allNodes()) {
+		n->randomEmbedding(seed++);
+	}
+}
+
+void PCTree::firstEmbedding() {
+	for (auto n : allNodes()) {
+		n->firstEmbedding();
+	}
+}
+
+bool PCTree::nextEmbedding() {
+	for (auto n : allNodes()) {
+		if (n->nextEmbedding()) {
+			return true;
+		}
+	}
+	return false;
 }
 
 void PCNode::checkTimestamp() const {

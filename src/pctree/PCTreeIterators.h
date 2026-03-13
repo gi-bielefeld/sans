@@ -53,9 +53,9 @@ class OGDF_EXPORT PCNodeIterator {
 
 public:
 	using iterator_category = std::forward_iterator_tag;
-	using value_type = PCNode;
-	using pointer = PCNode*;
-	using reference = PCNode&;
+	using value_type = PCNode*;
+	using pointer = PCNode**;
+	using reference = PCNode*&;
 	using difference_type = std::ptrdiff_t;
 
 	PCNodeIterator() = default;

@@ -39,6 +39,10 @@
 #include <list>
 #include <vector>
 
+#ifdef OGDF_DEBUG
+#	include <set>
+#endif
+
 namespace pc_tree {
 struct OGDF_EXPORT PCNodeChildrenIterable;
 struct OGDF_EXPORT PCNodeNeighborsIterable;
@@ -145,6 +149,9 @@ private:
 		}
 	}
 
+	OGDF_NO_COPY(PCNode)
+	OGDF_NO_MOVE(PCNode)
+
 	~PCNode() {
 		if (m_nodeType == PCNodeType::Leaf) {
 			m_userData.~array();
@@ -189,6 +196,62 @@ public:
 	 * Reverse the stored order of children.
 	 */
 	void flip() { std::swap(m_child1, m_child2); }
+
+	/**
+	 * Reorder all children according to the given range.
+	 *
+	 * @pre The given range must represent a permutation of this node's children.
+	 */
+	template<typename It>
+	void setChildOrder(It begin, It end) {
+		if (getDegree() == 0) {
+			OGDF_ASSERT(begin == end);
+			return;
+		}
+#ifdef OGDF_DEBUG
+		std::set<PCNode*> set1(begin, end);
+		OGDF_ASSERT(set1.size() == getChildCount());
+		size_t count = 0;
+#endif
+		PCNode* pred = nullptr;
+		PCNode* cur = nullptr;
+		for (It it = begin; it != end; ++it) {
+			pred = cur;
+			cur = *it;
+#ifdef OGDF_DEBUG
+			OGDF_ASSERT(isParentOf(cur));
+			count++;
+#endif
+			cur->m_sibling1 = pred;
+			if (pred) {
+				pred->m_sibling2 = cur;
+			} else {
+				m_child1 = cur;
+			}
+		}
+		OGDF_ASSERT(count == getChildCount());
+		cur->m_sibling2 = nullptr;
+		m_child2 = cur;
+	}
+
+	//! Reorder the children randomly
+	void randomEmbedding(uint32_t seed);
+
+	//! Reorder the children such that they represent the lexicographically first order.
+	/**
+	 * @sa std::next_permutation()
+	 * @sa PCTree::firstEmbedding()
+	 */
+	void firstEmbedding();
+
+	//! Reorder the children such that they represent the lexicographically next order.
+	/**
+	 * @return true if the new permutation is lexicographically greater than the old.
+	 *		   false if the last permutation was reached and the leaf order was reset to the first permutation.
+	 * @sa std::next_permutation()
+	 * @sa PCTree::nextEmbedding()
+	 */
+	bool nextEmbedding();
 
 private:
 	/**
