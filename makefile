@@ -45,7 +45,7 @@ SANS: makefile $(BUILDDIR)/main.o
 $(BUILDDIR)/main.o: makefile $(SRCDIR)/main.cpp $(SRCDIR)/main.h $(BUILDDIR)/color.o $(BUILDDIR)/translator.o $(BUILDDIR)/graph.o $(BUILDDIR)/util.o $(BUILDDIR)/cleanliness.o $(BUILDDIR)/gzstream.o $(BUILDDIR)/nexus_color.o $(BUILDDIR)/PCTree_construction.o $(BUILDDIR)/PCTree_basic.o $(BUILDDIR)/PCTreeForest.o $(BUILDDIR)/PCTree_restriction.o $(BUILDDIR)/PCTree_intersect.o $(BUILDDIR)/PCNode.o $(BUILDDIR)/pd.o
 	$(CC) -c $(SRCDIR)/main.cpp -o $(BUILDDIR)/main.o
 
-$(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o
+$(BUILDDIR)/graph.o: makefile $(SRCDIR)/graph.cpp $(SRCDIR)/graph.h $(BUILDDIR)/kmer.o $(BUILDDIR)/kmerAmino.o $(BUILDDIR)/color.o $(SRCDIR)/pctree/PCEnum.h
 	$(CC) -c $(SRCDIR)/graph.cpp -o $(BUILDDIR)/graph.o
 
 $(BUILDDIR)/kmer.o: makefile $(SRCDIR)/kmer.cpp $(SRCDIR)/kmer.h $(BUILDDIR)/util.o
