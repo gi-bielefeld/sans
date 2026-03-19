@@ -1820,7 +1820,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
             double intra_cluster;
             double inter_cluster;
             vector<int> p=my_pd.partition(representatives);
-            my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+            my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, nullptr, &inter_cluster);
 
             ofstream part_file;    // output tsv file stream
             ostream part_stream(part_file.rdbuf());
@@ -1902,7 +1902,7 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 double min_pd_normalized;
                 double intra_cluster;
                 double inter_cluster;
-                my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, &intra_cluster, &inter_cluster);
+                my_pd.partition_statistics(&tot_score, &scores, &min_score, &max_score,  &min_pd_normalized,  &max_pd_normalized, nullptr, &inter_cluster);
                 double dunn=inter_cluster/max_score;
                 //max. Dunn index
                 if(dunn>=max_dunn_index){
