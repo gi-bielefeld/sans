@@ -40,14 +40,14 @@ pd::pd(const multimap_<double, color_t> split_list, const int n): n(n){
 	
 	//PD value for a pair of taxa on the cycle (not for an interval!)
 	//needed for the DP algo in pd::pd_set
-	vector<vector<double>> x(n,vector<double>(n));
+    /*vector<vector<double>> x(n,vector<double>(n));
 	pd_pair_vals=x;
 	for (int i=0;i<n;i++){
 		for (int j=i+1;j<n;j++){
 			vector<int> taxa = {cycle[i], cycle[j]};
 			pd_pair_vals[i][j]=pd_value(taxa);
 		}
-	}
+    }*/
 }
 
 
@@ -75,8 +75,6 @@ double pd::pd_value(const vector<int>& taxa) {
 	color_t tax_col = 0;
 	for (int t : taxa) {
 		tax_col.set(t);
-		// Trivial splits (leaf edges) are fixed to a minimum weight and ignored below.
-//        val+=0.5*min;
 	}
 	
 	// Iterating over all splits and check if disjoint with taxa
@@ -92,6 +90,7 @@ double pd::pd_value(const vector<int>& taxa) {
         if( !color::is_singleton(colors) && ((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
             val+=weight;
 		}
+        // Trivial splits (leaf edges) are capped
         if( color::is_singleton(colors) ){
             val+=std::min(0.5*min,weight);
         }
@@ -679,4 +678,78 @@ double pd::inter_cluster(vector<int> partition_boundaries){
 
 	}	
     return min;
+}
+
+void pd::write_phylip(const std::vector<std::string>& taxon_names, const std::string& filename){
+    //PD value for a pair of taxa
+    vector<vector<double>> x(n,vector<double>(n));
+    for (int i=0;i<n;i++){
+        for (int j=i+1;j<n;j++){
+            int ti=cycle[i];
+            int tj=cycle[j];
+            x[std::min(ti,tj)][std::max(ti,tj)]=pd_pair_vals[i][j];
+        }
+    }
+    write_phylip(x,taxon_names, filename);
+}
+
+
+void pd::write_phylip(const multimap_<double, color_t> split_list,const std::vector<std::string>& taxon_names, const std::string& filename){
+    int n = taxon_names.size();
+    //PD value for a pair of taxa
+    vector<vector<double>> x(n,vector<double>(n));
+    for (int i=0;i<n;i++){
+        for (int j=i+1;j<n;j++){
+            double val=0;
+            // represent taxa as colors
+            color_t tax_col = 0;
+            tax_col.set(i);
+            tax_col.set(j);
+            // Iterating over all splits and check if disjoint with taxa
+            // Trivial splits (leaf edges) are excluded here / considered above
+            auto it = split_list.begin();
+            while (it != split_list.end()) {
+
+                double weight = it->first;
+                color_t colors = it->second;
+                it++;
+
+                //separating split? (and non-trivial)
+                if(((tax_col & colors) != tax_col) && ((tax_col & colors) != 0)){
+                    val+=weight;
+                }
+            }
+            x[i][j]=val;
+        }
+    }
+
+    write_phylip(x,taxon_names, filename);
+}
+
+void pd::write_phylip(const std::vector<std::vector<double>>& pd_pair_vals, const std::vector<std::string>& taxon_names, const std::string& filename){
+
+    int n = taxon_names.size();
+
+    // Open output file
+    std::ofstream out(filename);
+    if (!out)
+        throw std::runtime_error("Failed to open output file: " + filename);
+
+    // First line: number of taxa
+    out << n << "\n";
+
+    // Fixed decimal formatting
+    out << std::fixed << std::setprecision(6);
+
+    // Output lower triangular part including diagonal
+    for (std::size_t i = 0; i < n; ++i) {
+        // Write full taxon name (no truncation)
+        out << taxon_names[i];
+        // Output lower triangular values including diagonal
+        for (std::size_t j = 0; j < i; ++j) {
+            out << "\t" << pd_pair_vals[j][i];
+        }
+       out << "\n";
+    }
+    // File is automatically closed when 'out' goes out of scope
 }
