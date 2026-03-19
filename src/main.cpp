@@ -2009,10 +2009,10 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 
 void generate_output(const uint64_t& num, multimap_<double, color_t>& split_list, hash_map<color_t, array<uint32_t,2>>& color_table, const string output, string nexus, const string pdf, const string svg, const string raw, const bool nexus_wanted, const bool c_nexus_wanted, const bool pdf_wanted, const bool svg_wanted, const bool raw_wanted, const string groups, const string coloring, const uint32_t& bootstrap_no, hash_map<color_t, uint32_t>* support_values, vector<string> denom_names, const int denom_file_count, const bool verbose){
 
-        pd::write_phylip(split_list,denom_names,output+".dist");
+/*        pd::write_phylip(split_list,denom_names,output+".dist");
         pd my_pd=pd(graph::split_list,num);
         my_pd.write_phylip(denom_names,output+"_truncated.dist");
-
+*/
         ofstream file;    // output file stream
 		ostream stream(file.rdbuf());
 		if (!output.empty()){
