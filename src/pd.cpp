@@ -660,11 +660,12 @@ double pd::inter_cluster(vector<int> partition_boundaries){
 	for(int cluster=0;cluster<k;cluster++){
 		//PD of gap between clusters
         int sep=partition_boundaries[cluster];
-        int l = std::min(sep,(sep-1));
-        int r = std::max(sep,(sep-1));
-        if(l<0){l=0;r=n-1;}
-        double s=pd_pair_vals[l][r];
-
+        int l = sep-1;
+        int r = sep;
+        if(l<0){l=n-1;}
+//        if(l<0){l=0;r=n-1;}
+//        double s=pd_pair_vals[l][r]; //do not use these precomputed values in case they are not precomputed.
+        double s=pd_value_lookup(l,(r+1)%n);
 //        // different calculation
 //        double pd_t=pd_value_lookup(partition_boundaries[(cluster+k-1)%k],partition_boundaries[(cluster+1)%k]);
 //        double pd_l=pd_value_lookup(partition_boundaries[(cluster+k-1)%k],partition_boundaries[cluster]);
