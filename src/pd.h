@@ -161,7 +161,11 @@ class pd {
      */
     double inter_cluster(vector<int> partition_boundaries);
 
-    
+
+    void write_phylip(const std::vector<std::string>& taxon_names, const std::string& filename);
+    static void write_phylip(const std::vector<std::vector<double>>& pd_pair_vals, const std::vector<std::string>& taxon_names, const std::string& filename);
+    static void write_phylip(const multimap_<double, color_t> split_list, const std::vector<std::string>& taxon_names, const std::string& filename);
+
     
  protected:
 

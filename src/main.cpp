@@ -1865,7 +1865,8 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
 
                 ofstream part_file;    // output tsv file stream
                 ostream part_stream(part_file.rdbuf());
-                part_file.open(partitions_pref+"_cluster_"+to_string(k)+".tsv");
+                groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
+                part_file.open(groups);
 
                 //find set of representative/seed taxa that have maximum PD score
 //                vector<int> max_set=my_pd.pd_set(k);
@@ -1890,7 +1891,6 @@ double min_value = numeric_limits<double>::min(); // current minimal weight repr
                 string nexus_c = partitions_pref+"_cluster_"+to_string(k)+".nexus";
                 string pdf_c = partitions_pref+"_cluster_"+to_string(k)+".pdf";
                 string svg_c = svg_wanted?(output+"_cluster_"+to_string(k)+".svg"):"";
-                groups=partitions_pref+"_cluster_"+to_string(k)+".tsv";
                 generate_output(num, planar_splits, graph::color_table, output, nexus_c, pdf_c, svg_c, raw, nexus_wanted, true, pdf_wanted, svg_wanted, false, groups, coloring, 0, nullptr, denom_names, denom_file_count, false);
 
                 //cluster statistics (for this k)
@@ -2008,7 +2008,12 @@ void apply_filter(string filter, string newick, std::function<string(const uint6
 }
 
 void generate_output(const uint64_t& num, multimap_<double, color_t>& split_list, hash_map<color_t, array<uint32_t,2>>& color_table, const string output, string nexus, const string pdf, const string svg, const string raw, const bool nexus_wanted, const bool c_nexus_wanted, const bool pdf_wanted, const bool svg_wanted, const bool raw_wanted, const string groups, const string coloring, const uint32_t& bootstrap_no, hash_map<color_t, uint32_t>* support_values, vector<string> denom_names, const int denom_file_count, const bool verbose){
-		ofstream file;    // output file stream
+
+        pd::write_phylip(split_list,denom_names,output+".dist");
+        pd my_pd=pd(graph::split_list,num);
+        my_pd.write_phylip(denom_names,output+"_truncated.dist");
+
+        ofstream file;    // output file stream
 		ostream stream(file.rdbuf());
 		if (!output.empty()){
 			file.open(output);
