@@ -19,6 +19,11 @@ BUILDDIR 	:= obj
 
 # Wrap Windows / Unix commands
 ifeq ($(OS), Windows_NT)
+
+# 	Change to this? - first build fails since no obj dir exists yet
+# 	MK = if exist $(BUILDDIR) rmdir /s /q $(BUILDDIR)
+# 	MK += mkdir $(BUILDDIR)
+
 	TD = $(BUILDDIR)
 	MK = rmdir /s /q $(BUILDDIR) && mkdir $(BUILDDIR)
 	RM = rmdir /s /q $(BUILDDIR)
