@@ -1,0 +1,9 @@
+1129133 k-mers read. (520300 / 46% singleton k-mers) (359.0 ms)
+Accumulating splits from non-singleton k-mers... (405.0 ms)
+Accumulating splits from singleton k-mers... (414.0 ms)
+Compile split list... (415.0 ms)
+Filtering splits... (416.0 ms)
+Writing output...
+ Done! (438.0 ms)
+
+ // This is the original version output for prasinoviruses, k = 11.

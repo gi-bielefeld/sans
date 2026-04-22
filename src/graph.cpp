@@ -38,9 +38,19 @@ vector<spinlock> graph::lock;
 vector<uint_fast32_t> graph::period;
 
 /**
- * This is vector of hash tables mapping k-mers to colors [O(1)].
+ * This vector holds the fingerprints assigned to each genome.
+*/
+vector<fingerprint> genome_fingerprints;
+
+/**
+ * This is vector of hash tables mapping k-mers to fingerprints [O(1)].
  */
-vector<hash_map<kmer_t, color_t>> graph::kmer_table;
+vector<hash_map<kmer_t, fingerprint>> graph:: kmer_table;
+
+/**
+* This table holds the pairs of <count, color sets> for each fingerprint.  
+*/
+vector<hash_map<fingerprint, pair<uint_fast16_t, color_t>>> Fprint_table;
 
 /**
  * This is the amino equivalent.
@@ -301,9 +311,13 @@ bool graph::search_kmer_amino(const kmerAmino_t& kmer)
 * @return color_t The stored colores
 */
 color_t graph::get_color(const kmer_t& kmer, bool reversed){
-    return kmer_table[compute_bin(kmer)][kmer];
+    uint_fast32_t bin = compute_bin(kmer);
+    fingerprint F = kmer_table[bin][kmer];
+    if (reversed == false){
+        return ~Fprint_table[bin][F].second;
+    }
+    return Fprint_table[bin][F].second;
 }
-
 
 /**
  * This function returns the stored color vector of the given amino kmer

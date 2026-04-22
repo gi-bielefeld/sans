@@ -98,7 +98,9 @@ struct spinlock {
   }
 };
 
-
+// For Fingerprinting: A bitset 128 bits long should be sufficient
+constexpr static uint_fast8_t Fprint_length = 128;
+typedef bitset<Fprint_length> fingerprint;
 
 /**
  * This class manages the k-mer/color hash tables and split list.
@@ -135,10 +137,29 @@ private:
      * This vector holds the carries of 2**i % table_count for fast distribution of bitset represented kmers
      */
     static vector<uint_fast32_t> period;
+
     /**
-     * This is a vector of hash tables mapping k-mers to colors [O(1)].
+     *   FINGERPRINTING
+     *  The collision probability is bounded above by N^2 / 2^l
+     *  where N is the number of kmers and l length of the fingerprint.
+     *    - added Fprint_table to store [key : value] = [fingerprint : count, color_set_vector]
+     *    - count is the number of kmers that are present in the same set of genomes.
+    */    
+
+    /**
+     * This vector holds the fingerprints assigned to each genome.
      */
-    static vector<hash_map<kmer_t, color_t>> kmer_table;
+    static vector<fingerprint> genome_fingerprints;
+
+    /**
+    * changed kmer_table to store binary fingerprints of length l
+    */
+    static vector<hash_map<kmer_t, fingerprint>> kmer_table;
+    
+    /**
+    * This table holds the pairs of <count, color sets> for each fingerprint.  
+    */
+    static vector<hash_map<fingerprint, pair<uint_fast16_t, color_t>>> Fprint_table;
 
     /**
      * This is a vector of spinlocks protecting the hash tables.
@@ -222,10 +243,34 @@ public:
             //    table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
             table_count = (0b1u << 14) + 1;
             
+            // Create random binary fingerprints
+            genome_fingerprints = vector<fingerprint> (color::n);
+            random_device rd; // Seed source
+            mt19937 gen(rd());
+            uniform_int_distribution<uint32_t> dist;
+
+            int8_t takes = Fprint_length / 32;
+            int8_t rest  = Fprint_length % 32;
+
+            for (uint1N_t i = 0; i < color::n; i++){
+                string zeros_ones; 
+                for (int8_t j = 0; j < takes; j++){
+                    zeros_ones += to_string(bits(dist(gen)));
+                }
+                if (rest != 0){
+                    zeros_ones += to_string(bits(dist(gen))).substr(0, rest);
+                }
+                genome_fingerprints[i] = bits(zeros_ones);
+
+                if ( i == 1 | i == 7){
+                    cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
+                }
+            }
 
             // Init base tables
-            kmer_table = vector<hash_map<kmer_t, color_t>> (table_count);
+            kmer_table = vector<hash_map<kmer_t, fingerprint> (table_count);
             singleton_kmer_table = vector<hash_map<kmer_t, uint16_t>> (table_count);
+            Fprints_table = vector<hash_map<fingerprint, pair<uint_fast16_t, color_t>>> (table_count);
 
             // Init the lock vector
             lock = vector<spinlock> (table_count);
@@ -374,6 +419,7 @@ public:
                     }
                 };
             }else { // global quality value
+                // we could optimise a bit here     (-Adrian, 20.4.2026)
                 emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
                     if (quality_map[T][kmer] < quality-1) {
                         quality_map[T][kmer]++;
@@ -445,8 +491,65 @@ public:
      */
     static uint_fast32_t compute_amino_bin(const kmerAmino_t& kmer);
 
-    /**
-    * This function hashes a k-mer and stores it in the correstponding hash table.
+    // /**     Last version:
+    // * This function hashes a k-mer and stores it in the correstponding hash table.
+    // * The corresponding table is chosen by the carry of the encoded k-mer given the number of tables as module.
+    // * @param bin The bin, the kmer is stored in
+    // * @param kmer The kmer to store
+    // * @param color The color to store 
+    // */
+    // template<bool count_kmers>
+    // static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color)
+    // {
+    //     lock[bin].lock();
+    //     hash_map<kmer_t,color_t>::iterator entry=kmer_table[bin].find(kmer); 
+    //     // already in the kmer table?
+    //     if(entry != kmer_table[bin].end()){
+    //         if(count_kmers){
+    //           // check if not seen in this genome before, i.e., count a new (unique) kmer
+    //           if(!entry.value().test(color)){
+    //             // count
+    //             kmer_counters[color]++;
+    //           }
+    //         }
+    //         // add
+    //         entry.value().set(color);
+    //     }
+    //     // not yet in the kmer table?
+    //     else{
+    //         hash_map<kmer_t,uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
+    //         //seen once before? -> add to kmer table / remove from singleton table
+    //         if(s_entry != singleton_kmer_table[bin].end()){
+    //             if(s_entry.value() != color){
+    //                 kmer_table[bin][kmer].set(s_entry.value());
+    //                 kmer_table[bin][kmer].set(color);
+    //                 singleton_counters_locks[s_entry.value()].lock();
+    //                 singleton_counters[s_entry.value()]--;
+    //                 singleton_counters_locks[s_entry.value()].unlock();
+    //                 singleton_kmer_table[bin].erase(s_entry);
+    //                 if(count_kmers){
+    //                   // count
+    //                   kmer_counters[color]++;
+    //                 }
+    //             }
+    //         }
+    //         // not seen before -> add to singleton_table
+    //         else{
+    //             singleton_kmer_table[bin][kmer]=color;
+    //             singleton_counters_locks[color].lock();
+    //             singleton_counters[color]++;
+    //             singleton_counters_locks[color].unlock();
+    //             if(count_kmers){
+    //               // count
+    //               kmer_counters[color]++;
+    //             }
+    //         }
+    //     }
+    //     lock[bin].unlock();
+    // }
+
+    /**     New version with fingerprinting:
+    * This function hashes a k-mer and stores it in the corresponding hash table.
     * The corresponding table is chosen by the carry of the encoded k-mer given the number of tables as module.
     * @param bin The bin, the kmer is stored in
     * @param kmer The kmer to store
@@ -456,35 +559,68 @@ public:
     static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color)
     {
         lock[bin].lock();
-        hash_map<kmer_t,color_t>::iterator entry=kmer_table[bin].find(kmer); 
+        hash_map<kmer_t,fingerprint>::iterator entry=kmer_table[bin].find(kmer); 
         // already in the kmer table?
         if(entry != kmer_table[bin].end()){
-            if(count_kmers){
-              // check if not seen in this genome before, i.e., count a new (unique) kmer
-              if(!entry.value().test(color)){
-                // count
-                kmer_counters[color]++;
-              }
+            // check if not seen in this genome before, i.e., count a new (unique) kmer
+            fingerprint &F_old = entry.value();    // I guess I have to access the table with an interator, because that's how it was done above
+            hash_map<fingerprint, pair<uint_fast16_t, color_t>>::iterator Fpt_entry = Fprint_table[bin].find(F_old);
+            auto [&color_count, &color_set_vector] = Fpt_entry.value();
+            // we don't want to xor fingerprints of the same genome twice.
+            if(0 == color_set_vector.test(color)){
+                if (count_kmers){
+                    // count
+                    kmer_counters[color]++;
+                }
+                // do the xor - combine fingerprints
+                fingerprint F_new = F_old ^ genome_fingerprints[color];
+                entry.value().set(F_new);
+                // update the fingerprint table
+                hash_map<fingerprint, pair<uint_fast16_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin].find(F_new);
+                if (Fpt_entry_new != Fprint_table[bin].end()){
+                    Fpt_entry_new.value().first++;
+                } else {
+                    // add a new fingerprint
+                    color_set_vector.set(color);
+                    Fprint_table[bin][F_new] = pair<1, color_set_vector>;
+                }
+                // remove the kmer from the color-set it belonged to previously:
+                color_count--;
+                if (color_count == 0){
+                    Fprint_table[bin].erase(Fpt_entry);
+                }
             }
-            // add
-            entry.value().set(color);
+            
         }
         // not yet in the kmer table?
         else{
-            hash_map<kmer_t,uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
+            hash_map<kmer_t, uint16_t>::iterator s_entry = singleton_kmer_table[bin].find(kmer);
             //seen once before? -> add to kmer table / remove from singleton table
             if(s_entry != singleton_kmer_table[bin].end()){
                 if(s_entry.value() != color){
-                    kmer_table[bin][kmer].set(s_entry.value());
-                    kmer_table[bin][kmer].set(color);
+                    uint16_t &color2 = s_entry.value();
+                    fingerprint F_new = genome_fingerprints[color2] ^ genome_fingerprints[color];
+                    kmer_table[bin][kmer].set(F_new);                 
+
                     singleton_counters_locks[s_entry.value()].lock();
                     singleton_counters[s_entry.value()]--;
                     singleton_counters_locks[s_entry.value()].unlock();
-                    singleton_kmer_table[bin].erase(s_entry);
                     if(count_kmers){
                       // count
                       kmer_counters[color]++;
                     }
+
+                    // update the Fprint_table
+                    hash_map<fingerprint, pair<uint_fast16_t, color_t>>::iterator Fpt_entry = Fprint_table[bin][F_new];
+                    if (Fpt_entry != Fprint_table[bin].end()){
+                        Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
+                    } else {
+                        color_t color_set_vector(color::n);
+                        color_set_vector.set(color); color_set_vector.set(color2);
+                        Fprint_table[bin][F_new] = pair<1, color_set_vector>;
+                    }
+                    // Why doesn't the singleton table also have to be locked? 
+                    singleton_kmer_table[bin].erase(s_entry);   
                 }
             }
             // not seen before -> add to singleton_table
@@ -502,8 +638,7 @@ public:
         lock[bin].unlock();
     }
 
-
-
+    
     /**
     * This function hashes an amino k-mer and stores it in the corresponding hash table.
     * The correspontind table is chosen by the carry of the encoded k-mer bitset by the bit-module function.

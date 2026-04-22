@@ -10,3 +10,4 @@ SANS
 .Trashes
 # python
 scripts/__pycache__/
+example_data/
