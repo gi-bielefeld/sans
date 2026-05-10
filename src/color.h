@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string>
 using namespace std;
 
 #ifndef maxN     // max. color number defined
@@ -105,6 +106,14 @@ class color {
 	 */
 	static bool is_singleton(const color_t& c);
 
- protected:
+	/**
+	 * This function converts a color set to a string representation.
+	 * 
+	 * @param c color set to convert
+	 * @return string representation of the color set
+	 */
+	static std::string to_string(const color_t& c);
 
 };
+
+std::ostream& operator<<(std::ostream& os, const color_t& c);

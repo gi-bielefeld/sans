@@ -38,14 +38,30 @@ vector<spinlock> graph::lock;
 vector<uint_fast32_t> graph::period;
 
 /**
- * This is vector of hash tables mapping k-mers to colors [O(1)].
+ * This vector holds the fingerprints assigned to each genome.
+*/
+vector<fingerprint> graph::genome_fingerprints;
+
+/**
+ * This is vector of hash tables mapping k-mers to fingerprints [O(1)].
  */
-vector<hash_map<kmer_t, color_t>> graph::kmer_table;
+vector<hash_map<kmer_t, fingerprint>> graph:: kmer_table;
+
+/**
+* This table holds the pairs of <count, color set> for each fingerprint.  
+*/
+vector<hash_map<fingerprint, pair<uint_fast32_t, color_t>>> graph::Fprint_table;
 
 /**
  * This is the amino equivalent.
  */ 
-vector<hash_map<kmerAmino_t, color_t>> graph::kmer_tableAmino;
+vector<hash_map<kmerAmino_t, fingerprint>> graph::kmer_tableAmino;
+
+/**
+ *  Used for the calculation of the fingerprint bin.
+ *  Equals:  Fprint_length - the number of bits of table_count.
+ */
+uint_fast32_t graph::shift_bits_by;
 
 /**
  * This is a hash table mapping colors to weights [O(1)].
@@ -273,7 +289,19 @@ uint_fast32_t graph::compute_bin(const kmer_t& kmer)
     }
 #endif
 
-
+/**
+ * This method computes the bin of a given fingerprint
+ * @param f The target fingerprint
+ * @return uint64_t The bin
+ * 
+ * This is necessary, since many different kmers can have the same fingerprint.
+ * But each fingerprint must be contained only in one (sub)table.
+ */
+uint_fast32_t graph::compute_Fprint_bin(const fingerprint& f){ 
+    // Reduce the fingerprint to match the size of the binary number: table_count.
+    // This way the division in modulo will be fast.
+    return table_count % (f >> shift_bits_by).to_ulong();
+}
 
 /**
  * This function searches the corresponding hash table for the given kmer
@@ -295,23 +323,29 @@ bool graph::search_kmer_amino(const kmerAmino_t& kmer)
 }
 
 
-/**
+/** (Fingerprinting version)
 * This function returns the stored colores of the given kmer
 * @param kmer The target kmer
 * @return color_t The stored colores
 */
 color_t graph::get_color(const kmer_t& kmer, bool reversed){
-    return kmer_table[compute_bin(kmer)][kmer];
+    uint_fast32_t bin = compute_bin(kmer);
+    fingerprint F = kmer_table[bin][kmer];
+    if (reversed == true){
+        return ~Fprint_table[bin][F].second;
+    }
+    return Fprint_table[bin][F].second;
 }
 
-
-/**
+/** (Fingerprinting version)
  * This function returns the stored color vector of the given amino kmer
  * @param kmer The target amino kmer
  * return color_t The stored color vector
  */
 color_t graph::get_color_amino(const kmerAmino_t& kmer){
-    return kmer_tableAmino[compute_amino_bin(kmer)][kmer];
+    uint_fast32_t bin = compute_amino_bin(kmer);
+    fingerprint F = kmer_tableAmino[bin][kmer];
+    return Fprint_table[bin][F].second;
 }
 
 /**
@@ -1052,38 +1086,154 @@ void graph::add_cdbg_colored_kmer(string kmer_seq, const uint16_t& kmer_color){
 *
 */
 
+// /**      - the original version before fingerprinting
+//  * This function iterates over the hash table and calculates the split weights.
+//  * 
+//  * @param mean weight function
+//  * @param min_value the minimal weight represented in the top list
+//  * @param verbose print progess
+//  */
+// void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
+	
+	
+	
+//     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
+//     uint64_t cur=0, prog=0, next;
+
+//     // check table (Amino or base)
+//     uint64_t max = 0; // table size
+//     if (isAmino){for (auto table: kmer_tableAmino){max += table.size();}} // use the sum of amino table sizes
+//     else {for (auto table: kmer_table){max+=table.size();}} // use the sum of base table sizes
+
+//     // If the tables are empty, there is nothing to be done	    
+//     if (max==0){
+//         return;
+//     }
+//     // The iterators for the tables
+//     hash_map<kmer_t, color_t>::iterator base_it;
+//     hash_map<kmerAmino_t, color_t>::iterator amino_it;
+
+//     // Iterate the tables
+//     for (int i = 0; i < graph::table_count; i++) // Iterate all tables
+//     {
+//         if (!isAmino){base_it = kmer_table[i].begin();} // base table iterator
+//         else {amino_it = kmer_tableAmino[i].begin();} // amino table iterator
+
+//         while (true) { // process splits
+//             // show progress
+//             if (verbose) { 
+//                 next = 100*cur/max;
+//                 if (prog < next)  cout << "\33[2K\r" << "Accumulating splits from non-singleton k-mers... " << next << "%" << flush;
+//                 prog = next; cur++;
+//             }
+//             // update the iterator
+//             color_t* color_ref; // reference of the current color
+//             if (isAmino) { // if the amino table is used, update the amino iterator
+                
+//                 if (amino_it == kmer_tableAmino[i].end()){break;} // stop iterating if done
+//                 else{color_ref = &amino_it.value(); ++amino_it;} // iterate the amino table
+//                 }
+//             else { // if the base tables is used update the base iterator
+//                 // Todo: Get the target hash map index from the kmer bits
+//                 if (base_it == kmer_table[i].end()){break;} // stop itearating if done
+//                 else {color_ref = &base_it.value(); ++base_it;} // iterate the base table
+//                 }
+//             // process
+//             color_t& color = *color_ref;
+//             bool pos = color::represent(color);    // invert the color set, if necessary
+//             if (color == 0) continue;    // ignore empty splits
+//             // add_weight(color, mean, min_value, pos);
+// 			array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+// 			weight[pos]++; // update the weight or the inverse weight of the current color set
+// 		}
+//     }
+// }
+
+
+/* 
+* Delete the entire table and free up memory.
+* Warning: the table cannot be used any more.
+* Currently: not called from anywhere.
+*/ 
+void graph::clear_kmer_table(){
+    // what about the singletons table?
+    if (isAmino){
+        for (uint16_t i = 0; i < table_count; i++){
+            kmer_tableAmino[i] = {};    // do we also want to .clear()?
+        }
+    }
+    else {
+        for (uint16_t i = 0; i < table_count; i++){
+            kmer_table[i] = {};    
+        }
+    }
+}
+
+
+/* 
+*  Prints the entire contents of the kmer and fingerprint table to a log file for debugging purposes.
+*/  
+void graph:: printout_tables(string kmer_filename, string fprint_filename){
+ofstream kmer_out(kmer_filename);;
+ofstream fprint_out(fprint_filename);
+
+for (int bin = 0; bin < table_count; bin++){
+    auto kmer_entry = kmer_table[bin].begin();
+    auto fprint_entry = Fprint_table[bin].begin();
+    // kmer_out << "\n bin = " << bin << '\n';
+    // fprint_out << "\n bin = " << bin << '\n';
+
+    while (kmer_entry != kmer_table[bin].end()){
+        kmer_t k = kmer_entry.key();
+        kmer_out << kmer::kmer_to_string(k) << ": " << kmer_entry.value() << '\n';
+        kmer_entry++;
+    }
+
+    while (fprint_entry != Fprint_table[bin].end()){
+        fingerprint f = fprint_entry.key();
+        auto count = fprint_entry.value().first;
+        auto csv = fprint_entry.value().second;
+        fprint_out << f << ": " << count << " " << csv << "\n";
+        fprint_entry++;
+    }
+}
+
+kmer_out   << "\n = = = = = = = = = = = = = = = = = = = = = = = = \n\n ";
+fprint_out << "\n = = = = = = = = = = = = = = = = = = = = = = = = \n\n ";
+
+kmer_out.close();
+fprint_out.close();
+}
+
 /**
  * This function iterates over the hash table and calculates the split weights.
- * 
+ * FINGERPRINTING version - saves found weights into the color_table
  * @param mean weight function
  * @param min_value the minimal weight represented in the top list
  * @param verbose print progess
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
-	
-	
-	
+
+    // For debug:
+    printout_tables("kmer_table.txt", "Fprint_table.txt");
+
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
 
-    // check table (Amino or base)
+    // find total size of the Fprint_table
     uint64_t max = 0; // table size
-    if (isAmino){for (auto table: kmer_tableAmino){max += table.size();}} // use the sum of amino table sizes
-    else {for (auto table: kmer_table){max+=table.size();}} // use the sum of base table sizes
+    {for (auto table: Fprint_table){max += table.size();}}
 
-    // If the tables are empty, there is nothing to be done	    
+    // If the table is empty, there is nothing to be done	    
     if (max==0){
         return;
     }
-    // The iterators for the tables
-    hash_map<kmer_t, color_t>::iterator base_it;
-    hash_map<kmerAmino_t, color_t>::iterator amino_it;
-
-    // Iterate the tables
+    
+    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_it;
+    
     for (int i = 0; i < graph::table_count; i++) // Iterate all tables
     {
-        if (!isAmino){base_it = kmer_table[i].begin();} // base table iterator
-        else {amino_it = kmer_tableAmino[i].begin();} // amino table iterator
+       Fpt_it = Fprint_table[i].begin();
 
         while (true) { // process splits
             // show progress
@@ -1093,29 +1243,40 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 prog = next; cur++;
             }
             // update the iterator
-            color_t* color_ref; // reference of the current color
-            if (isAmino) { // if the amino table is used, update the amino iterator
+            if (Fpt_it == Fprint_table[i].end()){break;}        // stop iterating if done
+            else{
+                uint32_t count = Fpt_it.value().first;
+                color_t color_set = Fpt_it.value().second;
                 
-                if (amino_it == kmer_tableAmino[i].end()){break;} // stop iterating if done
-                else{color_ref = &amino_it.value(); ++amino_it;} // iterate the amino table
+                // if (count == 0){
+                //     // This occurs in the case when we don't remove outdated fingerprints from the Fprint_table
+                //     Fpt_it++; continue;
+                // }
+
+                // process
+
+                // "- When finally combining the color sets with their inverse sets, pick
+                // one (fewer one bits) as the key and store its count in [0] and the other
+                // count in [1]. I think, this is how it is done a the moment!?" - Roland Wittler
+
+                // relying on the fact that all color_sets stored in the Fprint_table are distinct:
+                // there are at most two color sets with the same representative
+                //  -> set the color_set to the one with the lesser number of 1:
+                color::represent(color_set);     
+
+                if (color_table.find(color_set) == color_table.end()){
+                    color_table[color_set] = array<uint32_t, 2> {count, 0};
                 }
-            else { // if the base tables is used update the base iterator
-                // Todo: Get the target hash map index from the kmer bits
-                if (base_it == kmer_table[i].end()){break;} // stop itearating if done
-                else {color_ref = &base_it.value(); ++base_it;} // iterate the base table
+                else {
+                    color_table[color_set][1] = count;
                 }
-            // process
-            color_t& color = *color_ref;
-            bool pos = color::represent(color);    // invert the color set, if necessary
-            if (color == 0) continue;    // ignore empty splits
-            // add_weight(color, mean, min_value, pos);
-			array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-			weight[pos]++; // update the weight or the inverse weight of the current color set
+                    
+                // add_weight(color, mean, min_value, pos);                
+            }
+            Fpt_it++; // iterate the fingerprint table
 		}
     }
 }
-
-
 
 
 /**
@@ -1205,9 +1366,17 @@ void graph::compile_split_list(double mean(uint32_t&, uint32_t&), double min_val
  * @param file output file stream
  * @param verbose print progess
  */
-void graph::output_core(ostream& file, bool& verbose)
-{
-    uint64_t cur=0, prog=0, next, core_count=0, all_count=0, singletons_count=0;
+void graph::output_core(ostream& file, bool& verbose){
+    // output_core should be called before deleting the kmer table!
+    // In fingerprinting, all kmers with the complete color set will have the same fingerprint
+    // To find the common fingerprint fast, we can xor all the genome fingerprints
+
+    fingerprint common_F = genome_fingerprints[0];
+    for (uint16_t i = 1; i < genome_fingerprints.size(); i++){
+        common_F ^= genome_fingerprints[i];
+    }
+
+   uint64_t cur=0, prog=0, next, core_count=0, all_count=0, singletons_count=0;
 
     // check table (Amino or base)
     uint64_t max = 0; // table size
@@ -1219,8 +1388,8 @@ void graph::output_core(ostream& file, bool& verbose)
         return;
     }
     // The iterators for the tables
-    hash_map<kmer_t, color_t>::iterator base_it;
-    hash_map<kmerAmino_t, color_t>::iterator amino_it;
+    hash_map<kmer_t, fingerprint>::iterator base_it;
+    hash_map<kmerAmino_t, fingerprint>::iterator amino_it;
 
     // Iterate the tables
     for (int i = 0; i < graph::table_count; i++) // Iterate all tables
@@ -1236,31 +1405,36 @@ void graph::output_core(ostream& file, bool& verbose)
                 prog = next; cur++;
             }
             // update the iterator
-            color_t* color_ref; // reference of the current color
+            fingerprint* current_f_ref; // reference of the current fingerprint
             kmer_t kmer;
 			kmerAmino_t kmerAmino;
             if (isAmino) { // if the amino table is used, update the amino iterator
                 if (amino_it == kmer_tableAmino[i].end()){break;} // stop iterating if done
-                else{kmerAmino = amino_it.key(); color_ref = &amino_it.value(); ++amino_it;} // iterate the amino table
+                else{kmerAmino = amino_it.key(); current_f_ref = &amino_it.value(); ++amino_it;} // iterate the amino table
             }
             else { // if the base tables is used update the base iterator
                 // Todo: Get the target hash map index from the kmer bits
                 if (base_it == kmer_table[i].end()){break;} // stop itearating if done
-                else {kmer = base_it.key(); color_ref = &base_it.value(); ++base_it;} // iterate the base table
+                else {kmer = base_it.key(); current_f_ref = &base_it.value(); ++base_it;} // iterate the base table
             }
             // process
-            color_t& color = *color_ref;
 			all_count++;
 			// is core?
-			if(color::is_complete(color)){
+			if(*current_f_ref == common_F){
 				core_count++;
 				//output
 				file << ">" << endl;
  				file << (isAmino?(kmerAmino::kmer_to_string(kmerAmino)):(kmer::kmer_to_string(kmer))) << endl;
 			}
-			if(color::is_singleton(color)){
-				singletons_count++;
-			}
+           
+            // This would never happen, since is_singleton(color) is defined as having just one color in the color set.
+            //   |  
+            //   V      color_t color = (isAmino ? (get_color_amino(kmerAmino)) : (get_color(kmer, false)));
+            // if(color::is_singleton(color)){
+			// 	singletons_count++;
+			// }
+
+            // However, we can easily get the singleton count by counting the size of singletons subtables.
 		}
     }
 	if (verbose) { 

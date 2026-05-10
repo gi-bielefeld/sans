@@ -112,3 +112,22 @@ bool color::is_singleton(const color_t& c){
 	return c.popcnt()==1;
 }
 
+/**
+ * This function converts a color set to a string representation.
+ * 
+ * @param c color set to convert
+ * @return string representation of the color set
+ */
+std::string color::to_string(const color_t& c) {
+    std::string s;
+    for (size1N_t i = 0; i < n; ++i) {
+        s += c.test(i) ? '1' : '0';
+    }
+    return s;
+}
+
+std::ostream& operator<<(std::ostream& os, const color_t& c) {
+    os << color::to_string(c);
+    return os;
+}
+
