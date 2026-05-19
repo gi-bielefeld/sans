@@ -4,6 +4,7 @@
 #include <functional>
 #include <utility>
 #include <vector>
+#include <chrono>
 
 #include <thread>
 #include <atomic>
@@ -100,8 +101,45 @@ struct spinlock {
 };
 
 // For Fingerprinting: A bitset 128 bits long should be sufficient
-constexpr static uint_fast8_t Fprint_length = 128;
+constexpr static uint_fast8_t Fprint_length = 128;      // this could be made dependent on maxN 
 using fingerprint = bitset<128>;
+
+
+class Measure_time {
+    // With this you can measure the total execution time of any line of code.
+private:
+    chrono::high_resolution_clock::duration execution_time{};
+    chrono::high_resolution_clock::time_point begin;
+    chrono::high_resolution_clock::time_point end;
+
+public:
+    Measure_time() : execution_time(chrono::high_resolution_clock::duration::zero()) {}
+
+    void start_clock() {
+        begin = chrono::high_resolution_clock::now();
+    }
+
+    void stop_clock() {
+        end = chrono::high_resolution_clock::now();
+        execution_time += end - begin;
+    }
+
+    void reset() {
+        execution_time = chrono::high_resolution_clock::duration::zero();
+    }
+
+    chrono::high_resolution_clock::duration elapsed() const {
+        return execution_time;
+    }
+
+    void show_time() const {
+        cout << util::format_time(execution_time) << endl;
+    }
+};
+
+inline Measure_time line618;
+inline uint_fast32_t same_kmer_counter = 0;
+inline uint_fast32_t same_kmer_in_singletons_counter = 0;
 
 /**
  * This class manages the k-mer/color hash tables and split list.
@@ -171,6 +209,11 @@ private:
      * This is a vector of spinlocks protecting the hash tables.
      */
     static vector<spinlock> lock;
+
+    /**
+     * This is a vector of spinlocks protecting the fingerprint table.
+     */
+    static vector<spinlock> F_lock;
 
     /**
      * This is a hash table mapping k-mers to fingerprints [O(1)].
@@ -247,8 +290,11 @@ public:
             //    table_count = 45 * thread_count - 33; // Estimated scaling
             //    table_count = table_count % 2 ? table_count : table_count + 1; // Ensure the table count is odd
             table_count = (0b1u << 14) + 1;
-            shift_bits_by = Fprint_length - 14;
-            
+            // table_count as a number will be a 1 followed by fourteen 0
+            // for the computation of table bin:
+            // after shifting the fingerprint, the number will have 14 valid digits. 
+            shift_bits_by = Fprint_length - 14;     
+
             // Create random binary fingerprints
             genome_fingerprints = vector<fingerprint> (color::n);
             random_device rd; // Seed source
@@ -258,20 +304,30 @@ public:
             int8_t takes = Fprint_length / 32;
             int8_t rest  = Fprint_length % 32;
             string zeros_ones; 
+            bool random_fingerprints = true;
 
-            for (uint1N_t i = 0; i < color::n; i++){
-                for (int8_t j = 0; j < takes; j++){
-                    zeros_ones += bitset<32>(dist(gen)).to_string();
-                }
-                if (rest != 0){
-                    zeros_ones += bitset<32>(dist(gen)).to_string().substr(0, rest);
-                }
-                genome_fingerprints[i] = bitset<Fprint_length>(zeros_ones);
-                zeros_ones.clear();
+            if (random_fingerprints){
+                for (uint1N_t i = 0; i < color::n; i++){
+                    for (int8_t j = 0; j < takes; j++){
+                        zeros_ones += bitset<32>(dist(gen)).to_string();
+                    }
+                    if (rest != 0){
+                        zeros_ones += bitset<32>(dist(gen)).to_string().substr(0, rest);
+                    }
+                    genome_fingerprints[i] = bitset<Fprint_length>(zeros_ones);
+                    zeros_ones.clear();
 
-               
-                cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
-                
+                    cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
+                }
+            }
+            else { // each fingerprint is just one color. 
+                   // This is for the purpose of testing for the effect of collisions on results.
+                for (uint1N_t i = 0; i < color::n; i++){
+                    fingerprint f;
+                    f.set(i);
+                    genome_fingerprints[i] = f;
+                    cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
+                }
             }
 
             // Init base tables
@@ -281,6 +337,7 @@ public:
 
             // Init the lock vector
             lock = vector<spinlock> (table_count);
+            F_lock = vector<spinlock> (table_count);
 
             // Precompute the period for fast shift update kmer binning in bitset representation 
             #if (maxK > 32)     
@@ -306,9 +363,6 @@ public:
             // Init amino tables
             kmer_tableAmino = vector<hash_map<kmerAmino_t, fingerprint>> (table_count);
             singleton_kmer_tableAmino = vector<hash_map<kmerAmino_t, uint16_t>> (table_count);
-            
-            // Init the mutex lock vector
-            lock = vector<spinlock> (table_count);
 
             // Precompute the period for fast shift update kmer binning in bitset representation 
             #if (maxK > 12)     
@@ -574,14 +628,18 @@ public:
     static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color)
     {
         lock[bin].lock();
-        hash_map<kmer_t,fingerprint>::iterator entry = kmer_table[bin].find(kmer); 
+
+        hash_map<kmer_t,fingerprint>::iterator entry = kmer_table[bin].find(kmer);
         // already in the kmer table?
         if(entry != kmer_table[bin].end()){
             // check if not seen in this genome before, i.e., count a new (unique) kmer
             fingerprint &F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
+            F_lock[bin_F_old].lock();
             hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-            // assert (Fpt_entry != Fprint_table[bin].end());      // must not happen
+            if (Fpt_entry == Fprint_table[bin].end()){ // must not happen
+                int raise(404);                            // (page not found error)
+            };      
             color_t color_set_vector = Fpt_entry.value().second;
 
             // we don't want to xor fingerprints of the same genome twice:
@@ -599,6 +657,7 @@ public:
                 // do the xor - combine fingerprints
                 fingerprint F_new = F_old ^ genome_fingerprints[color];
                 uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
+                F_lock[bin_F_new].lock();
                 // update the fingerprint table
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
                 if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
@@ -608,9 +667,15 @@ public:
                     color_set_vector.set(color);
                     Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
                 }
+                F_lock[bin_F_new].unlock();
                 // update the kmer_table
+                line618.start_clock();
                 entry.value() = F_new;
-            }
+                line618.stop_clock(); 
+            } //else {
+             //same_kmer_counter++;
+            //}
+            F_lock[bin_F_old].unlock();
         }
         // not yet in the kmer table?
         else{
@@ -635,6 +700,7 @@ public:
 
                     // update the Fprint_table
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
+                    F_lock[bin_F_new].lock();
                     hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     if (Fpt_entry != Fprint_table[bin_F_new].end()){
                         Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
@@ -645,7 +711,9 @@ public:
                         // cout << "color_set_vector: " << color_set_vector << endl; 
                         Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
                     }
+                    F_lock[bin_F_new].unlock();
                     // Why doesn't the singleton table also have to be locked? 
+                    // Ahaa I suppose it is locked, since it uses the same bin system as the kmer table.
                     singleton_kmer_table[bin].erase(s_entry);   
 
                     // debug
@@ -653,7 +721,9 @@ public:
                     // color_set_vector.set(10); color_set_vector.set(12);
                     // Fprint_table[bin][F_new] = pair<uint_fast32_t, color_t> (77, color_set_vector);
                     // printout_tables("kmer_table.txt", "Fprint_table.txt"); 
-                }
+                }//else {
+                //same_kmer_in_singletons_counter++;
+                //}
             }
             // not seen before -> add to singleton_table
             else{

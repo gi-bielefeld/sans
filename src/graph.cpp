@@ -33,6 +33,11 @@ uint64_t graph::table_count;
 vector<spinlock> graph::lock;
 
 /**
+ * This is a vector of spinlocks protecting the fingerprint table.
+ */
+vector<spinlock> graph:: F_lock;
+
+/**
  * This vector holds the carries of 2**i % table_count for fast distribution of binary represented kmers
  */
 vector<uint_fast32_t> graph::period;
@@ -298,9 +303,8 @@ uint_fast32_t graph::compute_bin(const kmer_t& kmer)
  * But each fingerprint must be contained only in one (sub)table.
  */
 uint_fast32_t graph::compute_Fprint_bin(const fingerprint& f){ 
-    // Reduce the fingerprint to match the size of the binary number: table_count.
-    // This way the division in modulo will be fast.
-    return table_count % (f >> shift_bits_by).to_ulong();
+    // Reduce the fingerprint to be just under the size of the binary number: table_count.
+    return (f >> shift_bits_by).to_ulong();
 }
 
 /**
@@ -1215,7 +1219,13 @@ fprint_out.close();
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
 
     // For debug:
-    printout_tables("kmer_table.txt", "Fprint_table.txt");
+    // printout_tables("kmer_table.txt", "Fprint_table.txt");
+    // cout << endl << endl << "Showing time for line618: ";
+    // line618.show_time();
+    // cout << "kmers seen in the same genome (second to nth repetition cumulative count:) = " << endl;
+    // cout << same_kmer_counter << endl; 
+    // cout << "singleton repeated kmers = " << same_kmer_in_singletons_counter << endl;
+    // cout << endl << endl;
 
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
@@ -1262,13 +1272,17 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 // relying on the fact that all color_sets stored in the Fprint_table are distinct:
                 // there are at most two color sets with the same representative
                 //  -> set the color_set to the one with the lesser number of 1:
-                color::represent(color_set);     
+                bool pos = color::represent(color_set);     
 
                 if (color_table.find(color_set) == color_table.end()){
-                    color_table[color_set] = array<uint32_t, 2> {count, 0};
+                    if (pos == 0){  // if the set was not inverted, save its count in the index 0:
+                        color_table[color_set] = array<uint32_t, 2> {count, 0};
+                    } else {
+                        color_table[color_set] = array<uint32_t, 2> {0, count};
+                    }
                 }
                 else {
-                    color_table[color_set][1] = count;
+                    color_table[color_set][pos] = count;
                 }
                     
                 // add_weight(color, mean, min_value, pos);                
@@ -1287,7 +1301,8 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
  * @param verbose print progess
  */
 void graph::add_singleton_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
-	
+	// This function is called from main right after: add_weights()
+
 	// not needed anymore
 	singleton_kmer_table.clear();
 	singleton_kmer_tableAmino.clear();	
@@ -1321,9 +1336,18 @@ void graph::add_singleton_weights(double mean(uint32_t&, uint32_t&), double min_
 			color.set(i);
             // process
             // add_weight(color, mean, min_value, pos);
-			array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
-			weight[0]+=singleton_counters[i]; // update the weight or the inverse weight of the current color set
-    }
+			// array<uint32_t,2>& weight = color_table[color];    // get the weight and inverse weight for the color set
+			// weight[0]+=singleton_counters[i]; // update the weight or the inverse weight of the current color set
+    
+            if (color_table.find(color) == color_table.end()){
+                // the inverse color-set does not exist (extremely rare)
+                color_table[color] = array<uint32_t, 2> {0, 0};
+                color_table[color][0] += singleton_counters[i];
+            }
+            else {
+                color_table[color][0] += singleton_counters[i];
+                }
+        }
 }
 
 
@@ -1428,7 +1452,7 @@ void graph::output_core(ostream& file, bool& verbose){
 			}
            
             // This would never happen, since is_singleton(color) is defined as having just one color in the color set.
-            //   |  
+            //   |      And we're iterating the kmer_table.
             //   V      color_t color = (isAmino ? (get_color_amino(kmerAmino)) : (get_color(kmer, false)));
             // if(color::is_singleton(color)){
 			// 	singletons_count++;
