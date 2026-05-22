@@ -1218,15 +1218,6 @@ fprint_out.close();
  */
 void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, bool& verbose) {
 
-    // For debug:
-    // printout_tables("kmer_table.txt", "Fprint_table.txt");
-    // cout << endl << endl << "Showing time for line618: ";
-    // line618.show_time();
-    // cout << "kmers seen in the same genome (second to nth repetition cumulative count:) = " << endl;
-    // cout << same_kmer_counter << endl; 
-    // cout << "singleton repeated kmers = " << same_kmer_in_singletons_counter << endl;
-    // cout << endl << endl;
-
     //double min_value = numeric_limits<double>::min(); // current min. weight in the top list (>0)
     uint64_t cur=0, prog=0, next;
 
@@ -1290,6 +1281,16 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             Fpt_it++; // iterate the fingerprint table
 		}
     }
+
+    // For debug:
+    // printout_tables("kmer_table_14.txt", "Fprint_table_14.txt");
+    // cout << endl << endl << "Showing time for line618: ";
+    // line618.show_time();
+    // cout << "kmers seen in the same genome (second to nth repetition cumulative count:) = " << endl;
+    // cout << same_kmer_counter << endl; 
+    // cout << "singleton repeated kmers = " << same_kmer_in_singletons_counter << endl;
+    // cout << endl << endl;
+
 }
 
 

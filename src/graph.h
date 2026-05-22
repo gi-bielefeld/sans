@@ -101,8 +101,11 @@ struct spinlock {
 };
 
 // For Fingerprinting: A bitset 128 bits long should be sufficient
-constexpr static uint_fast8_t Fprint_length = 128;      // this could be made dependent on maxN 
-using fingerprint = bitset<128>;
+#ifndef FL
+#define FL 128
+#endif
+constexpr static uint_fast16_t Fprint_length = FL;      // this could be made dependent on maxN 
+using fingerprint = bitset<FL>;
 
 
 class Measure_time {
@@ -317,8 +320,9 @@ public:
                     genome_fingerprints[i] = bitset<Fprint_length>(zeros_ones);
                     zeros_ones.clear();
 
-                    cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
+                    // cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
                 }
+                cout << "Fingerprint preview: " << genome_fingerprints[0] << endl;
             }
             else { // each fingerprint is just one color. 
                    // This is for the purpose of testing for the effect of collisions on results.
@@ -628,7 +632,6 @@ public:
     static void hash_kmer(uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color)
     {
         lock[bin].lock();
-
         hash_map<kmer_t,fingerprint>::iterator entry = kmer_table[bin].find(kmer);
         // already in the kmer table?
         if(entry != kmer_table[bin].end()){
@@ -669,9 +672,8 @@ public:
                 }
                 F_lock[bin_F_new].unlock();
                 // update the kmer_table
-                line618.start_clock();
                 entry.value() = F_new;
-                line618.stop_clock(); 
+                
             } //else {
              //same_kmer_counter++;
             //}
