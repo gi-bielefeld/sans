@@ -1,9 +1,9 @@
 # # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=14 -DFL=32 -std=c++17		# FL = Fingerprint_lenght	# D = Define
+# CC = g++ -O3 -march=native -DmaxK=31 -DmaxN=13 -DFL=64 -std=c++17		# FL = Fingerprint_lenght	# D = Define
 XX = -lpthread -lz
 
 # IF DEBUG
-# CC = g++ -g -march=native -DmaxK=32 -DmaxN=14 -std=c++17
+CC = g++ -g -march=native -DmaxK=32 -DmaxN=13 -DFL=16 -std=c++17
 
 ## IF BIFROST LIBRARY SHOULD BE USED
 # CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=64 -DuseBF -std=c++14

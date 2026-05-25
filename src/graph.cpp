@@ -1465,6 +1465,14 @@ void graph::output_core(ostream& file, bool& verbose){
 	if (verbose) { 
 		cout  << "\33[2K\r" << "Collecting core k-mers... (" << core_count << " / "<< (100*core_count/all_count) << "%)"<< flush;
 	}
+
+    // finally, remove the core kmers from the Fprint_table. 
+    uint_fast32_t bin = compute_Fprint_bin(common_F);
+    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator it = Fprint_table[bin].find(common_F); 
+
+    if (it != Fprint_table[bin].end()){
+        Fprint_table[bin].erase(it);
+    }
 }
 
 
@@ -1490,7 +1498,7 @@ uint64_t graph::number_kmers(){
  */
 uint64_t graph::number_singleton_kmers(){
 	uint64_t num=0;
-	for (uint16_t g=0;g<maxN-1;g++){num += singleton_counters[g];}
+	for (uint16_t g=0;g<maxN;g++){num += singleton_counters[g];}
 	return num;
 }
 

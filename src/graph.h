@@ -104,8 +104,13 @@ struct spinlock {
 #ifndef FL
 #define FL 128
 #endif
-constexpr static uint_fast16_t Fprint_length = FL;      // this could be made dependent on maxN 
-using fingerprint = bitset<FL>;
+
+// due to some bug with biteshifting the table_number should be shorter than the fingerprint.
+constexpr static uint_fast16_t Fprint_length = FL;
+// alternatively:
+// constexpr static uint_fast16_t Fprint_length = FL < 16 ? 16 : FL;      // this could be made a function of maxN
+
+using fingerprint = bitset<Fprint_length>;
 
 
 class Measure_time {
@@ -295,8 +300,10 @@ public:
             table_count = (0b1u << 14) + 1;
             // table_count as a number will be a 1 followed by fourteen 0
             // for the computation of table bin:
-            // after shifting the fingerprint, the number will have 14 valid digits. 
-            shift_bits_by = Fprint_length - 14;     
+            // after shifting the fingerprint by shift_bits_by, we get a number that 
+            // fits within the number: table_count
+            shift_bits_by = Fprint_length - 14 + 1;  
+            // cout << shift_bits_by;   
 
             // Create random binary fingerprints
             genome_fingerprints = vector<fingerprint> (color::n);
@@ -307,7 +314,7 @@ public:
             int8_t takes = Fprint_length / 32;
             int8_t rest  = Fprint_length % 32;
             string zeros_ones; 
-            bool random_fingerprints = true;
+            bool random_fingerprints = false;
 
             if (random_fingerprints){
                 for (uint1N_t i = 0; i < color::n; i++){
@@ -660,7 +667,18 @@ public:
                 // do the xor - combine fingerprints
                 fingerprint F_new = F_old ^ genome_fingerprints[color];
                 uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
-                F_lock[bin_F_new].lock();
+                
+                // fixed a bug: when a thread tried to lock the same bin,
+                // it fell into an infinite while-loop, waiting for the lock to get unlocked...
+                if (bin_F_new == bin_F_old){
+                    // this means the bin was locked by the current thread itself.
+                    // with random fingerprints an extremely rare event.
+                    // But can happen, since table_count = (1 << 14) + 1
+                    // This is so ugly that a refactoring of the method would be needed.
+                } else {
+                    F_lock[bin_F_new].lock();
+                }
+
                 // update the fingerprint table
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
                 if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
@@ -670,7 +688,11 @@ public:
                     color_set_vector.set(color);
                     Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
                 }
-                F_lock[bin_F_new].unlock();
+
+                if (bin_F_new != bin_F_old){
+                    F_lock[bin_F_new].unlock();
+                }
+                
                 // update the kmer_table
                 entry.value() = F_new;
                 
@@ -690,7 +712,8 @@ public:
 
                     uint16_t &color2 = s_entry.value();
                     fingerprint F_new = genome_fingerprints[color2] ^ genome_fingerprints[color];
-                    kmer_table[bin][kmer] = F_new;                 
+                    kmer_table[bin][kmer] = F_new;  
+                                 
 
                     singleton_counters_locks[s_entry.value()].lock();
                     singleton_counters[s_entry.value()]--;
