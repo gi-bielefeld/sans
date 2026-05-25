@@ -105,10 +105,8 @@ struct spinlock {
 #define FL 128
 #endif
 
-// due to some bug with biteshifting the table_number should be shorter than the fingerprint.
-constexpr static uint_fast16_t Fprint_length = FL;
-// alternatively:
-// constexpr static uint_fast16_t Fprint_length = FL < 16 ? 16 : FL;      // this could be made a function of maxN
+// due to undefined behaviour of negative biteshifting the table_number must be shorter than the fingerprint.
+constexpr static uint_fast16_t Fprint_length = FL < 16 ? 16 : FL;      // this could be made a function of maxN
 
 using fingerprint = bitset<Fprint_length>;
 
