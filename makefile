@@ -1,5 +1,5 @@
 # # MAX. K-MER LENGTH, NUMBER OF FILES
-CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=100 -std=c++17
+CC = g++ -O3 -march=native -DmaxK=32 -DmaxN=14 -DFL=32 -std=c++17		# FL = Fingerprint_lenght	# D = Define
 XX = -lpthread -lz
 
 # IF DEBUG
