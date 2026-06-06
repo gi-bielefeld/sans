@@ -647,7 +647,7 @@ public:
             fingerprint &F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
 
-            F_lock[bin_F_old].lock();
+            
 
             hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
             color_t color_set_vector = Fpt_entry.value().second;                // copy
@@ -659,11 +659,17 @@ public:
             if(0 == color_set_vector.test(color)){
                 uint_fast32_t& color_set_count = Fpt_entry.value().first;        // reference
 
+                // moved locking here to minimise the locked time of the bin and improve speed of multi-threading.
+                F_lock[bin_F_old].lock();
                 // remove the kmer from the color-set it belonged to previously:
+                
                 color_set_count--;
-                if (color_set_count == 0){
-                    Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
-                }
+
+                // Experiment: how much space do these "empty color sets" actually take?
+                // also, we don't have to worry about an entry being deleted by another thread in the meantime
+                // if (color_set_count == 0){
+                //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
+                // }
                 // we do no further actions in the current bin, therefore free it up for other threads.
                 F_lock[bin_F_old].unlock();
 
@@ -675,11 +681,13 @@ public:
                 // do the xor - combine fingerprints
                 fingerprint F_new = F_old ^ genome_fingerprints[color];
                 uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
-                
-                F_lock[bin_F_new].lock();
 
                 // update the fingerprint table
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
+                
+                // again, to minimise locked time.
+                F_lock[bin_F_new].lock();
+                
                 if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
                     Fpt_entry_new.value().first++;
                 } else {
