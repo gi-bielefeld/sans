@@ -225,6 +225,8 @@ private:
      */
     static vector<spinlock> F_lock;
 
+    inline static uint64_t threads;    // number of threads
+
     /**
      * This is a hash table mapping k-mers to fingerprints [O(1)].
      */
@@ -292,6 +294,7 @@ public:
      */
     template<bool count_kmers>
     static void init(uint64_t& top_size, bool amino, vector<int>& q_table, int& quality, hash_set<kmer_t>& blacklist, hash_set<kmerAmino_t>& blacklist_amino, uint64_t& thread_count) {
+        threads = thread_count;
         t = top_size;
         isAmino = amino;
         if(!isAmino){
@@ -647,63 +650,141 @@ public:
             fingerprint &F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
 
+            // To deal with rehashing of the table:
+            hash_map<fingerprint, pair<uint_fast32_t, color_t>> & F_table_ref = Fprint_table[bin_F_old];
+            uint_fast32_t rehashing_threshold = floor(F_table_ref.bucket_count() * F_table_ref.max_load_factor());
             
+            // In the edge case, all threads will want to insert an entry to the same bucket.
+            // I will assume the number of threads is <= 32.
+            // Locking policy:
+            // Optimistic: we don't have to worry about the table getting rehashed. => lock as little as possible.
+            // Cautious :  the table might get resized. => lock serially.
+            bool optimistic = false; 
+            bool cautious = false;
+            if (F_table_ref.size() + threads >= rehashing_threshold ){
+                cautious = true;
+            } else {
+                optimistic = true;
+            }
 
-            hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-            color_t color_set_vector = Fpt_entry.value().second;                // copy
-            if (Fpt_entry == Fprint_table[bin].end()){ // must not happen
-                int raise(404);                        // (page not found error)
-            };                                         // remove in final version
-  
-            // we don't want to xor fingerprints of the same genome twice:
-            if(0 == color_set_vector.test(color)){
-                uint_fast32_t& color_set_count = Fpt_entry.value().first;        // reference
+            if (optimistic){    
+                    
+                hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
+                color_t color_set_vector = Fpt_entry.value().second;                // copy
+                if (Fpt_entry == Fprint_table[bin].end()){ // must not happen
+                    int raise(404);                        // (page not found error)
+                };                                         // remove in final version
+    
+                // we don't want to xor fingerprints of the same genome twice:
+                if(0 == color_set_vector.test(color)){
+                    uint_fast32_t& color_set_count = Fpt_entry.value().first;        // reference
 
-                // moved locking here to minimise the locked time of the bin and improve speed of multi-threading.
-                F_lock[bin_F_old].lock();
-                // remove the kmer from the color-set it belonged to previously:
-                
-                color_set_count--;
+                    // moved locking here to minimise the locked time of the bin and improve speed of multi-threading.
+                    F_lock[bin_F_old].lock();
+                    // remove the kmer from the color-set it belonged to previously:
+                    
+                    color_set_count--;
 
-                // Experiment: how much space do these "empty color sets" actually take?
-                // also, we don't have to worry about an entry being deleted by another thread in the meantime
-                // if (color_set_count == 0){
-                //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
-                // }
-                // we do no further actions in the current bin, therefore free it up for other threads.
+                    // Experiment: how much space do these "empty color sets" actually take?
+                    // also, we don't have to worry about an entry being deleted by another thread in the meantime
+                    // if (color_set_count == 0){
+                    //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
+                    // }
+                    // we do no further actions in the current bin, therefore free it up for other threads.
+                    F_lock[bin_F_old].unlock();
+
+                    if (count_kmers){
+                        // count
+                        kmer_counters[color]++;
+                    }
+
+                    // do the xor - combine fingerprints
+                    fingerprint F_new = F_old ^ genome_fingerprints[color];
+                    uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
+
+                    // update the fingerprint table
+                    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
+                    
+                    // again, to minimise locked time.
+                    F_lock[bin_F_new].lock();
+
+                    if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
+                        Fpt_entry_new.value().first++;
+                    } else {
+                        // add a new fingerprint
+                        color_set_vector.set(color);
+                        Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
+                    }
+
+                    F_lock[bin_F_new].unlock();
+                    
+                    // update the kmer_table
+                    entry.value() = F_new;
+                    
+                } else {   
+                // kmer was already seen in this genome => pass; unlock bin.
                 F_lock[bin_F_old].unlock();
-
-                if (count_kmers){
-                    // count
-                    kmer_counters[color]++;
                 }
+            }
 
-                // do the xor - combine fingerprints
-                fingerprint F_new = F_old ^ genome_fingerprints[color];
-                uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
+            if (cautious){  // (an almost-copy)
+                // Lock bin before getting the entry, because rehashing would cause memory problems. 
+                F_lock[bin_F_old].lock();
 
-                // update the fingerprint table
-                hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
-                
-                // again, to minimise locked time.
-                F_lock[bin_F_new].lock();
-                
-                if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
-                    Fpt_entry_new.value().first++;
-                } else {
-                    // add a new fingerprint
-                    color_set_vector.set(color);
-                    Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
+                hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
+                color_t color_set_vector = Fpt_entry.value().second;                // copy
+                if (Fpt_entry == Fprint_table[bin].end()){ // must not happen
+                    int raise(404);                        // (page not found error)
+                };                                         // remove in final version
+    
+                // we don't want to xor fingerprints of the same genome twice:
+                if(0 == color_set_vector.test(color)){
+                    uint_fast32_t& color_set_count = Fpt_entry.value().first;        // reference
+
+                    // remove the kmer from the color-set it belonged to previously:
+                    color_set_count--;
+
+                    // Experiment: how much space do these "empty color sets" actually take?
+                    // also, we don't have to worry about an entry being deleted by another thread in the meantime
+                    // if (color_set_count == 0){
+                    //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
+                    // }
+
+                    // we do no further actions in the current bin, therefore free it up for other threads.
+                    F_lock[bin_F_old].unlock();
+
+                    if (count_kmers){
+                        // count
+                        kmer_counters[color]++;
+                    }
+
+                    // do the xor - combine fingerprints
+                    fingerprint F_new = F_old ^ genome_fingerprints[color];
+                    uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
+
+                    // before getting entry, lock bin.
+                    F_lock[bin_F_new].lock();
+
+                    // update the fingerprint table
+                    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
+                    
+                    if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
+                        Fpt_entry_new.value().first++;
+                    } else {
+                        // add a new fingerprint
+                        color_set_vector.set(color);
+                        Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
+                    }
+
+                    F_lock[bin_F_new].unlock();
+                    
+                    // update the kmer_table
+                    entry.value() = F_new;
+                    
+                } else {   
+                // kmer was already seen in this genome => pass; unlock bin.
+                F_lock[bin_F_old].unlock();
                 }
-
-                F_lock[bin_F_new].unlock();
-                
-                // update the kmer_table
-                entry.value() = F_new;
-                
-            } else {   
-            // kmer was already seen in this genome => pass; unlock bin.
-            F_lock[bin_F_old].unlock();
             }
         }
         // not yet in the kmer table?
@@ -727,7 +808,7 @@ public:
                       kmer_counters[color]++;
                     }
 
-                    // update the Fprint_table
+                    // update the Fprint_table (cautiously)
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
                     F_lock[bin_F_new].lock();
                     hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
