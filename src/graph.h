@@ -144,12 +144,14 @@ public:
 };
 
 // Debug variables:
-inline Measure_time line618;
+inline Measure_time opti, caut;
 inline uint_fast32_t same_kmer_counter = 0;
 inline uint_fast32_t same_kmer_in_singletons_counter = 0;
 
-// I used this counter (with cout) to see if threads are still working or in dead lock
+// Poor multithreading performance troubleshooting 
 inline uint_fast32_t lock_counter = 0;      
+inline uint_fast64_t optimistic_counter = 0;
+inline uint_fast64_t cautious_counter = 0;
 
 /**
  * This class manages the k-mer/color hash tables and split list.
@@ -662,13 +664,30 @@ public:
             bool optimistic = false; 
             bool cautious = false;
             if (F_table_ref.size() + threads >= rehashing_threshold ){
+                if ( cautious_counter % 1000 == 0){
+                cout << "F_table_ref stats:" << endl;
+                cout << "size: " << F_table_ref.size() << endl;
+                // cout << "max size: " << F_table_ref.max_size() << endl;
+
+                cout << "bucket count: " <<  F_table_ref.bucket_count() << endl;
+                cout << "max bucket count: " << F_table_ref.max_bucket_count() << endl;
+                
+                cout << "load factor: " << F_table_ref.load_factor() << endl;
+                cout << "max load factor:" <<  F_table_ref.max_load_factor() << endl;
+                
+                // cout << "count: " << F_table_ref.count() << endl;
+
+                cout << endl << endl ;
+                }
                 cautious = true;
+                cautious_counter++;
             } else {
                 optimistic = true;
+                optimistic_counter++;
             }
 
             if (optimistic){    
-                    
+                opti.start_clock();    
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
                 color_t color_set_vector = Fpt_entry.value().second;                // copy
                 if (Fpt_entry == Fprint_table[bin].end()){ // must not happen
@@ -725,9 +744,11 @@ public:
                 // kmer was already seen in this genome => pass; unlock bin.
                 F_lock[bin_F_old].unlock();
                 }
+                opti.stop_clock(); 
             }
 
             if (cautious){  // (an almost-copy)
+                caut.start_clock();
                 // Lock bin before getting the entry, because rehashing would cause memory problems. 
                 F_lock[bin_F_old].lock();
 
@@ -785,6 +806,7 @@ public:
                 // kmer was already seen in this genome => pass; unlock bin.
                 F_lock[bin_F_old].unlock();
                 }
+                caut.stop_clock();
             }
         }
         // not yet in the kmer table?
