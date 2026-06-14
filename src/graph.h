@@ -652,52 +652,83 @@ public:
             fingerprint &F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
 
+            // Note to Multi-threading  
+            // Although we have 32 000 bins, there might be much fewer color sets, or the majority of
+            // kmers concentrated in few color sets, which causes bin contention. Therefore,
             // This implementation is trying to lock the Fprint bins for as little time as possible
-            // while computing properly. Also considered that hashing is relatively computationally 
-            // expensive, access to the entries is minimised - each time we try to access only once,
-            // so far as the table is not rehashed. We are checking that with a cheap method: has_grown().
+            // while computing correct results. To avoid bin contention, find()-ing entries is allowed to take place
+            // concurrently, so far as no insertion into the table has been performed in the meantime.
+            // An insertion, even if the table doesn't grow and rehash, may invalidate any existing iterators.  
+            // Hashing is the most expensive operation in this method, so access to the entries is minimised - 
+            // each time we try to access only once, so far as no insert was done. 
+            // We are checking that with a cheap method: has_changed().
+            // This approach is good because adding a new color set (that is, inserting a new entry)
+            // is a much less frequent operation than incrementing the counter in an existing entry
+            // of the Fprint_table. 
+            
            
             // Find, if the kmer has been seen in the current genome or not.
 
-            // before asking for entry, remember the capacity of table
-            uint_fast32_t current_n_buckets = Fprint_table[bin_F_old].max_bucket_count();
-
+            // BEFORE asking for entry, remember the number of buckets of table
+            uint_fast32_t current_n_buckets = Fprint_table[bin_F_old].bucket_count();
             hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-            color_t color_set_vector = Fpt_entry.value().second;                // copy
+            // this iterator is unsafe - it can be invalidated at any moment.
+            // How to dereference it without risking segfault?
+            //  - freeze the table with lock()
+            //  - if no changes occured, we know for sure that the iterator is valid
+            //    (until we unlock the table)
+            //      - we can safely retrieve the color_set_vector
+            //  - if changes occured, we have to get the iterator again.
 
-            while (has_grown(bin_F_old, current_n_buckets)){
-                // repeat retrieval 
+            color_t color_set_vector;
+            while (true){
+                F_lock[bin_F_old].lock();
+                if (! has_changed(bin_F_old, current_n_buckets)){
+                    // now we can be sure the iterator points to valid memory
+                    color_set_vector = Fpt_entry.value().second;        
+                    // now the thread has the copy of the color_set_vector locally in this method
+                    F_lock[bin_F_old].unlock();
+                    break;
+                }
+                // repeat retrieval without closing the bin for other threads
+                F_lock[bin_F_old].unlock();
+                current_n_buckets = Fprint_table[bin_F_old].bucket_count();
                 Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-                color_set_vector = Fpt_entry.value().second;                    // copy
-                current_n_buckets = Fprint_table[bin_F_old].max_bucket_count();
             }
-            // perhaps this while is not necessary, but
-            // now we can be sure the color_set_vector points to valid memory
+
+            // Sanity check, remove after testing is successful: 
+            if (Fpt_entry == Fprint_table[bin_F_old].end()){
+                // this must not happen
+                int raise(404);         // page not found error.
+            }
 
             // we don't want to xor fingerprints of the same genome twice:
             if(0 == color_set_vector.test(color)){
-                // CRITICAL PART of this method (with regard to multithreading)
 
-                // moved locking here to minimise the locked time of the bin and improve speed of multi-threading.
-                F_lock[bin_F_old].lock();
+                // incrementing the counter:
+                while (true){
+                    F_lock[bin_F_old].lock();
+                    if (! has_changed(bin_F_old, current_n_buckets)){
+                        // we can be sure the iterator points to valid memory
+                        
+                        // remove the kmer from the color-set it belonged to previously:
+                        Fpt_entry.value().first--;
+                        // i.e. color_set_count--; 
 
-                if (has_grown(bin_F_old, current_n_buckets)){
-                    // retrieve anew.
+                        // Experiment: how much space do these "empty color sets" actually take?
+                        // also, we don't have to worry about an entry being deleted by another thread in the meantime
+                        // if (color_set_count == 0){
+                        //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
+                        // }
+
+                        F_lock[bin_F_old].unlock();
+                        break;
+                    }
+                    // repeat retrieval without closing the bin for other threads
+                    F_lock[bin_F_old].unlock();
+                    current_n_buckets = Fprint_table[bin_F_old].bucket_count();
                     Fpt_entry = Fprint_table[bin_F_old].find(F_old);
                 }
-
-                // remove the kmer from the color-set it belonged to previously:
-                Fpt_entry.value().first--;
-                // i.e. color_set_count--; 
-
-                // Experiment: how much space do these "empty color sets" actually take?
-                // also, we don't have to worry about an entry being deleted by another thread in the meantime
-                // if (color_set_count == 0){
-                //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
-                // }
-                
-                // we do no further actions in the current bin, therefore free it up for other threads.
-                F_lock[bin_F_old].unlock();
 
                 if (count_kmers){
                     // count
@@ -708,35 +739,37 @@ public:
                 fingerprint F_new = F_old ^ genome_fingerprints[color];
                 uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
 
-                // update the fingerprint table
+                // update the fingerprint table - increment an existing color set or create a new one (i.e. insert new entry)
 
-                // remember the capacity of table before asking for entry
-                uint_fast32_t current_n_buckets = Fprint_table[bin_F_new].max_bucket_count();
-                
-                // since the obtaining of this iterator takes a long time, let it be computed without locking the bin!
+                uint_fast32_t current_n_buckets = Fprint_table[bin_F_new].bucket_count();
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
                 
-                // again, to minimise locked time:
-                F_lock[bin_F_new].lock();
+                // using the same structure as before:
+                while (true){
+                    F_lock[bin_F_new].lock();
+                    if (! has_changed(bin_F_new, current_n_buckets)){
+                    
+                        if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
+                            Fpt_entry_new.value().first++;
+                        } else {
+                            // add a new fingerprint
+                            color_set_vector.set(color);
+                            Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
+                        }
 
-                // if the thread enters here, it means it was granted access and the bin will not be changed by another thread.
-                // the table could have been rehashed in the meantime, so we should check:
-                if (has_grown(bin_F_new, current_n_buckets)){
-                    Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
+                        F_lock[bin_F_new].unlock();
+                        break;
+                    }
+                    // repeat retrieval without closing the bin for other threads
+                    F_lock[bin_F_new].unlock();
+                    current_n_buckets = Fprint_table[bin_F_new].bucket_count();
+                    Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                 }
-
-                if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
-                    Fpt_entry_new.value().first++;
-                } else {
-                    // add a new fingerprint
-                    color_set_vector.set(color);
-                    Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
-                }
-
-                F_lock[bin_F_new].unlock();
                 
                 // update the kmer_table
                 entry.value() = F_new;
+                // The kmer table does not need multi-threading optimisation,
+                // since with 32 000 bins the likelihood of two threads waiting for each other is very small.
             }
         }
         // not yet in the kmer table?
@@ -762,25 +795,33 @@ public:
 
                     // update the Fprint_table
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
-                    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
+                    // BEFORE asking for entry, get the current number of buckets.
                     uint_fast32_t current_n_buckets = Fprint_table[bin_F_new].max_bucket_count();
+                    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
+                    
+                    // incrementing or new fingerprint
+                    while (true){
+                        F_lock[bin_F_new].lock();
+                        if (! has_changed(bin_F_new, current_n_buckets)){
+                        
+                            if (Fpt_entry != Fprint_table[bin_F_new].end()){
+                                Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
+                            } else {
+                                // Initialise an empty color set
+                                color_t color_set_vector(0);    
+                                color_set_vector.set(color); color_set_vector.set(color2);
+                                // cout << "color_set_vector: " << color_set_vector << endl; 
+                                Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
+                            }
 
-                    F_lock[bin_F_new].lock();
-
-                    if (has_grown(bin_F_new, current_n_buckets)){
+                            F_lock[bin_F_new].unlock();
+                            break;
+                        }
+                        F_lock[bin_F_new].unlock();
+                        current_n_buckets = Fprint_table[bin_F_new].bucket_count();
                         Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     }
 
-                    if (Fpt_entry != Fprint_table[bin_F_new].end()){
-                        Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
-                    } else {
-                        // Initialise an empty color set
-                        color_t color_set_vector(0);    
-                        color_set_vector.set(color); color_set_vector.set(color2);
-                        // cout << "color_set_vector: " << color_set_vector << endl; 
-                        Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
-                    }
-                    F_lock[bin_F_new].unlock();
                     singleton_kmer_table[bin].erase(s_entry);   
 
                     // debug
@@ -807,9 +848,9 @@ public:
         lock[bin].unlock();
     }
 
-    static bool has_grown(uint_fast32_t F_bin, uint_fast32_t n_buckets){
-        // this may only occur when a new color set is added, so getting again is actually a negligible cost...
-        return (Fprint_table[F_bin].max_bucket_count() > n_buckets);
+    static bool has_changed(uint_fast32_t F_bin, uint_fast32_t n_buckets){
+        // this may only occur when a new color set is added, so getting the iterator again is a small cost...
+        return (Fprint_table[F_bin].bucket_count() > n_buckets);
     }
 
     /**

@@ -1291,17 +1291,22 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
     // cout << "singleton repeated kmers = " << same_kmer_in_singletons_counter << endl;
     // cout << endl << endl;
 
-    cout << endl << "Cautious counter:   " << cautious_counter << endl;
-    cout         << "Optimistic counter: " << optimistic_counter << endl;
-    cout << "Execution time in cautious block:   "; caut.show_time();
-    cout << "Execution time in optimistic block: "; opti.show_time();
-    cout << "Average time per cautious insert:  " << util::format_time(caut.elapsed() / cautious_counter) << endl;
-    cout << "Average time per optimistic insert: ";
-    if (optimistic_counter > 0){
-        cout << util::format_time(opti.elapsed() / optimistic_counter) << endl;
-    } else {
-        cout << 0 << endl;
-    }
+    // cout << endl << "Cautious counter:   " << cautious_counter << endl;
+    // cout         << "Optimistic counter: " << optimistic_counter << endl;
+    // cout << "Execution time in cautious block:   "; caut.show_time();
+    // cout << "Execution time in optimistic block: "; opti.show_time();
+    // cout << "Average time per cautious insert:  ";
+    // if (cautious_counter == 0){
+    //     cout << "none" << endl;}
+    // else {
+    //     cout << util::format_time(caut.elapsed() / cautious_counter) << endl; 
+    // }
+    // cout << "Average time per optimistic insert: ";
+    // if (optimistic_counter > 0){
+    //     cout << util::format_time(opti.elapsed() / optimistic_counter) << endl;
+    // } else {
+    //     cout << "none" << endl;
+    // }
 }
     
 
