@@ -665,12 +665,11 @@ public:
             // This approach is good because adding a new color set (that is, inserting a new entry)
             // is a much less frequent operation than incrementing the counter in an existing entry
             // of the Fprint_table. 
-            
-           
+
             // Find, if the kmer has been seen in the current genome or not.
 
-            // BEFORE asking for entry, remember the number of buckets of table
-            uint_fast32_t current_n_buckets = Fprint_table[bin_F_old].bucket_count();
+            // BEFORE asking for entry, remember the number of live elements in the table
+            uint_fast32_t current_n = Fprint_table[bin_F_old].size();
             hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
             // this iterator is unsafe - it can be invalidated at any moment.
             // How to dereference it without risking segfault?
@@ -683,16 +682,16 @@ public:
             color_t color_set_vector;
             while (true){
                 F_lock[bin_F_old].lock();
-                if (! has_changed(bin_F_old, current_n_buckets)){
+                if (! has_changed(bin_F_old, current_n)){
                     // now we can be sure the iterator points to valid memory
                     color_set_vector = Fpt_entry.value().second;        
-                    // now the thread has the copy of the color_set_vector locally in this method
+                    // now the thread has its own copy of the color_set_vector
                     F_lock[bin_F_old].unlock();
                     break;
                 }
                 // repeat retrieval without closing the bin for other threads
                 F_lock[bin_F_old].unlock();
-                current_n_buckets = Fprint_table[bin_F_old].bucket_count();
+                current_n = Fprint_table[bin_F_old].size();
                 Fpt_entry = Fprint_table[bin_F_old].find(F_old);
             }
 
@@ -708,7 +707,7 @@ public:
                 // incrementing the counter:
                 while (true){
                     F_lock[bin_F_old].lock();
-                    if (! has_changed(bin_F_old, current_n_buckets)){
+                    if (! has_changed(bin_F_old, current_n)){
                         // we can be sure the iterator points to valid memory
                         
                         // remove the kmer from the color-set it belonged to previously:
@@ -726,7 +725,7 @@ public:
                     }
                     // repeat retrieval without closing the bin for other threads
                     F_lock[bin_F_old].unlock();
-                    current_n_buckets = Fprint_table[bin_F_old].bucket_count();
+                    current_n = Fprint_table[bin_F_old].size();
                     Fpt_entry = Fprint_table[bin_F_old].find(F_old);
                 }
 
@@ -741,13 +740,13 @@ public:
 
                 // update the fingerprint table - increment an existing color set or create a new one (i.e. insert new entry)
 
-                uint_fast32_t current_n_buckets = Fprint_table[bin_F_new].bucket_count();
+                uint_fast32_t current_n = Fprint_table[bin_F_new].size();
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
                 
                 // using the same structure as before:
                 while (true){
                     F_lock[bin_F_new].lock();
-                    if (! has_changed(bin_F_new, current_n_buckets)){
+                    if (! has_changed(bin_F_new, current_n)){
                     
                         if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
                             Fpt_entry_new.value().first++;
@@ -762,7 +761,7 @@ public:
                     }
                     // repeat retrieval without closing the bin for other threads
                     F_lock[bin_F_new].unlock();
-                    current_n_buckets = Fprint_table[bin_F_new].bucket_count();
+                    current_n = Fprint_table[bin_F_new].size();
                     Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                 }
                 
@@ -795,14 +794,14 @@ public:
 
                     // update the Fprint_table
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
-                    // BEFORE asking for entry, get the current number of buckets.
-                    uint_fast32_t current_n_buckets = Fprint_table[bin_F_new].max_bucket_count();
+                    // BEFORE asking for entry, get the current number of elements.
+                    uint_fast32_t current_n = Fprint_table[bin_F_new].size();
                     hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     
-                    // incrementing or new fingerprint
+                    // increment or create new fingerprint
                     while (true){
                         F_lock[bin_F_new].lock();
-                        if (! has_changed(bin_F_new, current_n_buckets)){
+                        if (! has_changed(bin_F_new, current_n)){
                         
                             if (Fpt_entry != Fprint_table[bin_F_new].end()){
                                 Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
@@ -818,7 +817,7 @@ public:
                             break;
                         }
                         F_lock[bin_F_new].unlock();
-                        current_n_buckets = Fprint_table[bin_F_new].bucket_count();
+                        current_n = Fprint_table[bin_F_new].size();
                         Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     }
 
@@ -848,9 +847,9 @@ public:
         lock[bin].unlock();
     }
 
-    static bool has_changed(uint_fast32_t F_bin, uint_fast32_t n_buckets){
+    static bool has_changed(uint_fast32_t F_bin, uint_fast32_t n){
         // this may only occur when a new color set is added, so getting the iterator again is a small cost...
-        return (Fprint_table[F_bin].bucket_count() > n_buckets);
+        return (Fprint_table[F_bin].size() > n);
     }
 
     /**
