@@ -669,7 +669,9 @@ public:
             // Find, if the kmer has been seen in the current genome or not.
 
             // BEFORE asking for entry, remember the number of live elements in the table
+            F_lock[bin_F_old].lock();   // if this is too slow, we will have to introduce a separate lock for increment and for insert.
             uint_fast32_t current_n = Fprint_table[bin_F_old].size();
+            F_lock[bin_F_old].unlock();
             hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
             // this iterator is unsafe - it can be invalidated at any moment.
             // How to dereference it without risking segfault?
@@ -690,8 +692,8 @@ public:
                     break;
                 }
                 // repeat retrieval without closing the bin for other threads
-                F_lock[bin_F_old].unlock();
                 current_n = Fprint_table[bin_F_old].size();
+                F_lock[bin_F_old].unlock();
                 Fpt_entry = Fprint_table[bin_F_old].find(F_old);
             }
 
@@ -724,8 +726,8 @@ public:
                         break;
                     }
                     // repeat retrieval without closing the bin for other threads
-                    F_lock[bin_F_old].unlock();
                     current_n = Fprint_table[bin_F_old].size();
+                    F_lock[bin_F_old].unlock();
                     Fpt_entry = Fprint_table[bin_F_old].find(F_old);
                 }
 
@@ -740,7 +742,9 @@ public:
 
                 // update the fingerprint table - increment an existing color set or create a new one (i.e. insert new entry)
 
+                F_lock[bin_F_new].lock();
                 uint_fast32_t current_n = Fprint_table[bin_F_new].size();
+                F_lock[bin_F_new].unlock();
                 hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
                 
                 // using the same structure as before:
@@ -760,8 +764,8 @@ public:
                         break;
                     }
                     // repeat retrieval without closing the bin for other threads
-                    F_lock[bin_F_new].unlock();
                     current_n = Fprint_table[bin_F_new].size();
+                    F_lock[bin_F_new].unlock();
                     Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                 }
                 
@@ -795,7 +799,9 @@ public:
                     // update the Fprint_table
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
                     // BEFORE asking for entry, get the current number of elements.
+                    F_lock[bin_F_new].lock();
                     uint_fast32_t current_n = Fprint_table[bin_F_new].size();
+                    F_lock[bin_F_new].unlock();
                     hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     
                     // increment or create new fingerprint
@@ -816,8 +822,8 @@ public:
                             F_lock[bin_F_new].unlock();
                             break;
                         }
-                        F_lock[bin_F_new].unlock();
                         current_n = Fprint_table[bin_F_new].size();
+                        F_lock[bin_F_new].unlock();
                         Fpt_entry = Fprint_table[bin_F_new].find(F_new);
                     }
 
