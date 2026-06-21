@@ -27,15 +27,27 @@ bool graph::isAmino;
 
 uint64_t graph::table_count;
 
+uint_fast32_t graph:: F_print_table_count; 
+
+// /**
+//  * This is a threshold for efficient cleaning of the Fprint_tables from 0-entries.
+//  */
+// uint_fast32_t graph:: cleaning_threshold;
+
+// /**
+//  *  This barrier makes all threads stop at at sync point to perform the cleaning in a synchronised manner.
+//  */
+// ThreadBarrier graph:: sync_point;
+
 /**
  * This is a vecotr of spinlocks protecting the hash maps 
  */
 vector<spinlock> graph::lock;
 
 /**
- * This is a vector of spinlocks protecting the fingerprint table.
+ * This is a vector of shared locks protecting the fingerprint table.
  */
-vector<spinlock> graph:: F_lock;
+vector<std::shared_mutex> graph:: F_lock;
 
 /**
  * This vector holds the carries of 2**i % table_count for fast distribution of binary represented kmers
@@ -55,8 +67,8 @@ vector<hash_map<kmer_t, fingerprint>> graph:: kmer_table;
 /**
 * This table holds the pairs of <count, color set> for each fingerprint.  
 */
-vector<hash_map<fingerprint, pair<uint_fast32_t, color_t>>> graph::Fprint_table;
-
+vector<hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>> graph::Fprint_table;
+                
 /**
  * This is the amino equivalent.
  */ 
@@ -335,10 +347,11 @@ bool graph::search_kmer_amino(const kmerAmino_t& kmer)
 color_t graph::get_color(const kmer_t& kmer, bool reversed){
     uint_fast32_t bin = compute_bin(kmer);
     fingerprint F = kmer_table[bin][kmer];
+    Fprint_table_entry& entry = *(Fprint_table[bin][F]);
     if (reversed == true){
-        return ~Fprint_table[bin][F].second;
+        return ~entry.color_set;
     }
-    return Fprint_table[bin][F].second;
+    return entry.color_set;
 }
 
 /** (Fingerprinting version)
@@ -349,7 +362,7 @@ color_t graph::get_color(const kmer_t& kmer, bool reversed){
 color_t graph::get_color_amino(const kmerAmino_t& kmer){
     uint_fast32_t bin = compute_amino_bin(kmer);
     fingerprint F = kmer_tableAmino[bin][kmer];
-    return Fprint_table[bin][F].second;
+    return (*(Fprint_table[bin][F])).color_set;
 }
 
 /**
@@ -1178,28 +1191,29 @@ void graph::clear_kmer_table(){
 *  Prints the entire contents of the kmer and fingerprint table to a log file for debugging purposes.
 */  
 void graph:: printout_tables(string kmer_filename, string fprint_filename){
-ofstream kmer_out(kmer_filename);;
-ofstream fprint_out(fprint_filename);
+    ofstream kmer_out(kmer_filename);;
+    ofstream fprint_out(fprint_filename);
 
-for (int bin = 0; bin < table_count; bin++){
-    auto kmer_entry = kmer_table[bin].begin();
-    auto fprint_entry = Fprint_table[bin].begin();
-    // kmer_out << "\n bin = " << bin << '\n';
-    // fprint_out << "\n bin = " << bin << '\n';
+    for (int bin = 0; bin < table_count; bin++){
+        auto kmer_it = kmer_table[bin].begin();
+        auto fprint_it = Fprint_table[bin].begin();
+        // kmer_out << "\n bin = " << bin << '\n';
+        // fprint_out << "\n bin = " << bin << '\n';
 
-    while (kmer_entry != kmer_table[bin].end()){
-        kmer_t k = kmer_entry.key();
-        kmer_out << kmer::kmer_to_string(k) << ": " << kmer_entry.value() << '\n';
-        kmer_entry++;
-    }
+        while (kmer_it != kmer_table[bin].end()){
+            kmer_t k = kmer_it.key();
+            kmer_out << kmer::kmer_to_string(k) << ": " << kmer_it.value() << '\n';
+            kmer_it++;
+        }
 
-    while (fprint_entry != Fprint_table[bin].end()){
-        fingerprint f = fprint_entry.key();
-        auto count = fprint_entry.value().first;
-        auto csv = fprint_entry.value().second;
-        fprint_out << f << ": " << count << " " << csv << "\n";
-        fprint_entry++;
-    }
+        while (fprint_it != Fprint_table[bin].end()){
+            fingerprint f = fprint_it.key();
+            Fprint_table_entry& entry = *(fprint_it->second);
+            uint_fast32_t count = entry.counter;
+            auto csv = entry.color_set;
+            fprint_out << f << ": " << count << " " << csv << "\n";
+            fprint_it++;
+        }
 }
 
 kmer_out   << "\n = = = = = = = = = = = = = = = = = = = = = = = = \n\n ";
@@ -1230,9 +1244,9 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
         return;
     }
     
-    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_it;
+    hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator Fpt_it;
     
-    for (int i = 0; i < graph::table_count; i++) // Iterate all tables
+    for (int i = 0; i < graph::F_print_table_count; i++) // Iterate all tables
     {
        Fpt_it = Fprint_table[i].begin();
 
@@ -1246,13 +1260,15 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
             // update the iterator
             if (Fpt_it == Fprint_table[i].end()){break;}        // stop iterating if done
             else{
-                uint32_t count = Fpt_it.value().first;
-                color_t color_set = Fpt_it.value().second;
+                // get the entry stored on the heap through the shared_ptr 
+                Fprint_table_entry& entry = *(Fpt_it->second); 
+                uint32_t count = entry.counter;
+                color_t color_set = entry.color_set;
                 
-                // if (count == 0){
-                //     // This occurs in the case when we don't remove outdated fingerprints from the Fprint_table
-                //     Fpt_it++; continue;
-                // }
+                if (count == 0){
+                    // filter out splits with 0 weight.
+                    Fpt_it++; continue;
+                }
 
                 // process
 
@@ -1263,7 +1279,9 @@ void graph::add_weights(double mean(uint32_t&, uint32_t&), double min_value, boo
                 // relying on the fact that all color_sets stored in the Fprint_table are distinct:
                 // there are at most two color sets with the same representative
                 //  -> set the color_set to the one with the lesser number of 1:
-                bool pos = color::represent(color_set);     
+                bool pos = color::represent(color_set);
+
+
 
                 if (color_table.find(color_set) == color_table.end()){
                     if (pos == 0){  // if the set was not inverted, save its count in the index 0:
@@ -1358,7 +1376,7 @@ void graph::add_singleton_weights(double mean(uint32_t&, uint32_t&), double min_
 			// weight[0]+=singleton_counters[i]; // update the weight or the inverse weight of the current color set
     
             if (color_table.find(color) == color_table.end()){
-                // the inverse color-set does not exist (extremely rare)
+                // the inverse color-set does not exist
                 color_table[color] = array<uint32_t, 2> {0, 0};
                 color_table[color][0] += singleton_counters[i];
             }
@@ -1485,9 +1503,10 @@ void graph::output_core(ostream& file, bool& verbose){
 
     // finally, remove the core kmers from the Fprint_table. 
     uint_fast32_t bin = compute_Fprint_bin(common_F);
-    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator it = Fprint_table[bin].find(common_F); 
+    hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it = Fprint_table[bin].find(common_F); 
 
     if (it != Fprint_table[bin].end()){
+        // shared_ptr manages deallocation
         Fprint_table[bin].erase(it);
     }
 }

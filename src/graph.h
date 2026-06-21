@@ -8,6 +8,9 @@
 
 #include <thread>
 #include <atomic>
+#include <mutex>
+#include <shared_mutex>
+#include <condition_variable>
 
 #include <iomanip>
 #include <string>
@@ -100,7 +103,7 @@ struct spinlock {
   }
 };
 
-// For Fingerprinting: A bitset 128 bits long should be sufficient
+// For Fingerprinting: A bitset 128 bits long should be more than sufficient
 #ifndef FL
 #define FL 128
 #endif
@@ -110,6 +113,16 @@ constexpr static uint_fast16_t Fprint_length = FL < 16 ? 16 : FL;      // this c
 
 using fingerprint = bitset<Fprint_length>;
 
+// This is a struct holding the pair<counter, color_set_vector>
+struct Fprint_table_entry {
+    // the counter is ATOMIC for multithreading
+    std::atomic<uint_fast32_t> counter{0};
+    const color_t color_set;        // the color set is never actually changed in the entry, only between them. So it can be const.
+    
+    Fprint_table_entry(uint_fast32_t count, color_t c) : counter(count), color_set(c) {}
+};
+// a std::unique_pointer in the hash_map will point to the Fprint_table_entry stored on the heap!
+// an entry will never be copied or moved - that is impossible with an atomic counter. 
 
 class Measure_time {
     // With this you can measure the total execution time of any line of code.
@@ -153,6 +166,52 @@ inline uint_fast32_t lock_counter = 0;
 inline uint_fast64_t optimistic_counter = 0;
 inline uint_fast64_t cautious_counter = 0;
 
+/*
+ *  This class is for the purpose of synchronising threads during cleanup.
+ *  Courtesy of Gemini
+*/
+class ThreadBarrier {
+private:
+    std::mutex mtx;
+    std::condition_variable cv;
+    size_t total_threads;
+    size_t waiting_threads;
+    size_t generation; // Tracks cycles to allow safe reuse
+
+public:
+    // ThreadBarrier needs to be default-constructible
+    ThreadBarrier() 
+        : total_threads(0), waiting_threads(0), generation(0) {}
+
+    explicit ThreadBarrier(size_t threads) 
+        : total_threads(threads), waiting_threads(threads), generation(0) {}
+
+    void init(size_t threads) {
+        std::unique_lock<std::mutex> lock(mtx);
+        total_threads = threads;
+        waiting_threads = threads;
+    }
+
+    void arrive_and_wait() {
+        std::unique_lock<std::mutex> lock(mtx);
+        size_t current_generation = generation;
+
+        if (--waiting_threads == 0) {
+            std::cout << "--- BARRIER TRIPPED BY THREAD " << " ---" << std::endl;
+            // The last thread has arrived! 
+            generation++;               // Advance to the next cycle
+            waiting_threads = total_threads; // Reset counter for next time
+            cv.notify_all();            // Wake up everyone
+        } else {
+            // Wait until the generation changes (woken up by the last thread)
+            cv.wait(lock, [this, current_generation] {
+                return current_generation != generation;
+            });
+        }
+    }
+};
+
+
 /**
  * This class manages the k-mer/color hash tables and split list.
  */
@@ -183,6 +242,40 @@ private:
      * This int indicates the number of tables to use for hashing
      */
     static uint64_t table_count;
+
+
+    static uint_fast32_t F_print_table_count; 
+
+    /**
+     * This is a threshold for efficient cleaning of the Fprint_tables from 0-entries.
+     */
+    inline static uint_fast32_t cleaning_threshold;
+
+    /**
+     * The cleaning is best to do after ALL threads have finished their "round".
+     * In the next round, zero-value entries will not be needed for sure.
+     */
+    inline static uint_fast32_t cleaning_round = 1;
+
+    /**
+     * Limits the maximum number of cleaning rounds that can take place.
+     */
+    inline static uint_fast32_t max_cleaning_rounds;
+
+    /**
+     * This is the related counter.
+     */
+    inline static uint_fast32_t inserts_counter;
+
+    /**
+     * This variable is used to check if all threads are active for cleaning.
+     */
+    inline static atomic<uint_fast32_t> threads_active;
+
+    /**
+     *  This barrier makes all threads stop at at sync point to perform the cleaning in a synchronised manner.
+     */
+    inline static ThreadBarrier sync_point;
     
     /**
      * This vector holds the carries of 2**i % table_count for fast distribution of bitset represented kmers
@@ -208,9 +301,9 @@ private:
     static vector<hash_map<kmer_t, fingerprint>> kmer_table;
     
     /**
-    * This table holds the pairs of <count, color set> for each fingerprint.  
+    * This table holds unique pointers to pairs of (count, color set) for each fingerprint.  
     */
-    static vector<hash_map<fingerprint, pair<uint_fast32_t, color_t>>> Fprint_table;
+    static vector<hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>> Fprint_table;
 
     /**
      *  Used for the calculation of the fingerprint bin.
@@ -223,9 +316,9 @@ private:
     static vector<spinlock> lock;
 
     /**
-     * This is a vector of spinlocks protecting the fingerprint table.
+     * This is a vector of shared locks protecting the fingerprint table.
      */
-    static vector<spinlock> F_lock;
+    static vector<std::shared_mutex> F_lock;
 
     inline static uint64_t threads;    // number of threads
 
@@ -308,7 +401,11 @@ public:
             // table_count as a number will be a 1 followed by fourteen 0
             // for the computation of fingerprint table bin:
             // so that after shifting, the fingerprint is 14 valid digits long:
-            shift_bits_by = Fprint_length - 14;  
+
+            // default setting:
+            short n_of_digits = 14;
+            F_print_table_count = (0b1u << n_of_digits);
+            shift_bits_by = Fprint_length - n_of_digits;  
             // cout << shift_bits_by;   
 
             // Create random binary fingerprints
@@ -350,11 +447,18 @@ public:
             // Init base tables
             kmer_table = vector<hash_map<kmer_t, fingerprint>> (table_count);
             singleton_kmer_table = vector<hash_map<kmer_t, uint16_t>> (table_count);
-            Fprint_table = vector<hash_map<fingerprint, pair<uint_fast32_t, color_t>>> (table_count);
+            Fprint_table = vector<hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>> (F_print_table_count);
 
+            // For multithreading:
             // Init the lock vector
             lock = vector<spinlock> (table_count);
-            F_lock = vector<spinlock> (table_count);
+            F_lock = vector<std::shared_mutex> (F_print_table_count);
+
+            // For cleaning zero-value entries:
+            cleaning_threshold = F_print_table_count;
+            max_cleaning_rounds = color::n / threads;
+            // initialise the ThreadBarrier sync_point:
+            sync_point.init(threads);
 
             // Precompute the period for fast shift update kmer binning in bitset representation 
             #if (maxK > 32)     
@@ -497,7 +601,6 @@ public:
                     }
                 };
             }else { // global quality value
-                // we could optimise a bit here     (-Adrian, 20.4.2026)
                 emplace_kmer_tmp = [&] (const uint64_t& T, uint_fast32_t& bin, const kmer_t& kmer, const uint16_t& color) {
                     if (quality_map[T][kmer] < quality-1) {
                         quality_map[T][kmer]++;
@@ -648,88 +751,51 @@ public:
         hash_map<kmer_t,fingerprint>::iterator entry = kmer_table[bin].find(kmer);
         // already in the kmer table?
         if(entry != kmer_table[bin].end()){
-            // check if not seen in this genome before, i.e., count a new (unique) kmer
-            fingerprint &F_old = entry.value();  
+            fingerprint F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
 
             // Note to Multi-threading  
-            // Although we have 32 000 bins, there might be much fewer color sets, or the majority of
-            // kmers concentrated in few color sets, which causes bin contention. Therefore,
-            // This implementation is trying to lock the Fprint bins for as little time as possible
-            // while computing correct results. To avoid bin contention, find()-ing entries is allowed to take place
-            // concurrently, so far as no insertion into the table has been performed in the meantime.
-            // An insertion, even if the table doesn't grow and rehash, may invalidate any existing iterators.  
-            // Hashing is the most expensive operation in this method, so access to the entries is minimised - 
-            // each time we try to access only once, so far as no insert was done. 
-            // We are checking that with a cheap method: has_changed().
-            // This approach is good because adding a new color set (that is, inserting a new entry)
+            // Although we have 32 000 bins, for some data there might be much fewer color sets, or the majority of
+            // kmers concentrated in few color sets, which causes bin contention.
+            // To avoid bin contention, find()-ing entries is allowed to take place
+            // concurrently. However, an insertion, even if the table doesn't grow and rehash, may invalidate any existing iterators.  
+            // Therefore, three levels of protection are implemented:
+            // 1. shared_lock       - for concurrent finding of entries in the same table
+            // 2. atomic counter    - for incrementing the counter thread-safe
+            // 3. unique_lock       - for inserts - the most dangerous operation.
+            // 
+            // ...This approach is good because adding a new color set (that is, inserting a new entry)
             // is a much less frequent operation than incrementing the counter in an existing entry
             // of the Fprint_table. 
 
             // Find, if the kmer has been seen in the current genome or not.
 
-            // BEFORE asking for entry, remember the number of live elements in the table
-            F_lock[bin_F_old].lock();   // if this is too slow, we will have to introduce a separate lock for increment and for insert.
-            uint_fast32_t current_n = Fprint_table[bin_F_old].size();
-            F_lock[bin_F_old].unlock();
-            hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-            // this iterator is unsafe - it can be invalidated at any moment.
-            // How to dereference it without risking segfault?
-            //  - freeze the table with lock()
-            //  - if no changes occured, we know for sure that the iterator is valid
-            //    (until we unlock the table)
-            //      - we can safely retrieve the color_set_vector
-            //  - if changes occured, we have to get the iterator again.
+            // Create an instance of shared_mutex ( is destructed automatically when it goes out of scope)
+            std::shared_lock<std::shared_mutex> shared_F_lock_old(F_lock[bin_F_old]);
+            // The bin is now shared-locked
 
-            color_t color_set_vector;
-            while (true){
-                F_lock[bin_F_old].lock();
-                if (! has_changed(bin_F_old, current_n)){
-                    // now we can be sure the iterator points to valid memory
-                    color_set_vector = Fpt_entry.value().second;        
-                    // now the thread has its own copy of the color_set_vector
-                    F_lock[bin_F_old].unlock();
-                    break;
-                }
-                // repeat retrieval without closing the bin for other threads
-                current_n = Fprint_table[bin_F_old].size();
-                F_lock[bin_F_old].unlock();
-                Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-            }
+            hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it1 = Fprint_table[bin_F_old].find(F_old);
 
             // Sanity check, remove after testing is successful: 
-            if (Fpt_entry == Fprint_table[bin_F_old].end()){
+            if (it1 == Fprint_table[bin_F_old].end()){
                 // this must not happen
                 int raise(404);         // page not found error.
             }
 
-            // we don't want to xor fingerprints of the same genome twice:
-            if(0 == color_set_vector.test(color)){
+            // Get entry stored on the heap through the unique pointer
+            Fprint_table_entry& Fpt_entry_old = *(it1->second); 
 
-                // incrementing the counter:
-                while (true){
-                    F_lock[bin_F_old].lock();
-                    if (! has_changed(bin_F_old, current_n)){
-                        // we can be sure the iterator points to valid memory
-                        
-                        // remove the kmer from the color-set it belonged to previously:
-                        Fpt_entry.value().first--;
-                        // i.e. color_set_count--; 
-
-                        // Experiment: how much space do these "empty color sets" actually take?
-                        // also, we don't have to worry about an entry being deleted by another thread in the meantime
-                        // if (color_set_count == 0){
-                        //     Fprint_table[bin_F_old].erase(Fpt_entry);       // to save space
-                        // }
-
-                        F_lock[bin_F_old].unlock();
-                        break;
-                    }
-                    // repeat retrieval without closing the bin for other threads
-                    current_n = Fprint_table[bin_F_old].size();
-                    F_lock[bin_F_old].unlock();
-                    Fpt_entry = Fprint_table[bin_F_old].find(F_old);
-                }
+            // we don't want to xor fingerprints of the same genome twice.
+            // check if not seen in this genome before, i.e., count a new (unique) kmer
+            if(0 == Fpt_entry_old.color_set.test(color)){
+                // remove the kmer from the color-set it belonged to previously:
+                // thanks to atomic we need no additional locks
+                assert(Fpt_entry_old.counter > 0);
+                Fpt_entry_old.counter.fetch_sub(1, std::memory_order_relaxed);    // the fastest way
+                // erasing of 0-value entries is done globally once in a time
+            
+                // no need to hold the lock any longer:
+                shared_F_lock_old.unlock();
 
                 if (count_kmers){
                     // count
@@ -742,33 +808,46 @@ public:
 
                 // update the fingerprint table - increment an existing color set or create a new one (i.e. insert new entry)
 
-                F_lock[bin_F_new].lock();
-                uint_fast32_t current_n = Fprint_table[bin_F_new].size();
-                F_lock[bin_F_new].unlock();
-                hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry_new = Fprint_table[bin_F_new].find(F_new);
+                std::shared_lock<std::shared_mutex> shared_F_lock_new(F_lock[bin_F_new]);
+                hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it2 = Fprint_table[bin_F_new].find(F_new);
+                // We cannot derefence if the iterator is end()!
                 
-                // using the same structure as before:
-                while (true){
-                    F_lock[bin_F_new].lock();
-                    if (! has_changed(bin_F_new, current_n)){
+                // cout << "bin_F_new: " << bin_F_new << endl;  // works
+                // cout << "bin_F_old: " << bin_F_old << endl;
                     
-                        if (Fpt_entry_new != Fprint_table[bin_F_new].end()){
-                            Fpt_entry_new.value().first++;
-                        } else {
-                            // add a new fingerprint
-                            color_set_vector.set(color);
-                            Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
-                        }
-
-                        F_lock[bin_F_new].unlock();
-                        break;
+                if (it2 != Fprint_table[bin_F_new].end()){
+                    // Get entry stored on the heap through the unique pointer
+                    Fprint_table_entry& Fpt_entry_new = *(it2->second);
+                    // Here was the last segfault. Let's print the iterator.
+                    // cout << "Printing Fpt_entry_new (color = " << color << ") " << static_cast<const void*>(&(*Fpt_entry_new)) << endl;
+                    Fpt_entry_new.counter.fetch_add(1, std::memory_order_relaxed);      
+                    shared_F_lock_new.unlock();
+                } else {
+                    // add a new fingerprint
+                    // WARNING: Fpt_entry_old on the heap is not protected by lock!
+                    // the cleaning method could erase it.
+                    color_t color_set_vector = Fpt_entry_old.color_set;
+                    color_set_vector.set(color);
+                    // CRITICAL SECTION - insert entry
+                    // Before acquiring unique_lock, relinquish the shared lock.
+                    shared_F_lock_new.unlock();
+                    // in this moment another thread might slip into the queue, acquire unique access to the bin, 
+                    // and perform the insertion of the very same element! *
+                    // Before a unique lock is acquired, all shared_locks are released. 
+                    std::unique_lock<std::shared_mutex> unique_F_lock(F_lock[bin_F_new]);
+                    // * therefore, we have to re-check if this didn't happen.
+                    hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it2 = Fprint_table[bin_F_new].find(F_new);
+                    // if the element is still not in the table:
+                    if (it2 == Fprint_table[bin_F_new].end()){
+                        // Create the shared_ptr on a new Fprint_table_entry object on the heap
+                        Fprint_table[bin_F_new][F_new] = std::make_unique<Fprint_table_entry>(1, color_set_vector);
+                        inserts_counter++;
+                    } else {
+                        // we should just increment
+                        Fprint_table_entry& Fpt_entry_new = *(it2->second); 
+                        Fpt_entry_new.counter.fetch_add(1, std::memory_order_relaxed);      
                     }
-                    // repeat retrieval without closing the bin for other threads
-                    current_n = Fprint_table[bin_F_new].size();
-                    F_lock[bin_F_new].unlock();
-                    Fpt_entry = Fprint_table[bin_F_new].find(F_new);
-                }
-                
+                }   // the unique lock is here released automatically.
                 // update the kmer_table
                 entry.value() = F_new;
                 // The kmer table does not need multi-threading optimisation,
@@ -798,41 +877,40 @@ public:
 
                     // update the Fprint_table
                     uint_fast32_t bin_F_new = compute_Fprint_bin(F_new);
-                    // BEFORE asking for entry, get the current number of elements.
-                    F_lock[bin_F_new].lock();
-                    uint_fast32_t current_n = Fprint_table[bin_F_new].size();
-                    F_lock[bin_F_new].unlock();
-                    hash_map<fingerprint, pair<uint_fast32_t, color_t>>::iterator Fpt_entry = Fprint_table[bin_F_new].find(F_new);
-                    
+                    std::shared_lock<std::shared_mutex> shared_F_lock_new(F_lock[bin_F_new]);
+                    hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it = Fprint_table[bin_F_new].find(F_new);
+
                     // increment or create new fingerprint
-                    while (true){
-                        F_lock[bin_F_new].lock();
-                        if (! has_changed(bin_F_new, current_n)){
-                        
-                            if (Fpt_entry != Fprint_table[bin_F_new].end()){
-                                Fpt_entry.value().first++;  // fingerprint already exists, add 1 kmer to the count
-                            } else {
-                                // Initialise an empty color set
-                                color_t color_set_vector(0);    
-                                color_set_vector.set(color); color_set_vector.set(color2);
-                                // cout << "color_set_vector: " << color_set_vector << endl; 
-                                Fprint_table[bin_F_new][F_new] = pair<uint_fast32_t, color_t>(1, color_set_vector);
-                            }
-
-                            F_lock[bin_F_new].unlock();
-                            break;
+                    if (it != Fprint_table[bin_F_new].end()){
+                        // fingerprint already exists, add 1 kmer to the count
+                        Fprint_table_entry& Fpt_entry = *(it->second);
+                        Fpt_entry.counter.fetch_add(1, std::memory_order_relaxed);           
+                        shared_F_lock_new.unlock();
+                    } else {
+                        // Initialise an empty color set
+                        color_t color_set_vector(0);    
+                        color_set_vector.set(color); color_set_vector.set(color2);
+                        // cout << "color_set_vector: " << color_set_vector << endl; 
+                        // CRITICAL SECTION - insert
+                        shared_F_lock_new.unlock();
+                        std::unique_lock<std::shared_mutex> unique_F_lock(F_lock[bin_F_new]);
+                        // As before, we need to be very careful.
+                        hash_map<fingerprint, std::shared_ptr<Fprint_table_entry>>::iterator it = Fprint_table[bin_F_new].find(F_new);
+                        // if the element is still not in the table:
+                        if (it == Fprint_table[bin_F_new].end()){
+                            // Create the shared_ptr on a new Fprint_table_entry object on the heap
+                            Fprint_table[bin_F_new][F_new] = std::make_unique<Fprint_table_entry>(1, color_set_vector);
+                            inserts_counter++;
+                        } else {
+                            // we should just increment
+                            Fprint_table_entry& Fpt_entry = *(it->second); 
+                            Fpt_entry.counter.fetch_add(1, std::memory_order_relaxed);      
                         }
-                        current_n = Fprint_table[bin_F_new].size();
-                        F_lock[bin_F_new].unlock();
-                        Fpt_entry = Fprint_table[bin_F_new].find(F_new);
-                    }
-
+                    }   // and unique_lock goes out of scope.
+                    
                     singleton_kmer_table[bin].erase(s_entry);   
 
                     // debug
-                    // color_t color_set_vector(color::n);
-                    // color_set_vector.set(10); color_set_vector.set(12);
-                    // Fprint_table[bin][F_new] = pair<uint_fast32_t, color_t> (77, color_set_vector);
                     // printout_tables("kmer_table.txt", "Fprint_table.txt"); 
                 }//else {
                 //same_kmer_in_singletons_counter++;
@@ -851,12 +929,119 @@ public:
             }
         }
         lock[bin].unlock();
+
+        //
+        // ========== CLEANING zero entries for saving memory ===========
+        // 
+
+        // thread_local is a special variable initialised only once for each thread:
+        bool thread_local completed_my_round = false;
+        // this creates a deterministic order, so that each thread gets one number from 1 to |threads|
+        uint_fast16_t thread_local my_segment; 
+
+        // How this works:
+        // no thread even thinks about cleaning unless the threshold is reached:
+        if (inserts_counter > cleaning_threshold){
+            // now, some threads might be behind while others already processing the next genomes.
+            // we should delay the cleaning until all threads complete the processing of their last genome. 
+            if (completed_my_round == false){
+                if (color >= cleaning_round * threads &&
+                    cleaning_round < max_cleaning_rounds) {
+                    completed_my_round = true;
+                    my_segment = threads_active.fetch_add(1, std::memory_order_relaxed);
+                    }
+                // still not completed? - continue.
+                else return;
+            }
+            // if a thread arrives here it means it is ready for cleaning
+
+            // if (color == color::n - 1){
+            //     // trigger a global cleaning for the last time:
+            //     threads_active = threads;
+            //     cleaning_round = max_cleaning_rounds;       // no more cleaning after this.
+            // }
+            
+            if (threads_active >= threads){
+                // means that all threads are ready for cleaning.
+
+                // Distribute the bins across threads evenly using math:
+                // If you have 10 threads and 1000 bins, Thread 0 cleans 0-99, Thread 1 cleans 100-199, etc.
+
+                size_t bins_per_thread = F_print_table_count / threads; 
+                size_t start_bin = (my_segment % threads) * bins_per_thread;
+                size_t end_bin = start_bin + bins_per_thread;
+                uint_fast32_t n_of_nonzero_entries = 0;
+                
+                // Because of that one unprotected reference to the color set vector
+                // We have to synchronise all threads here so that no reads are concurrent. (It's a reference to the color set vector to avoid copying it, because it can be huge. )
+                sync_point.arrive_and_wait(); 
+
+                // Loop through and clean the designated segment of bins
+                for (size_t i = start_bin; i < end_bin; ++i) {
+                    cleanup_zero_entries(i);
+                    n_of_nonzero_entries += Fprint_table[i].size();
+                }
+
+                // to take care of the division rest: this is the last thread's task
+                if (color % threads == threads-1 && end_bin < F_print_table_count){
+                    for (size_t i = end_bin; i < F_print_table_count; ++i) {
+                        cleanup_zero_entries(i);
+                        n_of_nonzero_entries += Fprint_table[i].size();
+                    }
+                }
+
+                // IMPORTANT: reset active threads and inserts_counter
+                if (my_segment == 0){
+                    // Update the cleaning limit depending on the proportion of non-zero entries in the tables.
+                    cleaning_threshold = max(cleaning_threshold, 2 * n_of_nonzero_entries);
+                    cleaning_round++;
+                    threads_active = 0;     
+                    inserts_counter = 0; 
+                }
+                // all threads:
+                completed_my_round = false;
+
+                sync_point.arrive_and_wait(); 
+
+                // So for example, if we have 32 000 bins and 32 threads,
+                // each thread cleans 1000 bins. If one finds, that after the last cleaning 
+                // the average number of nonzero entries is close to zero, the threshold stays the same.
+                // However, if it finds that after cleaning there are 10 nonzero entries, 
+                // the cleaning limit will be set to 20, so that the tables are not cleaned too often
+                // with little effect. This keeps the cost of cleaning per zero entry bound by a constant.
+                // (The same principle as extending a vector to double size.)
+            }
+        }
     }
 
-    static bool has_changed(uint_fast32_t F_bin, uint_fast32_t n){
-        // this may only occur when a new color set is added, so getting the iterator again is a small cost...
-        return (Fprint_table[F_bin].size() > n);
+
+    static void cleanup_zero_entries(uint_fast32_t bin) {
+    // remove Fprint_table_entries that have count == 0, because they are no longer needed.
+
+    // 1. Lock EXCLUSIVELY. No one else can read/write to this bin during cleanup.
+    std::unique_lock<std::shared_mutex> lock(F_lock[bin]);
+    
+    auto& table = Fprint_table[bin];
+    auto it = table.begin();
+    
+    // 2. Safely iterate and erase
+    while (it != table.end()) {
+        // it->second is the std::unique_ptr<Fprint_table_entry>
+        if (it->second->counter.load(std::memory_order_relaxed) == 0) {
+            
+            // table.erase returns the next valid iterator automatically
+            it = table.erase(it); 
+            
+        } else {
+            // Move to the next element manually if we didn't delete anything
+            ++it;
+        }
     }
+    
+    // force rehash to a minimal size.
+    table.rehash(0);    // this invalidates all existing iterators!
+    // see sparse_hash.h 
+}
 
     /**
     * This function hashes an amino k-mer and stores it in the corresponding hash table.
