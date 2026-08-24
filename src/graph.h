@@ -754,6 +754,9 @@ public:
             fingerprint F_old = entry.value();  
             uint_fast32_t bin_F_old = compute_Fprint_bin(F_old);
 
+            // // To see if many same fingerprints are seeked in waves at the same time
+            // cout << F_old << "\n";   // - not the case!
+
             // Note to Multi-threading  
             // Although we have 32 000 bins, for some data there might be much fewer color sets, or the majority of
             // kmers concentrated in few color sets, which causes bin contention.
@@ -825,7 +828,7 @@ public:
                 } else {
                     // add a new fingerprint
                     // WARNING: Fpt_entry_old on the heap is not protected by lock!
-                    // the cleaning method could erase it.
+                    // the cleaning method could erase it, if all threads were not synchronised.
                     color_t color_set_vector = Fpt_entry_old.color_set;
                     color_set_vector.set(color);
                     // CRITICAL SECTION - insert entry
@@ -1026,11 +1029,11 @@ public:
     
     // 2. Safely iterate and erase
     while (it != table.end()) {
-        // it->second is the std::unique_ptr<Fprint_table_entry>
+        // it->second is the std::shared_ptr<Fprint_table_entry>
         if (it->second->counter.load(std::memory_order_relaxed) == 0) {
             
-            // table.erase returns the next valid iterator automatically
-            it = table.erase(it); 
+            // this calls also the destructor of the fingerprint_entry on the heap
+            it = table.erase(it); // table.erase returns the next valid iterator automatically
             
         } else {
             // Move to the next element manually if we didn't delete anything

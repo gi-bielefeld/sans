@@ -5,15 +5,63 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import re
 
 
 os.makedirs("plots", exist_ok=True)
 
 df = pd.read_csv("TABLE.csv")
-df.rename(columns={"dataset" : "species"}, inplace = True)
-print(df.head())
+df.rename(columns={"dataset": "species",
+                   "max memory (kb)": "max memory (GB)",
+                   "running time": "running time (min)",
+                   "running time adjusted" : "running time (min, adjusted)"}, inplace=True)
 
-species = {"typhimurium":[1000, 2000], "drosophila":[12], "ebola":[160]}
+
+# Changed run time from seconds to minutes:
+df['running time (min)'] /= 60
+df['running time (min, adjusted)'] /= 60
+df['max memory (GB)'] /= 10**6
+
+# In numpy, slightly different logiacl operators are used!: | for or
+df['version'] = np.where((df['precision'] == 100) | (df['precision'] == "100"),
+                         df['version'], "incorrect results")
+
+# print("Head of df - for multithreading:")
+print("Head of TABLE.csv:")
+print(df.head())
+species = {"typhimurium": [1000, 2000], "drosophila": [12], "ebola": [160]}
+
+# ===== ==== === For multithreading = = = == = = = = = = == = = 
+
+# df_prev = pd.read_csv("TABLE.csv")
+# df_prev.rename(columns={"dataset": "species",
+#                    "max memory (kb)": "max memory (GB)",
+#                    "running time": "running time (min)",
+#                    "running time adjusted" : "running time (min, adjusted)"}, inplace=True)
+
+
+# # Changed run time from seconds to minutes:
+# df_prev['running time (min)'] /= 60
+# df_prev['running time (min, adjusted)'] /= 60
+# df_prev['max memory (GB)'] /= 10**6
+
+# df_prev['version'] = np.where(df_prev['precision'] == '100',
+#                          df_prev['version'], "incorrect results")
+
+
+# # For plotting
+# # Nezabudni pridat tri riadky pre T = 32 z TABLE.csv
+# temp = df_prev.query("FL == 64 and k == 11")
+# temp["threads"] = 32            # v celom stlpci bude rovnaka hodnota 32
+# df = pd.concat([df, temp])           # pridaj tabulku k prvej
+
+# # a prazdne riadky pre T = 4, 6-9, 11-15, 17-31.
+# for t in (4, 6,7,8,9,11,12,13,14,15,17):
+#     print("df has:", len(df.index), "rows.")
+#     df.loc[len(df.index)].all() = pd.DataFrame([None for _ in range(df.shape[1] -1)] + [t] )
+
+# for t in range(18, 33):
+#     df.loc[len(df.index)].all() = pd.DataFrame([None for _ in range(df.shape[1] -1)] + [t] )
 
 
 def format_sci(val):
@@ -22,7 +70,7 @@ def format_sci(val):
     return f"{base} x 10^{int(exp)}"
 
 
-def plot_all_species(species):
+def plot_all_species_old(species):
 
     # Set clean visual style
     sns.set_theme(style="whitegrid")
@@ -54,8 +102,8 @@ def plot_all_species(species):
                     print(species_df)
                     
                     if species_df.empty:
-                        ax.text(0.5, 0.5, f"No data for {species}", ha='center', va='center')
-                        ax.set_title(species.capitalize())
+                        # ax.text(0.5, 0.5, f"No data for {species}", ha='center', va='center')
+                        # ax.set_title(species.capitalize())
                         continue
                         
                     # Sort logically by k so the columns go left-to-right (e.g., k=11, k=21, k=31)
@@ -159,6 +207,188 @@ def plot_all_species(species):
             plt.savefig(savefilename, dpi=300)
             print("Subplots successfully generated and saved to: ", savefilename)
 
+def plot_all_species(species):
+
+    # Set clean visual style
+    sns.set_theme(style="whitegrid")
+
+    row = 0
+    col = 0
+    nrows = 3
+    ncols = 1
+
+    # comparison: sans original - fingerprint:  "FL is None or FL == 64"
+    # comparison between fingerprints:  "FL is not None"
+    # 'Is' nodes are not implemented
+    for counter, condition in enumerate(("FL.isna() or FL == 64", "not FL.isna()")):
+        for parameter in ("running time (min, adjusted)", "max memory (GB)"):
+
+            fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(
+                ncols * 8, nrows * 6), sharey=False, sharex=False)
+
+            plt.xticks((11, 21, 31))
+
+            comparison_mode = ''
+            if counter == 0:
+                comparison_mode = "\n sans original vs. fingerprinting \n "
+            else:
+                comparison_mode = "\n between different fingerprint lengths \n "
+
+            if "time" in parameter:
+                fig.suptitle("Execution run time" + comparison_mode,
+                             weight='bold', fontsize=25)
+            else:
+                fig.suptitle("Maximum resident set size" + comparison_mode, weight='bold', fontsize=25)\
+
+            fig.subplots_adjust(left=0.3, right=0.9,
+                                wspace=0.5, hspace=0.4, top=0.85)
+
+            for name, counts in species.items():
+
+                # for in-between fingerprints I now want only drosophila or ebola dataset
+                if (counter == 1 and (name != "drosophila" or name != "ebola")):
+                    continue
+
+                for n_genomes in counts:
+                    species_df = df.query(
+                        f"({condition}) and (species == '{name}') and (n == {n_genomes})")
+                    ax = axes[row]
+
+                    print(name, "df :")
+                    print(species_df)
+
+                    if species_df.empty:
+                        # ax.text(
+                        #     0.5, 0.5, f"No data for {name}", ha='center', va='center')
+                        # ax.set_title(name.capitalize())
+                        continue
+
+                    # Sort logically by k so the columns go left-to-right (e.g., k=11, k=21, k=31)
+                    species_df = species_df.sort_values(by='k')
+
+                    # 3. GENERATE THE SCATTER PLOT
+                    # We use hue to split colors by "version" (Original vs Fingerprint)
+                    sns.scatterplot(
+                        data=species_df,
+                        x='k',
+                        y=parameter,
+                        hue='version',
+                        # Gives different markers (e.g., circle vs X) for extra clarity
+                        style='version',
+                        s=150,             # Distinct, large data points
+                        ax=ax,
+                        palette={'sans original': 'green',
+                                 'fingerprint': 'blue',
+                                 'incorrect results': 'red'},
+                        edgecolor='none',
+                        alpha=0.85
+                    )
+
+                    # 4. ANNOTATE DATA POINTS
+                    for _, r0w in species_df.iterrows():
+
+                        # Format annotation: display precision score or FL if applicable
+                        if r0w['version'] == 'fingerprint' or r0w['version'] == 'incorrect results':
+                            label_text = f"FL{int(r0w['FL'])}"
+                        else:
+                            label_text = ""
+
+                        # drop text labels right next to data points
+                        ax.text(
+                            x=r0w['k'] + 1,
+                            y=r0w[f"{parameter}"],
+                            s=label_text,
+                            fontsize=13,
+                            ha='left',
+                            va='center',
+                            weight='semibold'
+                        )
+
+                    # 5. Annotate x ticks
+                    tick_positions = (11, 21, 31)
+                    tick_labels = []
+
+                    # let's take the average of kmers read for each k
+                    for k in (11, 21, 31):
+                        column = species_df.query(f"k == {k}")['kmers read']
+                        avg = column.sum() / len(column)
+                        s = f"{k}\n" + format_sci(avg)
+                        # the number of kmers per color set is important
+                        # 64 had always correct results
+                        kmers_per_cs = species_df.query(
+                            # take the value from the first row
+                            # square brackets!
+                            f"FL == 64 and k == {k}")['kmers per color set'].iloc[0]
+                        s += "\n" + format_sci(kmers_per_cs)
+
+                        tick_labels.append(s)
+
+                    # Set tick positions
+                    ax.set_xticks(tick_positions)
+
+                    # Make all y values be comparable from zero
+                    y_max = species_df[parameter].max()
+                    ax.set_ylim(bottom=-0.07*y_max, top=1.07*y_max)
+
+                    # Set x labels and increase font size
+                    ax.set_xticklabels(tick_labels, rotation=0, size=14)
+                    ax.tick_params(axis='y', size=14, labelsize=16)
+
+                    # 5. REFINING AXES AND TITLES
+                    ax.set_title(f" {name}, n = {n_genomes}",
+                                 fontsize=16, pad=10, weight='bold')
+
+                    ax.set_xlabel("")
+
+                    # x labels
+                    if (col == 0):
+                        ax.text(
+                            x=-0.15,
+                            y=-0.16,
+                            s="         k\n" \
+                              "kmers read\n" \
+                              "avg. k-mers\n" \
+                              "per color set",
+                            fontsize=15,
+                            ha='right',
+                            va='center',
+                            weight='bold',
+                            transform=ax.transAxes
+                        )
+
+                        if 'time' in parameter:
+                            ax.set_ylabel("Running Time \n (minutes, sum over CPUs)",
+                                          fontsize=15, loc='top', labelpad=10)
+                        else:
+                            ax.set_ylabel(
+                                "Maximum memory \n consumption (GB)", fontsize=15, loc='top')
+
+                    # Adjust y-axis to log scale if you notice massive differences between k values
+                    # ax.set_yscale('log')
+
+                    # Clean up legends
+                    if (row == 0 and col == 0):
+                        ax.legend(title="Version Run", loc="best")
+                    else:
+                        ax.get_legend().remove()
+
+                    # increment
+                    col += 1
+                    if col == ncols:
+                        col = 0
+                        row += 1
+                    if row == nrows:
+                        row = 0
+
+            # save
+            type = ""
+            if counter == 0:
+                type = "sans-vs-fingerprint"
+            else:
+                type = "between-fingerprints"
+            savefilename = f"plots/{type}_{parameter}_comparison.png"
+            plt.savefig(savefilename, dpi=300)
+            print("Subplots successfully generated and saved to: ", savefilename)
 
 
 def calculate_Lorenz_curve(raw_counts):
@@ -246,7 +476,7 @@ def plot_combined_lorenz_curves(df, k_filter=None):
     # 3. ADVANCED TICK & GRID CUSTOMIZATION (As requested)
     # Define major ticks at every 10% (0.1) interval
     major_ticks = np.arange(0, 1.1, 0.1)
-    plt.xticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks], fontsize=11)
+    plt.xticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks[0::2]], fontsize=11)
     plt.yticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks], fontsize=11)
     
     # Define minor ticks at every 5% (0.05) interval to catch tight curves
@@ -281,7 +511,119 @@ def plot_combined_lorenz_curves(df, k_filter=None):
     print(f"Successfully generated comparison plot! Saved as '{output_filename}'")
 
 
+def add_core_kmers():
+    input_folder="fingerprint_info"
+    output_folder="just_columns"
 
+    # Regex pattern: matches "Collecting core k-mers... (" followed by digits
+    pattern = re.compile(r"Collecting core k-mers\.\.\.\s*\((\d+)")
+    
+    # Ensure input directory exists
+    if not os.path.exists(input_folder):
+        print(f"Error: Folder '{input_folder}' does not exist.")
+        return
+
+    # Process each matching file
+    for filename in os.listdir(input_folder):
+        if filename.endswith("_FL64.txt"):
+            input_path = os.path.join(input_folder, filename)
+            
+            # Extract number from the text file
+            kmer_count = None
+            with open(input_path, 'r') as f:
+                for line in f:
+                    match = pattern.search(line)
+                    if match:
+                        kmer_count = match.group(1)
+                        break  # Stop searching once found
+            
+            if kmer_count is not None:
+                # Derive output filename: replace _FL64 with "" and .txt with .tsv
+                tsv_filename = filename.replace("_FL64", "").replace(".txt", ".tsv")
+                tsv_path = os.path.join(output_folder, tsv_filename)
+                
+                # Append the extracted number to the corresponding TSV file
+                if os.path.exists(tsv_path):
+                    with open(tsv_path, 'a') as f_out:
+                        f_out.write(f"{kmer_count} 0\n")
+                    print(f"Appended {kmer_count} to {tsv_path}")
+                else:
+                    print(f"Warning: Output file {tsv_path} does not exist.")
+            else:
+                print(f"Warning: Target pattern not found in {filename}")
+
+def create_table_of_core_kmers():
+    "This function collects the percentage of core kmers from each info file into a neat table"
+
+    input_folder="fingerprint_info"
+
+    # Regex pattern: captures the percentage digits before '%'
+    # Example target line: "Collecting core k-mers... (1178562 / 60%) (15.2 min)"
+    line_pattern = re.compile(r"Collecting core k-mers\.\.\..*?/\s*(\d+)%")
+    
+    # Regex to extract species and k value from filename 
+    # Example: "ebola_n160_k31_FL64.txt" -> species="ebola", k="31"
+    # Updated regex to capture: 1) species, 2) n value, 3) k value
+    file_pattern = re.compile(r"^([A-Za-z0-9]+)_n(\d+)_k(\d+)_FL64\.txt$")
+
+    records = []
+
+    for filename in os.listdir(input_folder):
+        if filename.endswith("_FL64.txt"):
+            file_match = file_pattern.search(filename)
+            if not file_match:
+                continue
+
+            species = file_match.group(1)
+            n_val = int(file_match.group(2))  # Extracts the integer after 'n'
+            k_val = int(file_match.group(3))
+            input_path = os.path.join(input_folder, filename)
+
+            # Search line by line for percentage
+            with open(input_path, 'r') as f:
+                for line in f:
+                    match = line_pattern.search(line)
+                    if match:
+                        percentage = int(match.group(1))
+                        records.append({
+                            'species': species,
+                            'n': n_val,
+                            'k': k_val,
+                            'percentage': percentage
+                        })
+                        break
+
+    # Inside the loop:
+    species = file_match.group(1)
+    n_val = int(file_match.group(2))  # Extracts the integer after 'n'
+    k_val = int(file_match.group(3))
+
+    records.append({
+        'species': species,
+        'n': n_val,
+        'k': k_val,
+        'percentage': percentage
+    })
+
+
+    # Convert records into a raw DataFrame
+    df = pd.DataFrame(records)
+
+    # Pivot into a 2D matrix: Species on rows, k-values on columns
+    # Creates a multi-index on the row axis (e.g. species on level 1, n on level 2)
+    # Uses mean() by default if duplicates are found, and keeps species & n as separate columns
+    pivot_df = df.pivot_table(
+        index=['species', 'n'], 
+        columns='k', 
+        values='percentage', 
+        aggfunc='first'  # Or 'mean'
+    ).reset_index()
+
+    # Clean up column axis name
+    # pivot_df.columns.name = None
+    
+    return pivot_df
+   
 
 def extract_kmer_distribution(save_name):
     # save_name = just_columns/file_name_of_orig_results
@@ -302,11 +644,11 @@ def extract_kmer_distribution(save_name):
 
 
 def plot_all_distributions(directory = "just_columns"):
-    fig, axes = plt.subplots(nrows = 1, ncols = 4, figsize=(16, 5), sharey=True, sharex=True)
-    fig.suptitle("Kmer distribution into color sets")
+    fig, axes = plt.subplots(nrows = 2, ncols = 2, figsize=(10, 10))
+    fig.suptitle("Kmer distribution into color sets (core kmers included)")
     axes = axes.flatten()
     sns.set_theme(style="whitegrid")
-
+    fig.subplots_adjust(wspace=0.2, hspace=0.25, top=0.9)
 
     # For each original result plot the Lorenz curve  
 
@@ -317,12 +659,12 @@ def plot_all_distributions(directory = "just_columns"):
             ax = axes[index]            
             ax.set_title(f"{s}, n = {n}")
 
-            
                  # Plot appearance / aesthetics settings
 
             major_ticks = np.arange(0, 1.1, 0.1)
-            plt.xticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks], fontsize=11)
-            plt.yticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks], fontsize=11)
+            ax.set_xticks(major_ticks, labels=[f"{int(i*100)}%"
+                        if round(i*10 % 2) == 0 else "" for i in major_ticks], fontsize=11)
+            ax.set_yticks(major_ticks, labels=[f"{int(i*100)}%" for i in major_ticks], fontsize=11)
             
             # Define minor ticks at every 5% (0.05) interval to catch tight curves
             minor_ticks = np.arange(0, 1.05, 0.05)
@@ -330,20 +672,19 @@ def plot_all_distributions(directory = "just_columns"):
             plt.gca().set_yticks(minor_ticks, minor=True)
             
             # Stylize the gridlines (solid for 10% marks, subtle dotted for 5% marks)
-            plt.grid(which='major', linestyle='-', linewidth=0.8, color='#e0e0e0')
-            plt.grid(which='minor', linestyle=':', linewidth=0.5, color='#c0c0c0', alpha=0.7)
+            ax.grid(which='major', linestyle='-', linewidth=0.8, color='#e0e0e0')
+            ax.grid(which='minor', linestyle=':', linewidth=0.5, color='#c0c0c0', alpha=0.7)
             
             # 4. PLOT AESTHETICS & GEOMETRY
-            plt.title(f"Fix this title...", 
-                    fontsize=15, weight='bold', pad=15)
-            plt.xlabel("Cumulative Proportion of Color Sets (Sorted by Size)", fontsize=12, labelpad=10)
-            plt.ylabel("Cumulative Proportion of Total K-mers", fontsize=12, labelpad=10)
+            # plt.title(f"Fix this title...", 
+            #         fontsize=15, weight='bold', pad=15)
+            if (index > 1):
+                ax.set_xlabel("Cumulative Proportion of Color Sets (Sorted by Size)", fontsize=12, labelpad=10)
+            if (index == 0 or index == 2):
+                ax.set_ylabel("Cumulative Proportion of Total K-mers", fontsize=12, labelpad=10)
             
             plt.xlim(0, 1.0)
             plt.ylim(0, 1.0)
-            
-            # Place the legend cleanly inside the graph arena
-            plt.legend(loc="upper left", fontsize=11, frameon=True, shadow=True)
             
             # Enforce a perfect 1:1 square aspect ratio so angles are not distorted
             plt.gca().set_aspect('equal', adjustable='box')
@@ -364,7 +705,10 @@ def plot_all_distributions(directory = "just_columns"):
                 lorenz_x, lorenz_y, gini = calculate_Lorenz_curve(d)
 
                 ax.plot(lorenz_x, lorenz_y , lw=2.5,
-                        label=f'{s.capitalize()} (Gini = {gini:.2f})')
+                        label=f'k == {k}  (Gini = {gini:.2f})')
+
+            # Create legend only after there is something plotted!
+            ax.legend(loc="upper left", fontsize=11, frameon=True, shadow=True)
 
                
 
@@ -373,301 +717,143 @@ def plot_all_distributions(directory = "just_columns"):
     plt.savefig(output_filename, dpi=300)
     print(f"Successfully generated comparison plot! Saved as '{output_filename}'")
 
-        
+
+def plot_all_threads(): 
+
+    benchmark = df_prev.query(f"(version == 'sans original') and (k == 11)")
+    print("printing benchmark\n:")
+    print(benchmark.head())
+    
+    # Set clean visual style
+    sns.set_theme(style="whitegrid")
+
+    row = 0
+    col = 0
+    nrows = 3
+    ncols = 1
+
+    condition = "FL == 64"
+    for parameter in ("running time (min, adjusted)", "max memory (GB)"):
+
+        fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=(
+            ncols * 8, nrows * 6), sharey=False, sharex=False)
+
+        plt.xticks(range(33))
+
+        comparison_mode = "\n with varying number of threads" \
+        " \n for k = 11"
+
+        if "time" in parameter:
+            fig.suptitle("(Total) execution run time" + comparison_mode,
+                            weight='bold', fontsize=25)
+        else:
+            fig.suptitle("Maximum resident set size" + comparison_mode, weight='bold', fontsize=25)\
+
+        fig.subplots_adjust(left=0.2, right=0.9,
+                            wspace=0.5, hspace=0.4, top=0.85, bottom = 0.05)
+
+        for name, counts in species.items():
+
+            for n_genomes in counts:
+                species_df = df.query(
+                    f"({condition}) and (species == '{name}') and (n == {n_genomes})")
+                ax = axes[row]
+
+                print(name, "df :")
+                print(species_df)
+
+                if species_df.empty:
+                    # ax.text(
+                    #     0.5, 0.5, f"No data for {name}", ha='center', va='center')
+                    # ax.set_title(name.capitalize())
+                    continue
+
+                # Sort by the number of threads so the columns go left-to-right (e.g., k=11, k=21, k=31)
+                species_df = species_df.sort_values(by='threads')
+
+                # 3. GENERATE Line Plot
+                # We use hue to split colors by "version" (Original vs Fingerprint)
+                sns.lineplot(
+                    data=species_df,
+                    x='threads',
+                    y=parameter,
+                    hue='version',
+                    # Gives different markers (e.g., circle vs X) for extra clarity
+                    style='version',
+                    ax=ax,
+                    palette={'sans original': 'green',
+                                'fingerprint': 'blue',
+                                'incorrect results': 'red'},
+                    linewidth=2.5,
+                    marker="o",
+                    markersize=8
+                    )
+
+                # Add a horizontal benchmark line obtained from the original results.
+                # Musia byt ' ' !!!                 tu   a tu
+                value = benchmark.loc[benchmark["species"] == name, parameter].item()   # -extract the one value
+                print("VALUE =", value)
+                ax.axhline(y=value, color='red', linestyle='-', linewidth=2, label='sans original, 32 threads')
+
+                # 5. Annotate x ticks
+                tick_positions = range(0, 33, 2)
+                ax.set_xticks(tick_positions)
+
+                # Make all y values be comparable from zero
+                y_max = species_df[parameter].max()
+                ax.set_ylim(bottom=-0.07*y_max, top=1.07*y_max)
+
+                ax.tick_params(axis='y', size=14, labelsize=16)
+
+                # 5. REFINING AXES AND TITLES
+                ax.set_title(f" {name}, n = {n_genomes}",
+                                fontsize=16, pad=10, weight='bold')
+
+                ax.set_xlabel("concurrent threads", fontsize = 15)
+
+                if 'time' in parameter:
+                    ax.set_ylabel("Running Time \n (minutes, sum over CPUs)",
+                                    fontsize=15, loc='top', labelpad=10)
+                else:
+                    ax.set_ylabel(
+                        "Maximum memory \n consumption (GB)", fontsize=15, loc='top')
+
+                # Clean up legends
+                if (row == 0 and col == 0):
+                    ax.legend(title="Version Run", loc="best")
+                else:
+                    ax.get_legend().remove()
+
+                # increment
+                col += 1
+                if col == ncols:
+                    col = 0
+                    row += 1
+                if row == nrows:
+                    row = 0
+
+        # save
+        type = "multithreading"
+        savefilename = f"plots/{type}_{parameter}.png"
+        plt.savefig(savefilename, dpi=300)
+        print("Subplots successfully generated and saved to: ", savefilename)
+
+
+# this should only be done once!
+done = True     # done indeed - ok
+if not done:
+    add_core_kmers()
 
 
 if __name__ == "__main__":
     species = {"typhimurium":[1000, 2000], "drosophila":[12], "ebola":[160]}
-    plot_all_species(species)
 
+    # plot_all_species(species)
     plot_all_distributions()
+    # plot_all_threads()
 
-
-
-# Gemini help functions
-
-# ==========================================
-# 1. MOCK DATA GENERATION (To test the script)
-# ==========================================
-# In reality, you will build this flat dataframe by looping through your log files
-# and parsing your output TSV files (to calculate precision and singletons).
-
-# data = [
-#     # Original SANS Data
-#     {'Type': 'Original', 'Dataset': 'ebola', 'k': 11, 'FL': 'N/A', 'Time': 10, 'Memory_MB': 50, 'Size_MB': 5, 'Singletons_Pct': 2.1, 'Precision': 0.99, 'N': 100},
-#     {'Type': 'Original', 'Dataset': 'drosophila', 'k': 11, 'FL': 'N/A', 'Time': 4500, 'Memory_MB': 12000, 'Size_MB': 3500, 'Singletons_Pct': 15.4, 'Precision': 0.98, 'N': 15},
-    
-#     # Fingerprint SANS Data (Ebola)
-#     {'Type': 'Fingerprint', 'Dataset': 'ebola', 'k': 11, 'FL': 16, 'Time': 8, 'Memory_MB': 40, 'Size_MB': 5, 'Singletons_Pct': 2.1, 'Precision': 0.92, 'N': 100},
-#     {'Type': 'Fingerprint', 'Dataset': 'ebola', 'k': 11, 'FL': 32, 'Time': 9, 'Memory_MB': 45, 'Size_MB': 5, 'Singletons_Pct': 2.1, 'Precision': 0.95, 'N': 100},
-#     {'Type': 'Fingerprint', 'Dataset': 'ebola', 'k': 11, 'FL': 64, 'Time': 9.5, 'Memory_MB': 48, 'Size_MB': 5, 'Singletons_Pct': 2.1, 'Precision': 0.98, 'N': 100},
-    
-#     # Fingerprint SANS Data (Drosophila)
-#     {'Type': 'Fingerprint', 'Dataset': 'drosophila', 'k': 11, 'FL': 16, 'Time': 3000, 'Memory_MB': 8000, 'Size_MB': 3500, 'Singletons_Pct': 15.4, 'Precision': 0.85, 'N': 15},
-#     {'Type': 'Fingerprint', 'Dataset': 'drosophila', 'k': 11, 'FL': 32, 'Time': 3500, 'Memory_MB': 9000, 'Size_MB': 3500, 'Singletons_Pct': 15.4, 'Precision': 0.91, 'N': 15},
-#     {'Type': 'Fingerprint', 'Dataset': 'drosophila', 'k': 11, 'FL': 64, 'Time': 4000, 'Memory_MB': 10000, 'Size_MB': 3500, 'Singletons_Pct': 15.4, 'Precision': 0.96, 'N': 15}
-# ]
-
-# df = pd.DataFrame(data)
-
-# # Create the Index column you requested (e.g., "ebola_k11")
-# df['Dataset_k'] = df['Dataset'] + '_k' + df['k'].astype(str)
-
-# # ==========================================
-# # 2. BUILDING THE REQUESTED TABLES
-# # ==========================================
-
-# print("--- Building Tables ---")
-
-# # Filter for just Original data for Table 1a and 1b
-# df_orig = df[df['Type'] == 'Original'].set_index('Dataset_k')
-
-# # Table 1.a) Time Table (Original)
-# table_1a = df_orig[['Time', 'Size_MB']].copy()
-# table_1a.columns = ['Execution_Time_sec', 'Dataset_Size_MB']
-# print("\nTable 1.a (Original Time & Size):\n", table_1a)
-
-# # Table 1.b) Memory Table (Original)
-# table_1b = df_orig[['Memory_MB', 'Singletons_Pct', 'Size_MB']].copy()
-# print("\nTable 1.b (Original Memory & Features):\n", table_1b)
-
-
-# # Filter for Fingerprint data for Table 2a and 2b
-# df_fp = df[df['Type'] == 'Fingerprint']
-
-# # Table 2.a) Time Table (Columns are FLs)
-# # Using pivot_table to reshape the data so FLs become columns
-# table_2a = df_fp.pivot_table(index='Dataset_k', columns='FL', values='Time')
-# table_2a.columns = [f"Time_FL{col}" for col in table_2a.columns]
-# print("\nTable 2.a (Fingerprint Time by FL):\n", table_2a)
-
-# # Table 2.b) Memory Table (Columns are FLs)
-# table_2b = df_fp.pivot_table(index='Dataset_k', columns='FL', values='Memory_MB')
-# table_2b.columns = [f"Memory_FL{col}" for col in table_2b.columns]
-# print("\nTable 2.b (Fingerprint Memory by FL):\n", table_2b)
-
-
-# # ==========================================
-# # 3. PLOTTING FUNCTION
-# # ==========================================
-
-# def plot_benchmark_scatter(data, x_col, y_col, hue_col='Dataset_k', 
-#                            title="Benchmark Plot", x_label="", y_label="", 
-#                            use_log_scale=False, filename=None):
-#     """
-#     Creates a scatter plot with colored dots per dataset, labels next to dots,
-#     and optional log-log scaling.
-#     """
-#     plt.figure(figsize=(10, 7))
-    
-#     # Create the scatter plot using Seaborn for automatic coloring and legends
-#     ax = sns.scatterplot(
-#         data=data, 
-#         x=x_col, 
-#         y=y_col, 
-#         hue=hue_col,
-#         s=100,         # Size of the dots
-#         palette="tab10", 
-#         edgecolor="black",
-#         alpha=0.8
-#     )
-
-#     # Add text labels next to each point
-#     # We iterate over the dataframe to plot the dataset name near its coordinate
-#     for i, row in data.iterrows():
-#         plt.text(
-#             x=row[x_col], 
-#             y=row[y_col], 
-#             s=str(row[hue_col]), 
-#             fontsize=9,
-#             ha='left',      # Horizontal alignment
-#             va='bottom',    # Vertical alignment
-#             padding=3
-#         )
-
-#     # Apply Log-Log scale if requested
-#     if use_log_scale:
-#         plt.xscale('log')
-#         plt.yscale('log')
-#         title += " (Log-Log Scale)"
-
-#     plt.title(title, fontsize=14, pad=15)
-#     plt.xlabel(x_label if x_label else x_col, fontsize=12)
-#     plt.ylabel(y_label if y_label else y_col, fontsize=12)
-#     plt.grid(True, which="both", ls="--", alpha=0.4)
-    
-#     # Move legend outside the plot so it doesn't overlap with data
-#     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-#     plt.tight_layout()
-
-#     if filename:
-#         plt.savefig(filename, dpi=300)
-#         print(f"Saved plot to {filename}")
-#     else:
-#         plt.show()
-
-# # ==========================================
-# # 4. EXECUTING THE PLOTS
-# # ==========================================
-
-# if __name__ == "__main__":
-    
-#     # Plot 1: Old vs New Execution Time (Comparing against Dataset Size)
-#     # We can plot the raw flat 'df' here to see Original vs Fingerprint on the same graph
-#     plot_benchmark_scatter(
-#         data=df,
-#         x_col='Size_MB',
-#         y_col='Time',
-#         hue_col='Type',  # Color by Original vs Fingerprint instead of dataset
-#         title="Execution Time vs Dataset Size",
-#         x_label="Dataset Size (MB)",
-#         y_label="Execution Time (Seconds)",
-#         use_log_scale=True,  # Crucial for Ebola vs Drosophila
-#         filename="time_vs_size_log.png"
-#     )
-
-#     # Plot 2: Precision vs Fingerprint Length
-#     # Using only the fingerprinting data
-#     plot_benchmark_scatter(
-#         data=df_fp,
-#         x_col='FL',
-#         y_col='Precision',
-#         hue_col='Dataset_k',
-#         title="Precision vs Fingerprint Length",
-#         x_label="Fingerprint Length (Bits)",
-#         y_label="Precision Score",
-#         use_log_scale=False, # Linear is better here since FL is just 16, 32, 64, 128
-#         filename="precision_vs_fl_linear.png"
-#     )
-
-
-
-
-    
-
-# def parse_time_string(time_str):
-#     """Converts the 'm:ss' or 'h:mm:ss' output from time -v into raw seconds."""
-#     parts = time_str.split(':')
-#     if len(parts) == 2:
-#         return int(parts[0]) * 60 + float(parts[1])
-#     elif len(parts) == 3:
-#         return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-#     return 0.0
-
-# def extract_log_info(filepath):
-#     """Scans a time log file and extracts memory (MB) and execution time (seconds)."""
-#     mem_pattern = re.compile(r"Maximum resident set size \(kbytes\):\s+(\d+)")
-#     time_pattern = re.compile(r"Elapsed \(wall clock\) time \(h:mm:ss or m:ss\):\s+([\d:.]+)")
-    
-#     max_memory_kb = None
-#     wall_time_sec = None
-    
-#     with open(filepath, 'r') as f:
-#         for line in f:
-#             mem_match = mem_pattern.search(line)
-#             if mem_match:
-#                 max_memory_kb = int(mem_match.group(1))
-#                 continue
-                
-#             time_match = time_pattern.search(line)
-#             if time_match:
-#                 wall_time_sec = parse_time_string(time_match.group(1))
-                
-#     # Convert memory to Megabytes for easier reading
-#     memory_mb = max_memory_kb / 1024 if max_memory_kb else None
-    
-#     return memory_mb, wall_time_sec
-
-# def build_dataframe():
-#     """Iterates through both info folders and builds a flat, tidy DataFrame."""
-#     data_rows = []
-    
-#     # 1. Parse Original SANS logs
-#     for filepath in glob.glob("original_info/*.txt"):
-#         filename = os.path.basename(filepath)
-#         mem, time = extract_log_info(filepath)
-        
-#         # Example filename: typhimurium_n1000_k11.txt
-#         parts = filename.replace('.txt', '').split('_')
-#         dataset = parts[0]
-#         n_genomes = int(parts[1].replace('n', ''))
-#         k_val = int(parts[2].replace('k', ''))
-        
-#         data_rows.append({
-#             'Type': 'Original',
-#             'Dataset': dataset,
-#             'N': n_genomes,
-#             'k': k_val,
-#             'FL': 'N/A', # Original doesn't have fingerprint length
-#             'Memory_MB': mem,
-#             'Time_Sec': time
-#         })
-
-#     # 2. Parse Fingerprint SANS logs
-#     for filepath in glob.glob("fingerprint_info/*.txt"):
-#         filename = os.path.basename(filepath)
-#         mem, time = extract_log_info(filepath)
-        
-#         # Example filename: typhimurium_n1000_k11_FL32.txt
-#         parts = filename.replace('.txt', '').split('_')
-#         dataset = parts[0]
-#         n_genomes = int(parts[1].replace('n', ''))
-#         k_val = int(parts[2].replace('k', ''))
-#         fl_val = int(parts[3].replace('FL', ''))
-        
-#         data_rows.append({
-#             'Type': 'Fingerprint',
-#             'Dataset': dataset,
-#             'N': n_genomes,
-#             'k': k_val,
-#             'FL': str(fl_val),
-#             'Memory_MB': mem,
-#             'Time_Sec': time
-#         })
-        
-#     return pd.DataFrame(data_rows)
-
-# # ==========================================
-# # EXECUTION & PLOTTING SKETCH
-# # ==========================================
-
-# if __name__ == "__main__":
-    # # 1. Build the tidy dataframe
-    # df = build_dataframe()
-    # print("Data successfully loaded!")
-    # print(df.head())
-
-    # # 2. Plotting Memory Comparison (Original vs Fingerprint)
-    # # Let's filter to just Typhimurium at k=11 to keep the graph readable
-    # plot_data = df[(df['Dataset'] == 'typhimurium') & (df['k'] == 11)].copy()
-    
-    # # For a clean comparison, we merge the 'Type' and 'FL' columns for the legend
-    # plot_data['Version'] = plot_data.apply(
-    #     lambda row: 'Original' if row['Type'] == 'Original' else f"Fingerprint (FL={row['FL']})", 
-    #     axis=1
-    # )
-
-    # plt.figure(figsize=(10, 6))
-    
-    # # Seaborn makes grouped bar charts effortless with tidy data
-    # sns.barplot(
-    #     data=plot_data, 
-    #     x='N', 
-    #     y='Memory_MB', 
-    #     hue='Version'
-    # )
-    
-    # plt.title("Memory Usage Comparison: Original vs Fingerprint SANS (Typhimurium, k=11)")
-    # plt.xlabel("Number of Genomes (N)")
-    # plt.ylabel("Maximum Resident Set Size (MB)")
-    # plt.grid(axis='y', linestyle='--', alpha=0.7)
-    
-    # plt.tight_layout()
-    # plt.savefig("memory_comparison.png", dpi=300)
-    # print("Plot saved as memory_comparison.png")
-
-
-
-
-
-
+    # Run and display the table of core kmers
+    df_percentages = create_table_of_core_kmers()
+    print("Percentages of core kmers table:")
+    df_percentages.sort_values(by = "species")
+    print(df_percentages)

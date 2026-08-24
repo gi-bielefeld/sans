@@ -8,11 +8,11 @@ import pandas as pd
 # import matplotlib.pyplot as plt
 from math import ceil
 
-cols = ["dataset", "version", "k", "n", "FL", "running time", "max memory (kb)", 
+cols = ["dataset", "version", "k", "n", "FL", "running time", "CPU percent", "running time adjusted", "max memory (kb)", 
         "kmers read", "singletons percentage", "kmers per color set",
-        "number of color sets", "precision"]
+        "number of color sets", "precision", "threads"]
 
-species = {"typhimurium":[1000, 2000], "drosophila":[12], "ebola":[160]}
+species = {"typhimurium":[1000], "drosophila":[12], "ebola":[160]}
 
 # Also it would be interesting to pinpoint the distribution of kmers in color sets:
 # show that most are concentrated in a top few.
@@ -50,7 +50,7 @@ def read_results(file_name):
     n_color_sets = 0
     try:
         result = subprocess.run("awk -F' ' '{if ($1 > 0) {n += 1}; if ($2 > 0) n += 1} END" \
-                                " {print n}'" +  f" {file_name}", 
+                                " {print n}' " +  f"{file_name}", 
                                 shell=True, capture_output=True, text=True, check=True)
 
         # Print the command's output
@@ -68,16 +68,22 @@ def read_results(file_name):
     if "FL" in file_name:
         # fingerprinting version - we need to compare
         # file_name is has form: fingerprint_results/species_n123_k123_FL123.tsv
+        
+        # Multi-threading tests:
+        # works still!
+
         # keep just the file name:
         ff_without_folder = file_name[file_name.index('/')+1 : ]
-        # FL is the last parameter - prune it
+        # FL is the last parameter - prune it (in case of multithreading tests it's the pre-last)
         original_file = "original_results/" + ff_without_folder[0 : ff_without_folder.index("_FL")] + ".tsv"
         # original_file = original_results/species_n123_k123.tsv
         diff_file = "result_discrepancies/" + ff_without_folder
 
         # already compared and saved comparison to diff file.        
-        # command = f"( diff --suppress-common-lines -y {original_file} {file_name} ) > {diff_file} 2>&1"
-        # result = subprocess.run(command, shell=True)
+        command = f"( diff --suppress-common-lines -y {original_file} {file_name} ) > {diff_file} 2>&1"
+        command_result = subprocess.run(command, shell=True)
+        print(f"return code of command: {command}:\n", command_result.returncode )
+        print(f"diff file tail: \n", subprocess.run(f"tail -n 10 {diff_file}", shell = True, capture_output=True, text=True, check=True))
 
         # check the diff file:
         with open(diff_file, "r") as file:
@@ -92,6 +98,12 @@ def read_results(file_name):
 
 
 def read_info(info, results, species, n, k, FL = None):
+    try:
+        with open(info, 'r') as file:
+            pass
+    except FileNotFoundError:
+        print("File: ", info, "was not found. Skipping.")
+        return
     with open(info, 'r') as file:
         # ... kmers read"
         line = file.readline()
@@ -108,6 +120,21 @@ def read_info(info, results, species, n, k, FL = None):
 
         time_string = line[7:-1]  # without brackets
         exec_time_s = parse_time_string(time_string)
+
+        very_next_line = file.readline()
+        assert("Command being timed:" in very_next_line)
+        words = very_next_line.split()
+        thr = words[words.index("-T") + 1]
+        if '"' == thr[-1]:
+            thr = thr[0:-1]
+        N_THREADS = int(thr)
+
+        while "Percent of CPU this job got:" not in line:
+            line = file.readline()
+
+        # Added CPU_percent because we should account for it
+        # 500% means an equivalent of 5 cores on 100% were used during this job.
+        CPU_percent = int(line.split()[-1][:-1])
 
         while "Maximum resident set size (kbytes):" not in line:
             line = file.readline()
@@ -136,12 +163,15 @@ def read_info(info, results, species, n, k, FL = None):
                 "n" : n,
                 "FL" : FL,
                 "running time" : exec_time_s,
+                "CPU percent" : CPU_percent,
+                "running time adjusted" : exec_time_s * (CPU_percent) // 100,
                 "max memory (kb)" : max_memory_consumption, 
                 "kmers read" : kmers_read,
                 "singletons percentage" : singleton_percentage,
                 "kmers per color set" : kpcs,
                 "number of color sets" : n_color_sets,
-                "precision" : precision 
+                "precision" : precision,
+                "threads" : N_THREADS
                 }
 
    # save to df
@@ -156,10 +186,9 @@ def write_kmer_distribution(file_name):
     keep_just_columns = "awk -F'\t' '{print $1, $2}'"
     save_name = f"just_columns/{file_name}"
     subprocess.run( f"{keep_just_columns} {file_name} > {save_name}")
-    
 
 # read data 
-if (True):
+if (False):
     for s in species.keys():
         for k in (11, 21, 31):
             for n in species[s]:
@@ -177,8 +206,27 @@ if (True):
 
                     print("\n = = = = = = = = Processing species:", s, "n =", n, "k =", k, "FL =", FL, " = = = = = = = =")
                     read_info(info_F, res_F, s, n, k, FL)
-                                    
-            
+
+# Testing threads:
+if (True):
+    for s in species.keys():
+        for k in (11, ):
+            for n in species[s]:
+                for T in (1, 2, 3, 5, 10, 16):
+                    # # ORIGINAL RESULTS
+                    # res_orig =  f"original_results/{s}_n{n}_k{k}.tsv"
+                    # info_orig = f"original_info/{s}_n{n}_k{k}.txt"
+
+                    # read_info(info_orig, res_orig, s, n, k)
+                    # # write_kmer_distribution(res_orig)         # done
+
+                    # FINGERPRINTING RESULTS - with threads and only FL 64
+                    for FL in (64, ):
+                        res_F =  f"thread_results/{s}_n{n}_k{k}_FL{FL}_T{T}.tsv"
+                        info_F = f"thread_info/{s}_n{n}_k{k}_FL{FL}_T{T}.txt"
+
+                        print("\n = = = = = = = = Processing species:", s, "n =", n, "k =", k, "FL =", FL, "threads =", T, "= = = = = = = =")
+                        read_info(info_F, res_F, s, n, k, FL)
 
 # read_info("vzor_vysledku.txt", "vysledok_classic_f.tsv", "virus", 13, 11)
-df.to_csv('TABLE.csv', index = False)
+df.to_csv('TABLE_multithreading.csv', index = False)
