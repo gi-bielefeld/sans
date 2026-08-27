@@ -403,10 +403,12 @@ public:
             // so that after shifting, the fingerprint is 14 valid digits long:
 
             // default setting:
-            short n_of_digits = 14;
+            short n_of_digits = 14; //14;
             F_print_table_count = (0b1u << n_of_digits);
             shift_bits_by = Fprint_length - n_of_digits;  
             // cout << shift_bits_by;   
+            // cout << table_count << "\n";
+             cout << "F_print_table_count: " << F_print_table_count << "\n";
 
             // Create random binary fingerprints
             genome_fingerprints = vector<fingerprint> (color::n);
@@ -432,7 +434,7 @@ public:
 
                     // cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
                 }
-                cout << "Fingerprint preview: " << genome_fingerprints[0] << endl;
+                //cout << "Fingerprint preview: " << genome_fingerprints[0] << endl;
             }
             else { // each fingerprint is just one color. 
                    // This was for the purpose of testing / debugging of the effect of collisions on results.
@@ -440,7 +442,7 @@ public:
                     fingerprint f;
                     f.set(i % Fprint_length);
                     genome_fingerprints[i] = f;
-                    cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
+                    //cout << "Fingerprint preview: " << genome_fingerprints[i] << endl;
                 }
             }
 
@@ -793,6 +795,7 @@ public:
             if(0 == Fpt_entry_old.color_set.test(color)){
                 // remove the kmer from the color-set it belonged to previously:
                 // thanks to atomic we need no additional locks
+                // Why does Adrain assume this here:
                 assert(Fpt_entry_old.counter > 0);
                 Fpt_entry_old.counter.fetch_sub(1, std::memory_order_relaxed);    // the fastest way
                 // erasing of 0-value entries is done globally once in a time
@@ -823,8 +826,9 @@ public:
                     Fprint_table_entry& Fpt_entry_new = *(it2->second);
                     // Here was the last segfault. Let's print the iterator.
                     // cout << "Printing Fpt_entry_new (color = " << color << ") " << static_cast<const void*>(&(*Fpt_entry_new)) << endl;
-                    Fpt_entry_new.counter.fetch_add(1, std::memory_order_relaxed);      
+                    Fpt_entry_new.counter.fetch_add(1, std::memory_order_relaxed);
                     shared_F_lock_new.unlock();
+//                    cout  << bin_F_new << "\n" << flush;
                 } else {
                     // add a new fingerprint
                     // WARNING: Fpt_entry_old on the heap is not protected by lock!
@@ -845,6 +849,7 @@ public:
                         // Create the shared_ptr on a new Fprint_table_entry object on the heap
                         Fprint_table[bin_F_new][F_new] = std::make_unique<Fprint_table_entry>(1, color_set_vector);
                         inserts_counter++;
+//                        cout  << bin_F_new << "\n" << flush;
                     } else {
                         // we should just increment
                         Fprint_table_entry& Fpt_entry_new = *(it2->second); 
@@ -887,8 +892,9 @@ public:
                     if (it != Fprint_table[bin_F_new].end()){
                         // fingerprint already exists, add 1 kmer to the count
                         Fprint_table_entry& Fpt_entry = *(it->second);
-                        Fpt_entry.counter.fetch_add(1, std::memory_order_relaxed);           
+                        Fpt_entry.counter.fetch_add(1, std::memory_order_relaxed);
                         shared_F_lock_new.unlock();
+//                        cout  << bin_F_new << "\n" << flush;
                     } else {
                         // Initialise an empty color set
                         color_t color_set_vector(0);    
@@ -904,6 +910,7 @@ public:
                             // Create the shared_ptr on a new Fprint_table_entry object on the heap
                             Fprint_table[bin_F_new][F_new] = std::make_unique<Fprint_table_entry>(1, color_set_vector);
                             inserts_counter++;
+//                            cout << bin_F_new << "\n" << flush;
                         } else {
                             // we should just increment
                             Fprint_table_entry& Fpt_entry = *(it->second); 
@@ -933,6 +940,8 @@ public:
         }
         lock[bin].unlock();
 
+        //##### DO NOT ERASE ANYTHING!
+ /*
         //
         // ========== CLEANING zero entries for saving memory ===========
         // 
@@ -1014,13 +1023,20 @@ public:
                 // with little effect. This keeps the cost of cleaning per zero entry bound by a constant.
                 // (The same principle as extending a vector to double size.)
             }
-        }
+
+        }*/
     }
 
 
+    static void cleanup_all_zero_entries(){
+        // Loop through all bins
+        for (size_t i = 0; i < F_print_table_count; ++i) {
+            cleanup_zero_entries(i);
+        }
+    }
+
     static void cleanup_zero_entries(uint_fast32_t bin) {
     // remove Fprint_table_entries that have count == 0, because they are no longer needed.
-
     // 1. Lock EXCLUSIVELY. No one else can read/write to this bin during cleanup.
     std::unique_lock<std::shared_mutex> lock(F_lock[bin]);
     

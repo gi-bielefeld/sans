@@ -1288,7 +1288,8 @@ int main(int argc, char* argv[]) {
 				}
 				sequence.clear();
 
-				
+                // delete zero-entries Fprint->colors-table in graph.h
+                graph::cleanup_all_zero_entries();
 // 				if (verbose) {
 // 					cout << "\33[2K\r" << flush;
 // 				}
