@@ -1100,8 +1100,7 @@ int main(int argc, char* argv[]) {
 		strcpy(c_name, (blacklistfile).c_str()); // Transcire to char array
 
 		igzstream file(c_name, ios::in);    // input file stream
-				count::deleteCount();
-
+                int count=0;
 				string appendixChars; 
 				string line;    // read the file line by line
 				while (getline(file, line)) {
@@ -1126,14 +1125,16 @@ int main(int argc, char* argv[]) {
 									appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
 									newLine = newLine.substr(0, line.length() - toManyChars);
 								}
+								int l=newLine.length();
 								newLine = translator::translate(newLine);
+                                count+=(l/3-newLine.length());
 							}
 							sequence += newLine;    // FASTA & FASTQ sequence -> read
 						}
 					}
 				}
-				if (verbose && count::getCount() > 0) {
-					cerr << count::getCount()<< " triplets could not be translated while reading blacklist."<< endl;
+				if (verbose && count > 0) {
+					cerr << count<< " triplets could not be translated while reading blacklist."<< endl;
 				}
 				graph::fill_blacklist(sequence, reverse);
 				sequence.clear();
@@ -1231,11 +1232,10 @@ int main(int argc, char* argv[]) {
 					ss << ")" << endl;
                     cout << ss.str();                    
 				}
-				count::deleteCount();
-
 
 				string appendixChars; 
 				string line;    // read the file line by line
+				int count=0;
 				while (getline(file, line)) {
 					if (line.length() > 0) {
 						if (line[0] == '>' || line[0] == '@') {    // FASTA & FASTQ header -> process
@@ -1269,15 +1269,16 @@ int main(int argc, char* argv[]) {
 									appendixChars = newLine.substr(line.length() - toManyChars, toManyChars);
 									newLine = newLine.substr(0, line.length() - toManyChars);
 								}
-
+                                int l=newLine.length();
 								newLine = translator::translate(newLine);
+                                count+=(l/3-newLine.length());
 							}
 							sequence += newLine;    // FASTA & FASTQ sequence -> read
 						}
 					}
 				}
-				if (verbose && count::getCount() > 0) {
-					cerr << count::getCount()<< " triplets could not be translated."<< endl;
+				if (verbose && count > 0) {
+					cerr << count<< " triplets in genome " << genome_ids[i]+1 << " could not be translated."<< endl;
 				}
 				if (window > 1) {
 					iupac > 1 ? graph::add_minimizers(T, sequence, genome_ids[i], reverse, window, iupac)

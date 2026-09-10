@@ -2,21 +2,6 @@
 #include "translator.h"
 #include "gc.h"
 
-namespace count {
-    int number = 0;
-
-    int getCount() {
-        return number;
-    }
-
-    void incrementCount() {
-        number += 1;
-    }
-
-    void deleteCount() {
-        number = 0;
-    }
-}
 
 /**
  * codon and translationTable structs to save genetic code information
@@ -140,12 +125,10 @@ string translator::getTranslatedAminoAcid(string &unit) {
     codon codon = translator::translationTable[unit];
 
     if (!codon.isValid()) {
-        count::incrementCount();
-        translated = "";
+        return "";
     } else {
-        translated = codon.amino;
+        return codon.amino;
     }
-    return  translated;
 }
 
 bool translator::checkUnit(string &basicString) {
