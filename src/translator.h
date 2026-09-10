@@ -12,13 +12,7 @@
 
 using namespace std;
 
-/**
- * This namespace counts the occurrences where triplets have not been translated.
- */
-namespace count {
-    extern int getCount();
-    extern void deleteCount();
-}
+
 
 /**
  * This class translates nucleotide sequences into amino acid sequences.

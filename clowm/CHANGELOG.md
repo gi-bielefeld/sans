@@ -1,5 +1,11 @@
 # SANS Changelog
 
+## v1.0.9 [2026-09-10]
+
+### Fixed
+
+- thread safe counting of untranslated codons
+
 ## v1.0.8 [2025-10-02]
 
 ### Fixed
