@@ -48,6 +48,8 @@ SANS is provided as a service of the [German Network for Bioinformatics Infrastr
 
 ## Publications
 
+Kolesch, F., Sohn, M., Rempel, A., Hippel, P., Wittler, R.: [SANS ambages: phylogenomics with abundance-filter, multi-threading, and bootstrapping on amino-acid or genomic sequences](https://doi.org/10.1186/s12859-025-06204-2). BMC Bioinformatics. 26: 227 (2025).
+
 Rempel, A., Wittler, R.: [SANS serif: alignment-free, whole-genome based phylogenetic reconstruction](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab444/6300510). Bioinformatics. (2021).
 
 Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](https://pub.uni-bielefeld.de/download/2942421/2942423/s13015-020-00164-3.wittler.pdf).
