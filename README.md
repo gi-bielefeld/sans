@@ -18,12 +18,14 @@
 * Be careful with outliers and outgroups (for the reason above).
 * The sequences should not be too short. Provide whole-genome data or as many coding sequences as possible.
 * Be careful with viruses (for the reasons above).
-* Have a look at the network (weakly compatible or 2-tree). It does not make much sense to extract a tree, if the split network is a hairball.
+* Have a look at the network (weakly compatible or planar). It does not make much sense to extract a tree, if the split network is a hairball.
 * Reconstructed phylogenies are unrooted, even though a Newick file (-N) suggests a root.
 * In case of problems, contact us (see below).
 
 
 ### Publications
+
+Kolesch, F., Sohn, M., Rempel, A., Hippel, P., Wittler, R.: [SANS ambages: phylogenomics with abundance-filter, multi-threading, and bootstrapping on amino-acid or genomic sequences](https://doi.org/10.1186/s12859-025-06204-2). BMC Bioinformatics. 26: 227 (2025).
 
 Rempel, A., Wittler, R.: [SANS serif: alignment-free, whole-genome based phylogenetic reconstruction](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btab444/6300510). Bioinformatics. (2021).
 
@@ -33,6 +35,15 @@ Algorithms for Molecular Biology. 15: 4 (2020).
 Wittler, R.: [Alignment- and reference-free phylogenomics with colored de Bruijn graphs](http://drops.dagstuhl.de/opus/volltexte/2019/11032/pdf/LIPIcs-WABI-2019-2.pdf).
 In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Schloss Dagstuhl--Leibniz-Zentrum fuer Informatik, Dagstuhl, Germany (2019).
 
+### Contact
+
+For any question, feedback, or problem, please feel free to file an issue on this Git repository or write an email and we will get back to you as soon as possible.
+
+[pangenomics-service@cebitec.uni-bielefeld.de](mailto:pangenomics-service@cebitec.uni-bielefeld.de)
+
+This is an approved [de.NBI](https://www.denbi.de/) service. Please help us improve by taking our [short user survey](https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans).
+
+
 ## Table of Contents
 
 * [Requirements](#requirements)
@@ -41,7 +52,6 @@ In: Huber, K. and Gusfield, D. (eds.) Proceedings of WABI 2019. LIPIcs. 143, Sch
 * [Examples](#examples)
 * [Performance evaluation on predicted open reading frames](#performance-evaluation-on-predicted-open-reading-frames)
 * [Clustering / dereplication of metagenome assembled genomes (MAGs)](#clustering-dereplication-of-metagenome-assembled-genomes-mags)
-* [Contact](#contact)
 * [License](#license)
 * [Privacy](#privacy)
 
@@ -330,17 +340,6 @@ These per-cluster measures were then averaged (weighted and unweighted). The fol
 | no filter    | quick        | 59h  | 127G | 0.996 <br> (0.983) | 0.173 <br> (0.668)  |
 |              | thoroughly   | 185h | 290G | 0.995 <br> (0.979) | 0.190 <br> (0.700)  |
 
-
-
-
-
-## Contact
-
-For any question, feedback, or problem, please feel free to file an issue on this Git repository or write an email and we will get back to you as soon as possible.
-
-[pangenomics-service@cebitec.uni-bielefeld.de](mailto:pangenomics-service@cebitec.uni-bielefeld.de)
-
-SANS is provided as a service of the [German Network for Bioinformatics Infrastructure (de.NBI)](https://www.denbi.de/). We would appriciate if you would participate in the evaluation of SANS by completing this [very short survey](https://www.surveymonkey.de/r/denbi-service?sc=bigi&tool=sans).
 
 
 ## License
